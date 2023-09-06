@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "json_repair"
+version = "0.0.1"
+authors = [
+  { name="Stefano Baccianella", email="stefano.baccianella@gmail.com" },
+]
+description = "A small package to repair broken json files. Built because GPT keeps fucking up its json response"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/mangiucugna/python-json-repair"
+"Bug Tracker" = "https://github.com/mangiucugna/python-json-repair/issues"
+[tool.pytest.ini_options]
+pythonpath = [
+  "."
+]

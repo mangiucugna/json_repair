@@ -1,0 +1,9 @@
+LICENSE
+README.md
+pyproject.toml
+src/json_repair/json_repair.py
+src/json_repair.egg-info/PKG-INFO
+src/json_repair.egg-info/SOURCES.txt
+src/json_repair.egg-info/dependency_links.txt
+src/json_repair.egg-info/top_level.txt
+tests/test_json_repair.py
