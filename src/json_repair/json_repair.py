@@ -89,6 +89,8 @@ class JSONParser:
 
         start = self.index
 
+        # Here things get a bit heiry because a string missing a quote can also be a key in an object
+        # In that case the repair action has to take into account the : separator and don't include it in the string
         while (
             (char := self.get_char_at()) != '"'
             and char is not False
@@ -99,6 +101,7 @@ class JSONParser:
         end = self.index
         if self.get_char_at() != '"':
             self.insert_char_at('"')
+        # A fallout of the previous special case, we need to update the index only if we didn't enter that case
         if self.context != "object" or char != ":":
             self.index += 1
 
@@ -144,8 +147,9 @@ class JSONParser:
         self.json_str = self.json_str[: self.index] + self.json_str[self.index :]
 
 
-def repair_json(json_str):
+def repair_json(json_str: str, return_objects: bool = False) -> any:
     parser = JSONParser(json_str.replace("\n", " ").replace("\r", " ").strip())
     parsed_json = parser.parse()
-    print(parsed_json)
+    if return_objects:
+        return parsed_json
     return json.dumps(parsed_json)
