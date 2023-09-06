@@ -9,7 +9,7 @@ repos:
   rev: 6.1.0
   hooks:
     - id: flake8
-      args: ["--extend-ignore=E203,E501", "--max-line-length=88"]
+      args: ["--extend-ignore=E203,E501"]
 - repo: https://github.com/pycqa/bandit
   rev: 1.7.5
   hooks:
