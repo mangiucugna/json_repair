@@ -1,42 +1,70 @@
 Metadata-Version: 2.1
 Name: json-repair
-Version: 0.0.1
-Summary: A small package to repair broken json files. Built because GPT keeps fucking up its json response
-Author-email: Stefano Baccianella <stefano.baccianella@gmail.com>
+Version: 0.1.0
+Summary: A package to repair broken json strings
+Author-email: Stefano Baccianella <4247706+mangiucugna@users.noreply.github.com>
+License: MIT License
+
+        Copyright (c) 2023 Stefano Baccianella
+
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+
 Project-URL: Homepage, https://github.com/mangiucugna/python-json-repair
 Project-URL: Bug Tracker, https://github.com/mangiucugna/python-json-repair/issues
+Keywords: JSON,REPAIR,LLM,PARSER
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
-Requires-Python: >=3.8
+Requires-Python: >=3.7
 Description-Content-Type: text/markdown
 License-File: LICENSE
 
-Forked from https://github.com/floydw1234/fix_broken_json
-
 This simple package can be used to repair a broken json file, particularly useful if you are using LLMs because those things keep fucking up the json output.
+
+Inspired by https://github.com/josdejong/jsonrepair with contributions by GPT-4
 
 # How to use
     from json_repair import repair_json
     good_json_string = repair_json(bad_json_string)
 
-# ChatGPT explanation of what this code is doing
-This Python script is designed to repair a truncated JSON string. It uses a stack-based approach to keep track of the context of the JSON string as it is being parsed. Here's a step-by-step breakdown:
+# How it works
+This module will parse the JSON file following the BNF definition:
 
-1. Enum Definitions: The script starts by defining two enumerations, ContextType and RespawnReason. ContextType represents the different contexts that can be encountered while parsing a JSON string, such as a string, number, array, object, etc. RespawnReason represents the reasons why the parser might need to "respawn", or start over from a certain position.
+    <json> ::= <primitive> | <container>
 
-2. Whitespace Check Function: The is_whitespace function checks if a given character is a whitespace character.
+    <primitive> ::= <number> | <string> | <boolean>
+    ; Where:
+    ; <number> is a valid real number expressed in one of a number of given formats
+    ; <string> is a string of valid characters enclosed in quotes
+    ; <boolean> is one of the literal strings 'true', 'false', or 'null' (unquoted)
 
-3. Main Function: The untruncate_json function is the main function that repairs the truncated JSON string. It initializes a stack to keep track of the context, and several variables to keep track of the position in the string and the respawn information.
+    <container> ::= <object> | <array>
+    <array> ::= '[' [ <json> *(', ' <json>) ] ']' ; A sequence of JSON values separated by commas
+    <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
+    <member> ::= <string> ': ' <json> ; A pair consisting of a name, and a JSON value
 
-4. Helper Functions: Inside untruncate_json, several helper functions are defined. These functions manipulate the context stack and the respawn information, and determine what to do based on the current character and context.
+If something is wrong (a missing parantheses or quotes for example) it will use a few simple heuristics to fix the JSON string:
+- Add the missing parentheses if the parser believes that the array or object should be closed
+- Quote strings or add missing single quotes
+- Adjust whitespaces and remove line breaks
 
-5. Main Parsing Loop: The main loop iterates over each character in the input string. Depending on the current context and character, it performs different actions, such as pushing a new context onto the stack, popping the current context, setting or clearing the respawn information, or not consuming the current character.
+I am sure some corner cases will be missing, if you have examples please open an issue or even better push a PR
 
-6. Respawn Handling: After the main loop, if a respawn is needed, the context stack is truncated to the respawn length, and the result string is initialized with the part of the input string before the respawn position.
-
-7. Finalization: The script then iterates over the remaining contexts in the stack in reverse order, and appends the appropriate closing characters to the result string based on the context.
-
-8. Result: Finally, the function returns the repaired JSON string by joining the result list into a single string.
-
-This script is quite complex and handles many edge cases. It's a good example of a state machine, where the current state (context) and input (character) determine the next state and output.
+# How to develop
+Just create a virtual environment with `requirements.txt`, the setup uses pre-commit to make sure all tests are run
