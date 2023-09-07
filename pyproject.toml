@@ -3,11 +3,11 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 [project]
 name = "json_repair"
-version = "0.0.1"
+version = "0.1.0"
 authors = [
-  { name="Stefano Baccianella", email="stefano.baccianella@gmail.com" },
+  { name="Stefano Baccianella", email="4247706+mangiucugna@users.noreply.github.com" },
 ]
-description = "A small package to repair broken json files. Built because GPT keeps fucking up its json response"
+description = "A package to repair broken json strings"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
