@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: json-repair
-Version: 0.1.5
+Version: 0.1.6
 Summary: A package to repair broken json strings
 Author-email: Stefano Baccianella <4247706+mangiucugna@users.noreply.github.com>
 License: MIT License

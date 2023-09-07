@@ -46,7 +46,9 @@ class JSONParser:
             if self.get_char_at() != ":":
                 self.insert_char_at(":")
             self.index += 1
+            self.context = "object_value"
             value = self.parse_json()
+            self.context = ""
             obj[key] = value
 
             if self.get_char_at() == ",":
@@ -95,6 +97,7 @@ class JSONParser:
             (char := self.get_char_at()) != '"'
             and char is not False
             and (self.context != "object_key" or char != ":")
+            and (self.context != "object_value" or (char != "," and char != "}"))
         ):
             self.index += 1
 
@@ -102,7 +105,9 @@ class JSONParser:
         if self.get_char_at() != '"':
             self.insert_char_at('"')
         # A fallout of the previous special case, we need to update the index only if we didn't enter that case
-        if self.context != "object_key" or char != ":":
+        if (self.context != "object_key" or char != ":") and (
+            self.context != "object_value" or (char != "," and char != "}")
+        ):
             self.index += 1
 
         return self.json_str[start:end]
