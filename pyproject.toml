@@ -19,8 +19,8 @@ classifiers = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/mangiucugna/python-json-repair"
-"Bug Tracker" = "https://github.com/mangiucugna/python-json-repair/issues"
+"Homepage" = "https://github.com/mangiucugna/json_repair/"
+"Bug Tracker" = "https://github.com/mangiucugna/json_repair/issues"
 [tool.pytest.ini_options]
 pythonpath = [
   "."
