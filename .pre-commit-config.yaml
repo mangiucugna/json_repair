@@ -9,7 +9,7 @@ repos:
   rev: 6.1.0
   hooks:
     - id: flake8
-      args: ["--extend-ignore=E203,E501"]
+      args: ["--extend-ignore=E203,E501", "--per-file-ignores=__init__.py:F401"]
 - repo: https://github.com/pycqa/bandit
   rev: 1.7.5
   hooks:
