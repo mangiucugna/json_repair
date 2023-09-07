@@ -153,6 +153,3 @@ def repair_json(json_str: str, return_objects: bool = False) -> any:
     if return_objects:
         return parsed_json
     return json.dumps(parsed_json)
-
-
-print(repair_json('{"name": "John", "age": 30, "city": New York}'))
