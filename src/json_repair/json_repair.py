@@ -25,6 +25,8 @@ class JSONParser:
             return self.parse_number()
         elif char == "t" or char == "f" or char == "n":
             return self.parse_boolean_or_null()
+        elif char.isalpha():
+            return self.parse_string()
         elif char == " ":
             self.index += 1
             return self.parse_json()
@@ -32,14 +34,15 @@ class JSONParser:
             raise ValueError("Invalid JSON format")
 
     def parse_object(self):
-        self.context = "object"
         if self.get_char_at() != "{":
             raise ValueError("Expected '{'")
         self.index += 1
 
         obj = {}
         while (char := self.get_char_at()) != "}" and char is not False:
+            self.context = "object_key"
             key = self.parse_string()
+            self.context = ""
             if self.get_char_at() != ":":
                 self.insert_char_at(":")
             self.index += 1
@@ -54,11 +57,9 @@ class JSONParser:
         if self.get_char_at() != "}":
             self.insert_char_at("}")
         self.index += 1
-        self.context = ""
         return obj
 
     def parse_array(self):
-        self.context = "array"
         if self.get_char_at() != "[":
             raise ValueError("Expected '['")
         self.index += 1
@@ -78,7 +79,6 @@ class JSONParser:
             self.insert_char_at("]")
 
         self.index += 1
-        self.context = ""
         return arr
 
     def parse_string(self):
@@ -94,7 +94,7 @@ class JSONParser:
         while (
             (char := self.get_char_at()) != '"'
             and char is not False
-            and (self.context != "object" or char != ":")
+            and (self.context != "object_key" or char != ":")
         ):
             self.index += 1
 
@@ -102,7 +102,7 @@ class JSONParser:
         if self.get_char_at() != '"':
             self.insert_char_at('"')
         # A fallout of the previous special case, we need to update the index only if we didn't enter that case
-        if self.context != "object" or char != ":":
+        if self.context != "object_key" or char != ":":
             self.index += 1
 
         return self.json_str[start:end]
@@ -153,3 +153,6 @@ def repair_json(json_str: str, return_objects: bool = False) -> any:
     if return_objects:
         return parsed_json
     return json.dumps(parsed_json)
+
+
+print(repair_json('{"name": "John", "age": 30, "city": New York}'))

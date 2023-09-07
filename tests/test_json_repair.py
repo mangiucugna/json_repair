@@ -24,6 +24,10 @@ def test_repair_json():
         repair_json('{"name": "John", "age": 30, city: "New York"}')
         == '{"name": "John", "age": 30, "city": "New York"}'
     )
+    assert (
+        repair_json('{"name": "John", "age": 30, "city": New York}')
+        == '{"name": "John", "age": 30, "city": "New York}"}'
+    )
     assert repair_json("[1, 2, 3,") == "[1, 2, 3]"
     assert (
         repair_json('{"employees":["John", "Anna",')
@@ -34,6 +38,7 @@ def test_repair_json():
     assert repair_json(" ") == '""'
     assert repair_json("[") == "[]"
     assert repair_json("{") == "{}"
+    assert repair_json('{"key": "value:value"}') == '{"key": "value:value"}'
     assert (
         repair_json('{"name": "John", "age": 30, "city": "New')
         == '{"name": "John", "age": 30, "city": "New"}'
@@ -69,6 +74,11 @@ def test_repair_json_with_objects():
         "age": 30,
         "city": "New York",
     }
+    assert repair_json('{"name": "John", "age": 30, "city": New York}', True) == {
+        "name": "John",
+        "age": 30,
+        "city": "New York}",
+    }
     assert repair_json("[1, 2, 3,", True) == [1, 2, 3]
     assert repair_json('{"employees":["John", "Anna",', True) == {
         "employees": ["John", "Anna"]
@@ -78,6 +88,7 @@ def test_repair_json_with_objects():
     assert repair_json(" ", True) == ""
     assert repair_json("[", True) == []
     assert repair_json("{", True) == {}
+    assert repair_json('{"key": "value:value"}', True) == {"key": "value:value"}
     assert repair_json('{"name": "John", "age": 30, "city": "New', True) == {
         "name": "John",
         "age": 30,
