@@ -51,6 +51,14 @@ def test_repair_json():
         repair_json('{"employees":["John", "Anna", "Peter')
         == '{"employees": ["John", "Anna", "Peter"]}'
     )
+    assert (
+        repair_json('{"employees":["John", "Anna", "Peter"]}')
+        == '{"employees": ["John", "Anna", "Peter"]}'
+    )
+    assert (
+        repair_json('{"text": "The quick brown fox,"}')
+        == '{"text": "The quick brown fox,"}'
+    )
 
 
 def test_repair_json_with_objects():

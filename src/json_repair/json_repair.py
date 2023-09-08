@@ -41,6 +41,10 @@ class JSONParser:
         obj = {}
         while (char := self.get_char_at()) != "}" and char is not False:
             self.context = "object_key"
+            # Skip filler whitespaces
+            if char == " ":
+                self.index += 1
+                continue
             key = self.parse_string()
             self.context = ""
             if self.get_char_at() != ":":
@@ -84,8 +88,10 @@ class JSONParser:
         return arr
 
     def parse_string(self):
+        fixed_quotes = False
         if self.get_char_at() != '"':
             self.insert_char_at('"')
+            fixed_quotes = True
         else:
             self.index += 1
 
@@ -96,8 +102,12 @@ class JSONParser:
         while (
             (char := self.get_char_at()) != '"'
             and char is not False
-            and (self.context != "object_key" or char != ":")
-            and (self.context != "object_value" or (char != "," and char != "}"))
+            and (not fixed_quotes or self.context != "object_key" or char != ":")
+            and (
+                not fixed_quotes
+                or self.context != "object_value"
+                or (char != "," and char != "}")
+            )
         ):
             self.index += 1
 
@@ -105,9 +115,7 @@ class JSONParser:
         if self.get_char_at() != '"':
             self.insert_char_at('"')
         # A fallout of the previous special case, we need to update the index only if we didn't enter that case
-        if (self.context != "object_key" or char != ":") and (
-            self.context != "object_value" or (char != "," and char != "}")
-        ):
+        if self.get_char_at() == '"':
             self.index += 1
 
         return self.json_str[start:end]
@@ -153,8 +161,13 @@ class JSONParser:
 
 
 def repair_json(json_str: str, return_objects: bool = False) -> any:
-    parser = JSONParser(json_str.replace("\n", " ").replace("\r", " ").strip())
-    parsed_json = parser.parse()
+    json_str = json_str.replace("\n", " ").replace("\r", " ").strip()
+    try:
+        parsed_json = json.loads(json_str)
+    except Exception:
+        parser = JSONParser(json_str)
+        parsed_json = parser.parse()
+
     if return_objects:
         return parsed_json
     return json.dumps(parsed_json)
