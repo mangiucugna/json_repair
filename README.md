@@ -1,6 +1,14 @@
-This simple package can be used to repair a broken json file, particularly useful if you are using LLMs because those things keep fucking up the json output.
+This simple package can be used to repair a broken json file. To know all cases in which this package will work, check out the unit test.
 
 Inspired by https://github.com/josdejong/jsonrepair with contributions by GPT-4
+
+# Motivation
+I was using GPT a lot and there is no sure fire way to get structured output out of it.
+You can ask for a JSON output or use the Functions paradigm, either way the documentation from OpenAI clearly states that it might not return a valid JSON.
+Luckily, the mistakes GPT makes are simple enough to be fixed without destroying the content.
+I searched for a lightweight python package but couldn't find any.
+
+So I wrote this one.
 
 # How to use
     from json_repair import repair_json
