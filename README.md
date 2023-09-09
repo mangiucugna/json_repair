@@ -10,6 +10,8 @@ I searched for a lightweight python package but couldn't find any.
 
 So I wrote this one.
 
+You can look how I used it by checking out this demo: https://huggingface.co/spaces/mangiucugna/difficult-conversations-bot/
+
 # How to use
     from json_repair import repair_json
     good_json_string = repair_json(bad_json_string)
