@@ -63,12 +63,12 @@ class JSONParser:
         elif char.isalpha():
             return self.parse_string()
         # Ignore whitespaces outside of strings
-        elif char == " ":
+        elif char.isspace():
             self.index += 1
             return self.parse_json()
         # If everything else fails, then we give up and return an exception
         else:
-            raise ValueError("Invalid JSON format")
+            raise ValueError(f"Invalid JSON format")
 
     def parse_object(self):
         # <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
@@ -128,6 +128,10 @@ class JSONParser:
         while (char := self.get_char_at()) != "]" and char is not False:
             value = self.parse_json()
             arr.append(value)
+
+            # skip over whitespace after a value but before closing ]
+            while (char := self.get_char_at()) is not False and char.isspace():
+                self.index += 1
 
             if self.get_char_at() == ",":
                 self.index += 1
