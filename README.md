@@ -49,3 +49,7 @@ You will need owner access to this repository
 - **Commit and push all changes to the repository before continuing or the next steps will fail**
 - Create a new release in Github, making sure to tag all the issues solved and contributors. Create the new tag, same as the one in the build configuration
 - Once the release is created, a new Github Actions workflow will start to publish on Pypi, make sure it didn't fail
+
+---
+# Bonus Content
+If you need some good Custom Instructions (System Message) to improve your chatbot responses try https://gist.github.com/mangiucugna/7ec015c4266df11be8aa510be0110fe4
