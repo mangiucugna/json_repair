@@ -110,3 +110,61 @@ def test_repair_json_with_objects():
     assert repair_json('{"employees":["John", "Anna", "Peter', True) == {
         "employees": ["John", "Anna", "Peter"]
     }
+
+
+def test_repair_json_corner_cases_generate_by_gpt():
+    # Test with nested JSON
+    assert (
+        repair_json('{"key1": {"key2": [1, 2, 3]}}') == '{"key1": {"key2": [1, 2, 3]}}'
+    )
+    assert repair_json('{"key1": {"key2": [1, 2, 3') == '{"key1": {"key2": [1, 2, 3]}}'
+
+    # Test with empty keys
+    assert repair_json('{"": "value"}') == '{"": "value"}'
+
+    # Test with Unicode characters
+    assert repair_json('{"key": "value\u263A"}') == '{"key": "value\\u263a"}'
+
+    # Test with special characters
+    assert repair_json('{"key": "value\\nvalue"}') == '{"key": "value\\nvalue"}'
+
+    # Test with large numbers
+    assert (
+        repair_json('{"key": 12345678901234567890}') == '{"key": 12345678901234567890}'
+    )
+
+    # Test with whitespace
+    assert repair_json(' { "key" : "value" } ') == '{"key": "value"}'
+
+    # Test with null values
+    assert repair_json('{"key": null}') == '{"key": null}'
+
+
+def test_repair_json_corner_cases_generate_by_gpt_with_objects():
+    # Test with nested JSON
+    assert repair_json('{"key1": {"key2": [1, 2, 3]}}', True) == {
+        "key1": {"key2": [1, 2, 3]}
+    }
+    assert repair_json('{"key1": {"key2": [1, 2, 3', True) == {
+        "key1": {"key2": [1, 2, 3]}
+    }
+
+    # Test with empty keys
+    assert repair_json('{"": "value"}', True) == {"": "value"}
+
+    # Test with Unicode characters
+    assert repair_json('{"key": "value\u263A"}', True) == {"key": "value☺"}
+
+    # Test with special characters
+    assert repair_json('{"key": "value\\nvalue"}', True) == {"key": "value\nvalue"}
+
+    # Test with large numbers
+    assert repair_json('{"key": 12345678901234567890}', True) == {
+        "key": 12345678901234567890
+    }
+
+    # Test with whitespace
+    assert repair_json(' { "key" : "value" } ', True) == {"key": "value"}
+
+    # Test with null values
+    assert repair_json('{"key": null}', True) == {"key": None}
