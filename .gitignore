@@ -5,3 +5,4 @@ __pycache__
 .gitattributes
 .pytest_cache
 dist/
+src/json_repair.egg-info/
