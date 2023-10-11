@@ -68,7 +68,7 @@ class JSONParser:
             return self.parse_json()
         # If everything else fails, then we give up and return an exception
         else:
-            raise ValueError(f"Invalid JSON format")
+            raise ValueError("Invalid JSON format")
 
     def parse_object(self):
         # <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
