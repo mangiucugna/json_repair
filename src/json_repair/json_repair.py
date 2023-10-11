@@ -24,7 +24,7 @@ All supported use cases are in the unit tests
 
 import json
 import re
-from typing import Any
+from typing import Any, Dict, List, Union
 
 
 class JSONParser:
@@ -36,10 +36,12 @@ class JSONParser:
         # This is used in the object member parsing to manage the special cases of missing quotes in key or value
         self.context = ""
 
-    def parse(self):
+    def parse(self) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
         return self.parse_json()
 
-    def parse_json(self):
+    def parse_json(
+        self,
+    ) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
         char = self.get_char_at()
         # False means that we are at the end of the string provided, is the base case for recursion
         if char is False:
@@ -70,7 +72,7 @@ class JSONParser:
         else:
             raise ValueError("Invalid JSON format")
 
-    def parse_object(self):
+    def parse_object(self) -> Dict[str, Any]:
         # <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
 
         # This guard should never be called, but you never know what happens in the future
@@ -116,7 +118,7 @@ class JSONParser:
         self.index += 1
         return obj
 
-    def parse_array(self):
+    def parse_array(self) -> List[Any]:
         # <array> ::= '[' [ <json> *(', ' <json>) ] ']' ; A sequence of JSON values separated by commas
         # This guard should never be called, but you never know what happens in the future
         if self.get_char_at() != "[":
@@ -146,7 +148,7 @@ class JSONParser:
         self.index += 1
         return arr
 
-    def parse_string(self):
+    def parse_string(self) -> str:
         # <string> is a string of valid characters enclosed in quotes
         # Somehow all weird cases in an invalid JSON happen to be resolved in this function, so be careful here
         # Flag to manage corner cases related to missing starting quote
@@ -187,7 +189,7 @@ class JSONParser:
 
         return self.json_str[start:end]
 
-    def parse_number(self):
+    def parse_number(self) -> Union[float, int]:
         # <number> is a valid real number expressed in one of a number of given formats
         number_pattern = r"-?\d+(\.\d+)?([eE][+-]?\d+)?"
         match = re.match(number_pattern, self.json_str[self.index :])
@@ -200,9 +202,9 @@ class JSONParser:
                 return int(number_str)
         else:
             # This is a string then
-            self.parse_string()
+            return self.parse_string()
 
-    def parse_boolean_or_null(self):
+    def parse_boolean_or_null(self) -> Union[bool, None]:
         # <boolean> is one of the literal strings 'true', 'false', or 'null' (unquoted)
         if self.json_str.startswith("true", self.index):
             self.index += 4
@@ -215,21 +217,23 @@ class JSONParser:
             return None
         else:
             # This is a string then
-            self.parse_string()
+            return self.parse_string()
 
-    def insert_char_at(self, char):
+    def insert_char_at(self, char: str) -> None:
         self.json_str = self.json_str[: self.index] + char + self.json_str[self.index :]
         self.index += 1
 
-    def get_char_at(self):
+    def get_char_at(self) -> Union[str, bool]:
         # Why not use something simpler? Because we might be out of bounds and doing this check all the time is annoying
         return self.json_str[self.index] if self.index < len(self.json_str) else False
 
-    def remove_char_at(self):
+    def remove_char_at(self) -> None:
         self.json_str = self.json_str[: self.index] + self.json_str[self.index :]
 
 
-def repair_json(json_str: str, return_objects: bool = False) -> Any:
+def repair_json(
+    json_str: str, return_objects: bool = False
+) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
     json_str = json_str.replace("\n", " ").replace("\r", " ").strip()
     try:
         parsed_json = json.loads(json_str)
