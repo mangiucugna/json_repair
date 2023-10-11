@@ -41,3 +41,11 @@ I am sure some corner cases will be missing, if you have examples please open an
 
 # How to develop
 Just create a virtual environment with `requirements.txt`, the setup uses pre-commit to make sure all tests are run
+
+# How to release
+You will need owner access to this repository
+- Edit `pyproject.toml` and update the version number appropriately using `semver` notation
+- Run `python -m build`
+- **Commit and push all changes to the repository before continuing or the next steps will fail**
+- Create a new release in Github, making sure to tag all the issues solved and contributors. Create the new tag, same as the one in the build configuration
+- Once the release is created, a new Github Actions workflow will start to publish on Pypi, make sure it didn't fail
