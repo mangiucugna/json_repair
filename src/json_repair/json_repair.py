@@ -91,7 +91,7 @@ class JSONParser:
             self.context = "object_key"
 
             # Skip filler whitespaces
-            if char == " ":
+            if char.isspace():
                 self.index += 1
                 continue
             # <member> starts with a <string>
@@ -110,7 +110,7 @@ class JSONParser:
 
             if self.get_char_at() == ",":
                 self.index += 1
-            if self.get_char_at() == " ":
+            if (c := self.get_char_at()) and c.isspace():
                 self.index += 1
         # Especially at the end of an LLM generated json you might miss the last "}"
         if self.get_char_at() != "}":
@@ -234,7 +234,8 @@ class JSONParser:
 def repair_json(
     json_str: str, return_objects: bool = False
 ) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
-    json_str = json_str.replace("\n", " ").replace("\r", " ").strip()
+    json_str = re.sub(r"^\s+", "", json_str)
+    json_str = re.sub(r"\s+$", "", json_str)
     try:
         parsed_json = json.loads(json_str)
     except Exception:
