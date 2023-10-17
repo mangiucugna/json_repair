@@ -244,6 +244,11 @@ class JSONParser:
 def repair_json(
     json_str: str, return_objects: bool = False
 ) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
+    """
+    Given a json formatted string, it will try to decode it and, if it fails, it will try to fix it.
+    It will return the fixed string by default.
+    When `return_objects=True` is passed, it will return the decoded data structure instead.
+    """
     json_str = re.sub(r"^\s+", "", json_str)
     json_str = re.sub(r"\s+$", "", json_str)
     try:
@@ -255,3 +260,13 @@ def repair_json(
     if return_objects:
         return parsed_json
     return json.dumps(parsed_json)
+
+
+def loads(
+    json_str: str,
+) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
+    """
+    This function works like `json.loads()` except that it will fix your JSON in the process.
+    It is a wrapper around the `repair_json()` function with `return_objects=True`.
+    """
+    return repair_json(json_str, True)
