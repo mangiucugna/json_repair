@@ -16,6 +16,11 @@ You can look how I used it by checking out this demo: https://huggingface.co/spa
     from json_repair import repair_json
     good_json_string = repair_json(bad_json_string)
 
+You can use this library to completely replace `json.loads()`:
+
+    from json_repair import repair_json
+    decoded_object = repair_json(bad_json_string, return_objects=True)
+
 # How it works
 This module will parse the JSON file following the BNF definition:
 
