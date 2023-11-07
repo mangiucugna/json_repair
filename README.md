@@ -3,6 +3,8 @@ This simple package can be used to repair a broken json file. To know all cases 
 Inspired by https://github.com/josdejong/jsonrepair with contributions by GPT-4
 
 # Motivation
+[UPDATE] OpenAI just released a new update with JSON mode in function calling. So I guess if you use OpenAI with function calling you don't need this.
+
 I was using GPT a lot and there is no sure fire way to get structured output out of it.
 You can ask for a JSON output or use the Functions paradigm, either way the documentation from OpenAI clearly states that it might not return a valid JSON.
 Luckily, the mistakes GPT makes are simple enough to be fixed without destroying the content.
