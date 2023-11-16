@@ -82,15 +82,18 @@ class JSONParser:
 
         obj = {}
         # Stop when you either find the closing parentheses or you have iterated over the entire string
-        char = self.get_char_at()
-        while char and char != "}":
+        while self.get_char_at() and self.get_char_at() != "}":
             # This is what we expect to find:
             # <member> ::= <string> ': ' <json>
 
             # Skip filler whitespaces
-            while char and char.isspace():
+            self.trim()
+
+            # Sometimes LLMs do weird things, if we find a ":" so early, we'll change it to "," and move on
+            if self.get_char_at() == ":":
+                self.remove_char_at()
+                self.insert_char_at(",")
                 self.index += 1
-                char = self.get_char_at()
 
             # We are now searching for they string key
             # Context is used in the string parser to manage the lack of quotes
@@ -98,10 +101,17 @@ class JSONParser:
 
             # <member> starts with a <string>
             key = self.parse_string()
+            while key == "":
+                key = self.parse_string()
+
+            # We reached the end here
+            if key == "}":
+                continue
+
             # Reset context
             self.context = ""
             # An extreme case of missing ":" after a key
-            if self.get_char_at() != ":":
+            if self.get_char_at() and self.get_char_at() != ":":
                 self.insert_char_at(":")
             self.index += 1
             self.context = "object_value"
@@ -113,11 +123,11 @@ class JSONParser:
             if self.get_char_at() == ",":
                 self.index += 1
 
-            # Update the loop variable, just in case someone changed the index above
-            char = self.get_char_at()
+            # Remove trailing spaces
+            self.trim()
 
         # Especially at the end of an LLM generated json you might miss the last "}"
-        if self.get_char_at() != "}":
+        if self.get_char_at() and self.get_char_at() != "}":
             self.insert_char_at("}")
         self.index += 1
         return obj
@@ -162,6 +172,8 @@ class JSONParser:
         # Flag to manage corner cases related to missing starting quote
         fixed_quotes = False
         # i.e. { name: "John" }
+        # Remove any trailing space
+        self.trim()
         if self.get_char_at() != '"':
             self.insert_char_at('"')
             fixed_quotes = True
@@ -181,6 +193,7 @@ class JSONParser:
             char
             and char != '"'
             and (not fixed_quotes or self.context != "object_key" or char != ":")
+            and (not fixed_quotes or self.context != "object_key" or not char.isspace())
             and (
                 not fixed_quotes
                 or self.context != "object_value"
@@ -189,6 +202,24 @@ class JSONParser:
         ):
             self.index += 1
             char = self.get_char_at()
+
+        # If the cycle stopped at a space we have some doubts on wheter this is a valid string, check one char ahead
+        if (
+            self.get_char_at()
+            and fixed_quotes
+            and self.context == "object_key"
+            and self.get_char_at().isspace()
+        ):
+            # skip whitespaces
+            self.trim()
+            # This string is invalid if there's no valid termination afterwards
+
+            if (
+                self.get_char_at() != ":"
+                or self.get_char_at() != ","
+                or self.get_char_at() != "}"
+            ):
+                return ""
 
         end = self.index
         if self.get_char_at() != '"':
@@ -233,12 +264,19 @@ class JSONParser:
         self.json_str = self.json_str[: self.index] + char + self.json_str[self.index :]
         self.index += 1
 
-    def get_char_at(self) -> Union[str, bool]:
+    def get_char_at(self, idx=0) -> Union[str, bool]:
         # Why not use something simpler? Because we might be out of bounds and doing this check all the time is annoying
-        return self.json_str[self.index] if self.index < len(self.json_str) else False
+        idx = self.index + idx
+        return self.json_str[idx] if idx < len(self.json_str) else False
 
-    def remove_char_at(self) -> None:
-        self.json_str = self.json_str[: self.index] + self.json_str[self.index :]
+    def remove_char_at(self, idx=0) -> None:
+        idx += 1
+        self.json_str = self.json_str[: self.index] + self.json_str[self.index + idx :]
+
+    def trim(self) -> None:
+        # Remove trailing spaces
+        while self.get_char_at() and self.get_char_at().isspace():
+            self.index += 1
 
 
 def repair_json(
@@ -251,6 +289,7 @@ def repair_json(
     """
     json_str = re.sub(r"^\s+", "", json_str)
     json_str = re.sub(r"\s+$", "", json_str)
+    json_str = re.sub(r"/\*.*?\*/", "", json_str)
     try:
         parsed_json = json.loads(json_str)
     except Exception:

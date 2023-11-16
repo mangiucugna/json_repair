@@ -5,6 +5,8 @@ def test_repair_json():
     # Test with valid JSON strings
     assert repair_json("[]") == "[]"
     assert repair_json("{}") == "{}"
+    assert repair_json("\"") == '""'
+    assert repair_json("\n") == '""'
     assert (
         repair_json('{"name": "John", "age": 30, "city": "New York"}')
         == '{"name": "John", "age": 30, "city": "New York"}'
@@ -60,6 +62,16 @@ def test_repair_json():
         repair_json('{"text": "The quick brown fox,"}')
         == '{"text": "The quick brown fox,"}'
     )
+    assert {
+        repair_json('{"value_1": "value_2": "data"}') == '{"value_1": "value_2", "data": ""}'
+    }
+    assert {
+        repair_json('{"value_1": true, COMMENT "value_2": "data"}') == '{"value_1": "value_2", "": "data"}'
+    }
+    # Test with garbage comments
+    assert repair_json('{"value_1": true, SHOULD_NOT_EXIST "value_2": "data" AAAA }') == '{"value_1": true, "value_2": "data"}'
+
+
 
 
 def test_repair_json_with_objects():
@@ -110,6 +122,9 @@ def test_repair_json_with_objects():
     assert repair_json('{"employees":["John", "Anna", "Peter', True) == {
         "employees": ["John", "Anna", "Peter"]
     }
+    
+    #Test with garbage comments
+    assert repair_json('{"value_1": true, SHOULD_NOT_EXIST "value_2": "data" AAAA }', True) == {'value_1': True, 'value_2': 'data'}
 
 
 def test_repair_json_corner_cases_generate_by_gpt():
@@ -168,59 +183,3 @@ def test_repair_json_corner_cases_generate_by_gpt_with_objects():
 
     # Test with null values
     assert repair_json('{"key": null}', True) == {"key": None}
-
-def test_functions_output():
-    assert repair_json("""{
-    "path": "/Users/david/local-git/twitter_poster/db/db_methods.py",
-    "contents": "import pandas as pd
-from datetime import datetime 
-from sqlalchemy import create_engine
-from twitter_poster.modules.utils import date_to_str, str_to_date
-
-engine = create_engine('sqlite:///twitter_poster.db')
-
-def get_post (date: datetime) -> dict:
-    date_str = date_to_str (date)
-    with engine.connect() as connection:
-        result = connection.execute(f\"SELECT * FROM posts WHERE send_date='{date_str}'\")
-    post = result. fetchone ()
-    if post:
-        return f'id': postI0], 'tweet_id': post[1], 'content': post[2], 'send_date': str_to_date(post[3]), 'was_sent': post[4]}
-    else:
-        return {}
-
-def index_posts(start_date: datetime, end_date: datetime) → list:
-    start_date_str = date_to_str(start_date)
-    end_date_str = date_to_str (end_date)
-    with engine.connect) as connection:
-        result = connection.execute(f\"SELECT * FROM posts WHERE send_date BETWEEN '{start_date_str}' AND '{end_date_str}'\")
-    posts = result. fetchall)
-    return [{'id': post[0], "tweet_id': post[1], 'content': post[21, 'send_date': str_to_date(post[31), 'was_sent': post[4]} for post in posts]"
-}""") == """{"path": "/Users/david/local-git/twitter_poster/db/db_methods.py", "contents": "import pandas as pd\\nfrom datetime import datetime \\nfrom sqlalchemy import create_engine\\nfrom twitter_poster.modules.utils import date_to_str, str_to_date\\n\\nengine = create_engine('sqlite:///twitter_poster.db')\\n\\ndef get_post (date: datetime) -> dict:\\n    date_str = date_to_str (date)\\n    with engine.connect() as connection:\\n        result = connection.execute(f", "SELECT * FROM posts WHERE send_date='{date_str}'": "post = result. fetchone ()\\n    if post:\\n        return f'id': postI0]", "'tweet_id'": "post[1]", "'content'": "post[2]", "'send_date'": "str_to_date(post[3])", "'was_sent'": "post[4]"}"""
-    assert repair_json("""{
-    "path": "/Users/david/local-git/twitter_poster/db/db_methods.py",
-    "contents": "import pandas as pd
-from datetime import datetime 
-from sqlalchemy import create_engine
-from twitter_poster.modules.utils import date_to_str, str_to_date
-
-engine = create_engine('sqlite:///twitter_poster.db')
-
-def get_post (date: datetime) -> dict:
-    date_str = date_to_str (date)
-    with engine.connect() as connection:
-        result = connection.execute(f\"SELECT * FROM posts WHERE send_date='{date_str}'\")
-    post = result. fetchone ()
-    if post:
-        return f'id': postI0], 'tweet_id': post[1], 'content': post[2], 'send_date': str_to_date(post[3]), 'was_sent': post[4]}
-    else:
-        return {}
-
-def index_posts(start_date: datetime, end_date: datetime) → list:
-    start_date_str = date_to_str(start_date)
-    end_date_str = date_to_str (end_date)
-    with engine.connect) as connection:
-        result = connection.execute(f\"SELECT * FROM posts WHERE send_date BETWEEN '{start_date_str}' AND '{end_date_str}'\")
-    posts = result. fetchall)
-    return [{'id': post[0], "tweet_id': post[1], 'content': post[21, 'send_date': str_to_date(post[31), 'was_sent': post[4]} for post in posts]"
-}""", True) == {"path": "/Users/david/local-git/twitter_poster/db/db_methods.py", "contents": "import pandas as pd\nfrom datetime import datetime \nfrom sqlalchemy import create_engine\nfrom twitter_poster.modules.utils import date_to_str, str_to_date\n\nengine = create_engine('sqlite:///twitter_poster.db')\n\ndef get_post (date: datetime) -> dict:\n    date_str = date_to_str (date)\n    with engine.connect() as connection:\n        result = connection.execute(f", "SELECT * FROM posts WHERE send_date='{date_str}'": "post = result. fetchone ()\n    if post:\n        return f'id': postI0]", "'tweet_id'": "post[1]", "'content'": "post[2]", "'send_date'": "str_to_date(post[3])", "'was_sent'": "post[4]"}
