@@ -66,7 +66,7 @@ class JSONParser:
             return self.parse_string()
         # Ignore whitespaces outside of strings
         elif char.isspace():
-            self.index += 1
+            self.skip_whitespaces_at()
             return self.parse_json()
         # If everything else fails, then we give up and return an exception
         else:
@@ -87,7 +87,7 @@ class JSONParser:
             # <member> ::= <string> ': ' <json>
 
             # Skip filler whitespaces
-            self.trim()
+            self.skip_whitespaces_at()
 
             # Sometimes LLMs do weird things, if we find a ":" so early, we'll change it to "," and move on
             if self.get_char_at() == ":":
@@ -124,7 +124,7 @@ class JSONParser:
                 self.index += 1
 
             # Remove trailing spaces
-            self.trim()
+            self.skip_whitespaces_at()
 
         # Especially at the end of an LLM generated json you might miss the last "}"
         if self.get_char_at() and self.get_char_at() != "}":
@@ -173,7 +173,7 @@ class JSONParser:
         fixed_quotes = False
         # i.e. { name: "John" }
         # Remove any trailing space
-        self.trim()
+        self.skip_whitespaces_at()
         if self.get_char_at() != '"':
             self.insert_char_at('"')
             fixed_quotes = True
@@ -211,7 +211,7 @@ class JSONParser:
             and self.get_char_at().isspace()
         ):
             # skip whitespaces
-            self.trim()
+            self.skip_whitespaces_at()
             # This string is invalid if there's no valid termination afterwards
 
             if (
@@ -247,33 +247,27 @@ class JSONParser:
 
     def parse_boolean_or_null(self) -> Union[bool, None]:
         # <boolean> is one of the literal strings 'true', 'false', or 'null' (unquoted)
-        if self.json_str.startswith("true", self.index):
-            self.index += 4
-            return True
-        elif self.json_str.startswith("false", self.index):
-            self.index += 5
-            return False
-        elif self.json_str.startswith("null", self.index):
-            self.index += 4
-            return None
-        else:
-            # This is a string then
-            return self.parse_string()
+        literals = {"true": True, "false": False, "null": None}
+        if self.json_str[self.index :].startswith(tuple(literals.keys())):
+            literal = self.json_str[self.index : self.index + 4]
+            self.index += len(literal)
+            return literals[literal]
+
+        # This is a string then
+        return self.parse_string()
 
     def insert_char_at(self, char: str) -> None:
         self.json_str = self.json_str[: self.index] + char + self.json_str[self.index :]
         self.index += 1
 
-    def get_char_at(self, idx=0) -> Union[str, bool]:
+    def get_char_at(self) -> Union[str, bool]:
         # Why not use something simpler? Because we might be out of bounds and doing this check all the time is annoying
-        idx = self.index + idx
-        return self.json_str[idx] if idx < len(self.json_str) else False
+        return self.json_str[self.index] if self.index < len(self.json_str) else False
 
-    def remove_char_at(self, idx=0) -> None:
-        idx += 1
-        self.json_str = self.json_str[: self.index] + self.json_str[self.index + idx :]
+    def remove_char_at(self) -> None:
+        self.json_str = self.json_str[: self.index] + self.json_str[self.index + 1 :]
 
-    def trim(self) -> None:
+    def skip_whitespaces_at(self) -> None:
         # Remove trailing spaces
         while self.get_char_at() and self.get_char_at().isspace():
             self.index += 1
@@ -292,7 +286,7 @@ def repair_json(
     json_str = re.sub(r"/\*.*?\*/", "", json_str)
     try:
         parsed_json = json.loads(json_str)
-    except Exception:
+    except json.JSONDecodeError:
         parser = JSONParser(json_str)
         parsed_json = parser.parse()
     # It's useful to return the actual object instead of the json string, it allows this lib to be a replacement of the json library

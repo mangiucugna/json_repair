@@ -7,6 +7,7 @@ def test_repair_json():
     assert repair_json("{}") == "{}"
     assert repair_json("\"") == '""'
     assert repair_json("\n") == '""'
+    assert repair_json('{"key": true, "key2": false, "key3": null}') == '{"key": true, "key2": false, "key3": null}'
     assert (
         repair_json('{"name": "John", "age": 30, "city": "New York"}')
         == '{"name": "John", "age": 30, "city": "New York"}'
@@ -78,6 +79,7 @@ def test_repair_json_with_objects():
     # Test with valid JSON strings
     assert repair_json("[]", True) == []
     assert repair_json("{}", True) == {}
+    assert repair_json('{"key": true, "key2": false, "key3": null}', True) == {"key": True, "key2": False, "key3": None}
     assert repair_json('{"name": "John", "age": 30, "city": "New York"}', True) == {
         "name": "John",
         "age": 30,
