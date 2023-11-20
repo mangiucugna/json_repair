@@ -185,3 +185,9 @@ def test_repair_json_corner_cases_generate_by_gpt_with_objects():
 
     # Test with null values
     assert repair_json('{"key": null}', True) == {"key": None}
+
+def test_repair_json_skip_json_loads():
+    assert repair_json('{"key": true, "key2": false, "key3": null}', skip_json_loads=True) == '{"key": true, "key2": false, "key3": null}'
+    assert repair_json('{"key": true, "key2": false, "key3": null}', return_objects=True, skip_json_loads=True) == {"key": True, "key2": False, "key3": None}
+    assert repair_json('{"key": true, "key2": false, "key3": }', skip_json_loads=True) == '{"key": true, "key2": false, "key3": ""}'
+    assert repair_json('{"key": true, "key2": false, "key3": }', return_objects=True, skip_json_loads=True) == {"key": True, "key2": False, "key3": ""}

@@ -52,6 +52,10 @@ class JSONParser:
         # <array> starts with '['
         elif char == "[":
             return self.parse_array()
+        # there can be an edge case in which a key is empty and at the end of an object
+        # like "key": }. We return an empty string here to close the object properly
+        elif char == "}" and self.context == "object_value":
+            return ""
         # <string> starts with '"'
         elif char == '"':
             return self.parse_string()
@@ -247,11 +251,18 @@ class JSONParser:
 
     def parse_boolean_or_null(self) -> Union[bool, None]:
         # <boolean> is one of the literal strings 'true', 'false', or 'null' (unquoted)
-        literals = {"true": True, "false": False, "null": None}
-        if self.json_str[self.index :].startswith(tuple(literals.keys())):
-            literal = self.json_str[self.index : self.index + 4]
-            self.index += len(literal)
-            return literals[literal]
+        if self.json_str.startswith("true", self.index):
+            self.index += 4
+            return True
+        elif self.json_str.startswith("false", self.index):
+            self.index += 5
+            return False
+        elif self.json_str.startswith("null", self.index):
+            self.index += 4
+            return None
+        else:
+            # This is a string then
+            return self.parse_string()
 
         # This is a string then
         return self.parse_string()
@@ -274,7 +285,7 @@ class JSONParser:
 
 
 def repair_json(
-    json_str: str, return_objects: bool = False
+    json_str: str, return_objects: bool = False, skip_json_loads: bool = False
 ) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
     """
     Given a json formatted string, it will try to decode it and, if it fails, it will try to fix it.
@@ -284,11 +295,14 @@ def repair_json(
     json_str = re.sub(r"^\s+", "", json_str)
     json_str = re.sub(r"\s+$", "", json_str)
     json_str = re.sub(r"/\*.*?\*/", "", json_str)
-    try:
-        parsed_json = json.loads(json_str)
-    except json.JSONDecodeError:
-        parser = JSONParser(json_str)
+    parser = JSONParser(json_str)
+    if skip_json_loads:
         parsed_json = parser.parse()
+    else:
+        try:
+            parsed_json = json.loads(json_str)
+        except json.JSONDecodeError:
+            parsed_json = parser.parse()
     # It's useful to return the actual object instead of the json string, it allows this lib to be a replacement of the json library
     if return_objects:
         return parsed_json

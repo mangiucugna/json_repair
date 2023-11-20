@@ -22,7 +22,7 @@ You can look how I used it by checking out this demo: https://huggingface.co/spa
         # Not even this library could fix this JSON
 
 You can use this library to completely replace `json.loads()`:
-    
+
     import json_repair
     try:
         decoded_object = json_repair.loads(json_string)
@@ -36,6 +36,17 @@ or just
         decoded_object = json_repair.repair_json(json_string, return_objects=True)
     except Exception:
         # Manage Exception
+
+## Performance
+If you find this library too slow because is using `json.loads()` you can skip that by passing `skip_json_loads=True` to `repair_json`. Like:
+
+    from json_repair import repair_json
+    try:
+        good_json_string = repair_json(bad_json_string, skip_json_loads=True)
+    except Exception:
+        # Not even this library could fix this JSON
+
+I made a choice of not using any fast json library to avoid having any external dependency, so that anybody can use it regardless of their stack.
 
 # How it works
 This module will parse the JSON file following the BNF definition:
