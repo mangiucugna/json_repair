@@ -62,7 +62,7 @@ class JSONParser:
         # <number> starts with [0-9] or minus
         elif char.isdigit() or char == "-":
             return self.parse_number()
-        # <boolean> could (T)rue or (F)alse or (N)ull
+        # <boolean> could be (T)rue or (F)alse or (N)ull
         elif char == "t" or char == "f" or char == "n":
             return self.parse_boolean_or_null()
         # This might be a <string> that is missing the starting '"'
@@ -70,6 +70,7 @@ class JSONParser:
             return self.parse_string()
         # Ignore whitespaces outside of strings
         elif char.isspace():
+            self.index += 1
             self.skip_whitespaces_at()
             return self.parse_json()
         # If everything else fails, then we give up and return an exception
@@ -104,6 +105,7 @@ class JSONParser:
             self.context = "object_key"
 
             # <member> starts with a <string>
+            self.skip_whitespaces_at()
             key = self.parse_string()
             while key == "":
                 key = self.parse_string()
@@ -176,8 +178,6 @@ class JSONParser:
         # Flag to manage corner cases related to missing starting quote
         fixed_quotes = False
         # i.e. { name: "John" }
-        # Remove any trailing space
-        self.skip_whitespaces_at()
         if self.get_char_at() != '"':
             self.insert_char_at('"')
             fixed_quotes = True
@@ -218,11 +218,7 @@ class JSONParser:
             self.skip_whitespaces_at()
             # This string is invalid if there's no valid termination afterwards
 
-            if (
-                self.get_char_at() != ":"
-                or self.get_char_at() != ","
-                or self.get_char_at() != "}"
-            ):
+            if self.get_char_at() not in [":", ","]:
                 return ""
 
         end = self.index
@@ -236,11 +232,13 @@ class JSONParser:
 
     def parse_number(self) -> Union[float, int]:
         # <number> is a valid real number expressed in one of a number of given formats
-        number_pattern = r"-?\d+(\.\d+)?([eE][+-]?\d+)?"
-        match = re.match(number_pattern, self.json_str[self.index :])
-        if match:
-            number_str = match.group()
-            self.index += len(number_str)
+        number_str = ""
+        char = self.get_char_at()
+        while char and (char.isdigit() or char in "-.eE"):
+            number_str += char
+            self.index += 1
+            char = self.get_char_at()
+        if number_str:
             if "." in number_str or "e" in number_str or "E" in number_str:
                 return float(number_str)
             else:
@@ -264,24 +262,34 @@ class JSONParser:
             # This is a string then
             return self.parse_string()
 
-        # This is a string then
-        return self.parse_string()
-
     def insert_char_at(self, char: str) -> None:
         self.json_str = self.json_str[: self.index] + char + self.json_str[self.index :]
         self.index += 1
 
     def get_char_at(self) -> Union[str, bool]:
         # Why not use something simpler? Because we might be out of bounds and doing this check all the time is annoying
-        return self.json_str[self.index] if self.index < len(self.json_str) else False
+        try:
+            return self.json_str[self.index]
+        except IndexError:
+            return False
 
     def remove_char_at(self) -> None:
         self.json_str = self.json_str[: self.index] + self.json_str[self.index + 1 :]
 
     def skip_whitespaces_at(self) -> None:
         # Remove trailing spaces
-        while self.get_char_at() and self.get_char_at().isspace():
+        # I'd rather not do this BUT this method is called so many times that it makes sense to expand get_char_at
+        # At least this is what the profiler said and I believe in our lord and savior the profiler
+        try:
+            char = self.json_str[self.index]
+        except IndexError:
+            return
+        while char and char.isspace():
             self.index += 1
+            try:
+                char = self.json_str[self.index]
+            except IndexError:
+                return
 
 
 def repair_json(

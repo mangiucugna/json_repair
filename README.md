@@ -48,6 +48,10 @@ If you find this library too slow because is using `json.loads()` you can skip t
 
 I made a choice of not using any fast json library to avoid having any external dependency, so that anybody can use it regardless of their stack.
 
+Some rules of thumb to use:
+- Setting `return_objects=True` will always be faster because the parser returns an object already and it doesn't have serialize that object to JSON
+- `skip_json_loads` is faster only if you 100% know that the string is not a valid JSON
+
 # How it works
 This module will parse the JSON file following the BNF definition:
 
