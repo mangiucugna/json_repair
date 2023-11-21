@@ -1,18 +1,13 @@
 This simple package can be used to repair a broken json file. To know all cases in which this package will work, check out the unit test.
 
-Inspired by https://github.com/josdejong/jsonrepair with contributions by GPT-4
+Inspired by https://github.com/josdejong/jsonrepair
 
 # Motivation
-[UPDATE] OpenAI just released a new update with JSON mode in function calling. So I guess if you use OpenAI with function calling you don't need this.
+Some LLMs are a bit iffy when it comes to returning well formed JSON data, sometimes they skip a parentheses and sometimes they add some words in it, because that's what an LLM does.
+Luckily, the mistakes LLMs make are simple enough to be fixed without destroying the content.
+I searched for a lightweight python package that was able to reliably fix this problem but couldn't find any.
 
-I was using GPT a lot and there is no sure fire way to get structured output out of it.
-You can ask for a JSON output or use the Functions paradigm, either way the documentation from OpenAI clearly states that it might not return a valid JSON.
-Luckily, the mistakes GPT makes are simple enough to be fixed without destroying the content.
-I searched for a lightweight python package but couldn't find any.
-
-So I wrote this one.
-
-You can look how I used it by checking out this demo: https://huggingface.co/spaces/mangiucugna/difficult-conversations-bot/
+So I wrote one myself.
 
 # How to use
     from json_repair import repair_json

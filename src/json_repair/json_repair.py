@@ -48,9 +48,11 @@ class JSONParser:
             return ""
         # <object> starts with '{'
         elif char == "{":
+            self.index += 1
             return self.parse_object()
         # <array> starts with '['
         elif char == "[":
+            self.index += 1
             return self.parse_array()
         # there can be an edge case in which a key is empty and at the end of an object
         # like "key": }. We return an empty string here to close the object properly
@@ -79,12 +81,6 @@ class JSONParser:
 
     def parse_object(self) -> Dict[str, Any]:
         # <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
-
-        # This guard should never be called, but you never know what happens in the future
-        if self.get_char_at() != "{":
-            raise ValueError("Expected '{'")
-        self.index += 1
-
         obj = {}
         # Stop when you either find the closing parentheses or you have iterated over the entire string
         while self.get_char_at() and self.get_char_at() != "}":
@@ -140,11 +136,6 @@ class JSONParser:
 
     def parse_array(self) -> List[Any]:
         # <array> ::= '[' [ <json> *(', ' <json>) ] ']' ; A sequence of JSON values separated by commas
-        # This guard should never be called, but you never know what happens in the future
-        if self.get_char_at() != "[":
-            raise ValueError("Expected '['")
-        self.index += 1
-
         arr = []
         # Stop when you either find the closing parentheses or you have iterated over the entire string
         char = self.get_char_at()
