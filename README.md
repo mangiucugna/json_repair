@@ -5,9 +5,10 @@ Inspired by https://github.com/josdejong/jsonrepair
 # Motivation
 Some LLMs are a bit iffy when it comes to returning well formed JSON data, sometimes they skip a parentheses and sometimes they add some words in it, because that's what an LLM does.
 Luckily, the mistakes LLMs make are simple enough to be fixed without destroying the content.
+
 I searched for a lightweight python package that was able to reliably fix this problem but couldn't find any.
 
-So I wrote one myself.
+*So I wrote one*
 
 # How to use
     from json_repair import repair_json
@@ -22,7 +23,7 @@ You can use this library to completely replace `json.loads()`:
     try:
         decoded_object = json_repair.loads(json_string)
     except Exception:
-        # Manage Exception
+        # Not even this library could fix this JSON
 
 or just
 
@@ -30,9 +31,9 @@ or just
     try:
         decoded_object = json_repair.repair_json(json_string, return_objects=True)
     except Exception:
-        # Manage Exception
+        # Not even this library could fix this JSON
 
-## Performance
+## Performance considerations
 If you find this library too slow because is using `json.loads()` you can skip that by passing `skip_json_loads=True` to `repair_json`. Like:
 
     from json_repair import repair_json
@@ -71,13 +72,15 @@ If something is wrong (a missing parantheses or quotes for example) it will use 
 I am sure some corner cases will be missing, if you have examples please open an issue or even better push a PR
 
 # How to develop
-Just create a virtual environment with `requirements.txt`, the setup uses pre-commit to make sure all tests are run
+Just create a virtual environment with `requirements.txt`, the setup uses [pre-commit](https://pre-commit.com/) to make sure all tests are run.
+
+Make sure that the Github Actions running after pushing a new commit don't fail as well.
 
 # How to release
 You will need owner access to this repository
 - Edit `pyproject.toml` and update the version number appropriately using `semver` notation
-- Run `python -m build`
 - **Commit and push all changes to the repository before continuing or the next steps will fail**
+- Run `python -m build`
 - Create a new release in Github, making sure to tag all the issues solved and contributors. Create the new tag, same as the one in the build configuration
 - Once the release is created, a new Github Actions workflow will start to publish on Pypi, make sure it didn't fail
 
