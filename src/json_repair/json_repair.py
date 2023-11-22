@@ -103,7 +103,7 @@ class JSONParser:
             # <member> starts with a <string>
             self.skip_whitespaces_at()
             key = self.parse_string()
-            while key == "":
+            while self.get_char_at() and key == "":
                 key = self.parse_string()
 
             # We reached the end here
