@@ -83,7 +83,7 @@ class JSONParser:
         # <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
         obj = {}
         # Stop when you either find the closing parentheses or you have iterated over the entire string
-        while self.get_char_at() and self.get_char_at() != "}":
+        while (self.get_char_at() or "}") != "}":
             # This is what we expect to find:
             # <member> ::= <string> ': ' <json>
 
@@ -91,7 +91,7 @@ class JSONParser:
             self.skip_whitespaces_at()
 
             # Sometimes LLMs do weird things, if we find a ":" so early, we'll change it to "," and move on
-            if self.get_char_at() == ":":
+            if (self.get_char_at() or "") == ":":
                 self.remove_char_at()
                 self.insert_char_at(",")
                 self.index += 1
@@ -103,7 +103,7 @@ class JSONParser:
             # <member> starts with a <string>
             self.skip_whitespaces_at()
             key = self.parse_string()
-            while self.get_char_at() and key == "":
+            while key == "" and self.get_char_at():
                 key = self.parse_string()
 
             # We reached the end here
@@ -113,7 +113,7 @@ class JSONParser:
             # Reset context
             self.context = ""
             # An extreme case of missing ":" after a key
-            if self.get_char_at() and self.get_char_at() != ":":
+            if (self.get_char_at() or "") != ":":
                 self.insert_char_at(":")
             self.index += 1
             self.context = "object_value"
@@ -122,14 +122,14 @@ class JSONParser:
             self.context = ""
             obj[key] = value
 
-            if self.get_char_at() == ",":
+            if (self.get_char_at() or "") == ",":
                 self.index += 1
 
             # Remove trailing spaces
             self.skip_whitespaces_at()
 
         # Especially at the end of an LLM generated json you might miss the last "}"
-        if self.get_char_at() and self.get_char_at() != "}":
+        if (self.get_char_at() or "}") != "}":
             self.insert_char_at("}")
         self.index += 1
         return obj
@@ -138,8 +138,7 @@ class JSONParser:
         # <array> ::= '[' [ <json> *(', ' <json>) ] ']' ; A sequence of JSON values separated by commas
         arr = []
         # Stop when you either find the closing parentheses or you have iterated over the entire string
-        char = self.get_char_at()
-        while char and char != "]":
+        while (self.get_char_at() or "]") != "]":
             value = self.parse_json()
             arr.append(value)
 
@@ -149,13 +148,10 @@ class JSONParser:
                 self.index += 1
                 char = self.get_char_at()
 
-            # Update the loop variable, in case someone above changed the index
-            char = self.get_char_at()
-
         # Especially at the end of an LLM generated json you might miss the last "]"
-        if self.get_char_at() != "]":
+        if (self.get_char_at() or "]") != "]":
             # Sometimes when you fix a missing "]" you'll have a trailing "," there that makes the JSON invalid
-            if self.get_char_at() == ",":
+            if (self.get_char_at() or "") == ",":
                 # Remove trailing "," before adding the "]"
                 self.remove_char_at()
             self.insert_char_at("]")
@@ -169,7 +165,7 @@ class JSONParser:
         # Flag to manage corner cases related to missing starting quote
         fixed_quotes = False
         # i.e. { name: "John" }
-        if self.get_char_at() != '"':
+        if (self.get_char_at() or '"') != '"':
             self.insert_char_at('"')
             fixed_quotes = True
         else:
@@ -200,23 +196,22 @@ class JSONParser:
 
         # If the cycle stopped at a space we have some doubts on wheter this is a valid string, check one char ahead
         if (
-            self.get_char_at()
-            and fixed_quotes
+            fixed_quotes
             and self.context == "object_key"
-            and self.get_char_at().isspace()
+            and (self.get_char_at() or "").isspace()
         ):
             # skip whitespaces
             self.skip_whitespaces_at()
             # This string is invalid if there's no valid termination afterwards
 
-            if self.get_char_at() not in [":", ","]:
+            if (self.get_char_at() or "") not in [":", ","]:
                 return ""
 
         end = self.index
-        if self.get_char_at() != '"':
+        if (self.get_char_at() or '"') != '"':
             self.insert_char_at('"')
         # A fallout of the previous special case in the while loop, we need to update the index only if we had a closing quote
-        if self.get_char_at() == '"':
+        if (self.get_char_at() or "") == '"':
             self.index += 1
 
         return self.json_str[start:end]
