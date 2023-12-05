@@ -140,6 +140,10 @@ class JSONParser:
         # Stop when you either find the closing parentheses or you have iterated over the entire string
         while (self.get_char_at() or "]") != "]":
             value = self.parse_json()
+
+            if not value:
+                break
+
             arr.append(value)
 
             # skip over whitespace after a value but before closing ]
