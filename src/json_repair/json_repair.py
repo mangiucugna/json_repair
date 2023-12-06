@@ -100,9 +100,10 @@ class JSONParser:
             # Context is used in the string parser to manage the lack of quotes
             self.context = "object_key"
 
-            # <member> starts with a <string>
             self.skip_whitespaces_at()
-            key = self.parse_string()
+
+            # <member> starts with a <string>
+            key = ""
             while key == "" and self.get_char_at():
                 key = self.parse_string()
 
@@ -110,8 +111,6 @@ class JSONParser:
             if key == "}":
                 continue
 
-            # Reset context
-            self.context = ""
             # An extreme case of missing ":" after a key
             if (self.get_char_at() or "") != ":":
                 self.insert_char_at(":")
@@ -119,6 +118,8 @@ class JSONParser:
             self.context = "object_value"
             # The value can be any valid json
             value = self.parse_json()
+
+            # Reset context since our job is done
             self.context = ""
             obj[key] = value
 
@@ -141,6 +142,7 @@ class JSONParser:
         while (self.get_char_at() or "]") != "]":
             value = self.parse_json()
 
+            # It is possible that parse_json() returns nothing valid, so we stop
             if not value:
                 break
 
@@ -153,9 +155,10 @@ class JSONParser:
                 char = self.get_char_at()
 
         # Especially at the end of an LLM generated json you might miss the last "]"
-        if (self.get_char_at() or "]") != "]":
+        char = self.get_char_at()
+        if char and char != "]":
             # Sometimes when you fix a missing "]" you'll have a trailing "," there that makes the JSON invalid
-            if (self.get_char_at() or "") == ",":
+            if char == ",":
                 # Remove trailing "," before adding the "]"
                 self.remove_char_at()
             self.insert_char_at("]")
@@ -165,16 +168,20 @@ class JSONParser:
 
     def parse_string(self) -> str:
         # <string> is a string of valid characters enclosed in quotes
+        # i.e. { name: "John" }
         # Somehow all weird cases in an invalid JSON happen to be resolved in this function, so be careful here
+
         # Flag to manage corner cases related to missing starting quote
         fixed_quotes = False
-        # i.e. { name: "John" }
-        if (self.get_char_at() or '"') != '"':
+
+        char = self.get_char_at()
+        if char != '"':
             self.insert_char_at('"')
             fixed_quotes = True
         else:
             self.index += 1
-        # Start position of the string
+
+        # Start position of the string (to use later in the return value)
         start = self.index
 
         # Here things get a bit hairy because a string missing the final quote can also be a key or a value in an object
@@ -184,38 +191,26 @@ class JSONParser:
         # * It iterated over the entire sequence
         # * If we are fixing missing quotes in an object, when it finds the special terminators
         char = self.get_char_at()
-        while (
-            char
-            and char != '"'
-            and (not fixed_quotes or self.context != "object_key" or char != ":")
-            and (not fixed_quotes or self.context != "object_key" or not char.isspace())
-            and (
-                not fixed_quotes
-                or self.context != "object_value"
-                or (char != "," and char != "}")
-            )
-        ):
+        while char and char != '"':
+            if fixed_quotes:
+                if self.context == "object_key" and (char == ":" or char.isspace()):
+                    break
+                elif self.context == "object_value" and (char == "," or char == "}"):
+                    break
             self.index += 1
             char = self.get_char_at()
 
-        # If the cycle stopped at a space we have some doubts on wheter this is a valid string, check one char ahead
-        if (
-            fixed_quotes
-            and self.context == "object_key"
-            and (self.get_char_at() or "").isspace()
-        ):
-            # skip whitespaces
+        if char and fixed_quotes and self.context == "object_key" and char.isspace():
             self.skip_whitespaces_at()
-            # This string is invalid if there's no valid termination afterwards
-
-            if (self.get_char_at() or "") not in [":", ","]:
+            if self.get_char_at() not in [":", ","]:
                 return ""
 
         end = self.index
-        if (self.get_char_at() or '"') != '"':
-            self.insert_char_at('"')
+
         # A fallout of the previous special case in the while loop, we need to update the index only if we had a closing quote
-        if (self.get_char_at() or "") == '"':
+        if char != '"':
+            self.insert_char_at('"')
+        else:
             self.index += 1
 
         return self.json_str[start:end]
@@ -223,8 +218,9 @@ class JSONParser:
     def parse_number(self) -> Union[float, int]:
         # <number> is a valid real number expressed in one of a number of given formats
         number_str = ""
+        number_chars = set("0123456789-.eE")
         char = self.get_char_at()
-        while char and (char.isdigit() or char in "-.eE"):
+        while char and char in number_chars:
             number_str += char
             self.index += 1
             char = self.get_char_at()
@@ -239,18 +235,14 @@ class JSONParser:
 
     def parse_boolean_or_null(self) -> Union[bool, None]:
         # <boolean> is one of the literal strings 'true', 'false', or 'null' (unquoted)
-        if self.json_str.startswith("true", self.index):
-            self.index += 4
-            return True
-        elif self.json_str.startswith("false", self.index):
-            self.index += 5
-            return False
-        elif self.json_str.startswith("null", self.index):
-            self.index += 4
-            return None
-        else:
-            # This is a string then
-            return self.parse_string()
+        boolean_map = {"true": (True, 4), "false": (False, 5), "null": (None, 4)}
+        for key, (value, length) in boolean_map.items():
+            if self.json_str.startswith(key, self.index):
+                self.index += length
+                return value
+
+        # This is a string then
+        return self.parse_string()
 
     def insert_char_at(self, char: str) -> None:
         self.json_str = self.json_str[: self.index] + char + self.json_str[self.index :]
