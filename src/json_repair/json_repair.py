@@ -61,6 +61,8 @@ class JSONParser:
         # <string> starts with '"'
         elif char == '"':
             return self.parse_string()
+        elif char == "'":
+            return self.parse_string(use_single_quotes=True)
         # <number> starts with [0-9] or minus
         elif char.isdigit() or char == "-":
             return self.parse_number()
@@ -105,7 +107,9 @@ class JSONParser:
             # <member> starts with a <string>
             key = ""
             while key == "" and self.get_char_at():
-                key = self.parse_string()
+                key = self.parse_string(
+                    use_single_quotes=(self.json_str[self.index] == "'")
+                )
 
             # We reached the end here
             if key == "}":
@@ -166,17 +170,19 @@ class JSONParser:
         self.index += 1
         return arr
 
-    def parse_string(self) -> str:
+    def parse_string(self, use_single_quotes=False) -> str:
         # <string> is a string of valid characters enclosed in quotes
         # i.e. { name: "John" }
         # Somehow all weird cases in an invalid JSON happen to be resolved in this function, so be careful here
 
         # Flag to manage corner cases related to missing starting quote
         fixed_quotes = False
-
+        string_terminator = '"'
+        if use_single_quotes:
+            string_terminator = "'"
         char = self.get_char_at()
-        if char != '"':
-            self.insert_char_at('"')
+        if char != string_terminator:
+            self.insert_char_at(string_terminator)
             fixed_quotes = True
         else:
             self.index += 1
@@ -191,7 +197,7 @@ class JSONParser:
         # * It iterated over the entire sequence
         # * If we are fixing missing quotes in an object, when it finds the special terminators
         char = self.get_char_at()
-        while char and char != '"':
+        while char and char != string_terminator:
             if fixed_quotes:
                 if self.context == "object_key" and (char == ":" or char.isspace()):
                     break
@@ -208,8 +214,8 @@ class JSONParser:
         end = self.index
 
         # A fallout of the previous special case in the while loop, we need to update the index only if we had a closing quote
-        if char != '"':
-            self.insert_char_at('"')
+        if char != string_terminator:
+            self.insert_char_at(string_terminator)
         else:
             self.index += 1
 

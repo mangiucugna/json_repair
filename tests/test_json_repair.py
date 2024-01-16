@@ -8,6 +8,7 @@ def test_repair_json():
     assert repair_json("\"") == '""'
     assert repair_json("\n") == '""'
     assert repair_json('{"key": true, "key2": false, "key3": null}') == '{"key": true, "key2": false, "key3": null}'
+    assert repair_json("{'key': 'string', 'key2': false, \"key3\": null, \"key4\": unquoted}") == '{"key": "string", "key2": false, "key3": null, "key4": "unquoted"}'
     assert (
         repair_json('{"name": "John", "age": 30, "city": "New York"}')
         == '{"name": "John", "age": 30, "city": "New York"}'
@@ -66,6 +67,10 @@ def test_repair_json():
         repair_json('{"text": "The quick brown fox,"}')
         == '{"text": "The quick brown fox,"}'
     )
+    assert (
+        repair_json('{"text": "The quick brown fox won\'t jump"}')
+        == '{"text": "The quick brown fox won\'t jump"}'
+    )
     assert {
         repair_json('{"value_1": "value_2": "data"}') == '{"value_1": "value_2", "data": ""}'
     }
@@ -119,6 +124,7 @@ def test_repair_json_with_objects():
     assert repair_json("[", True) == []
     assert repair_json("{", True) == {}
     assert repair_json('{"key": "value:value"}', True) == {"key": "value:value"}
+    assert repair_json("{'key': 'string', 'key2': false, \"key3\": null, \"key4\": unquoted}", True) == {"key": "string", "key2": False, "key3": None, "key4": "unquoted"}
     assert repair_json('{"name": "John", "age": 30, "city": "New', True) == {
         "name": "John",
         "age": 30,
