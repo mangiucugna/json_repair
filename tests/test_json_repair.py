@@ -81,6 +81,12 @@ def test_repair_json():
     }
     # Test with garbage comments
     assert repair_json('{"value_1": true, SHOULD_NOT_EXIST "value_2": "data" AAAA }') == '{"value_1": true, "value_2": "data"}'
+    assert {
+        repair_json('{"" : true, "key2": "value2"}') == '{" ": true, "key2": "value_2"}'
+    }
+    assert {
+        repair_json('{"": true, "key2": "value2"}') == '{"empty_placeholder": true, "key2": "value_2"}'
+    }
 
 
 

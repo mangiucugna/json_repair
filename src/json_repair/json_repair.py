@@ -111,6 +111,11 @@ class JSONParser:
                     use_single_quotes=(self.json_str[self.index] == "'")
                 )
 
+                # This can happen sometimes like { "": "value" }
+                if key == "" and self.get_char_at() == ":":
+                    key = "empty_placeholder"
+                    break
+
             # We reached the end here
             if key == "}":
                 continue
