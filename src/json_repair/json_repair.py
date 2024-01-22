@@ -202,6 +202,7 @@ class JSONParser:
         # * It iterated over the entire sequence
         # * If we are fixing missing quotes in an object, when it finds the special terminators
         char = self.get_char_at()
+        fix_broken_markdown_link = False
         while char and char != string_terminator:
             if fixed_quotes:
                 if self.context == "object_key" and (char == ":" or char.isspace()):
@@ -210,6 +211,17 @@ class JSONParser:
                     break
             self.index += 1
             char = self.get_char_at()
+            # ChatGPT sometimes forget to quote links in markdown like: { "content": "[LINK]("https://google.com")" }
+            if char == string_terminator and (
+                fix_broken_markdown_link
+                or (
+                    self.index - 2 > 0
+                    and self.json_str[self.index - 2 : self.index] == "]("
+                )
+            ):
+                fix_broken_markdown_link = not fix_broken_markdown_link
+                self.index += 1
+                char = self.get_char_at()
 
         if char and fixed_quotes and self.context == "object_key" and char.isspace():
             self.skip_whitespaces_at()

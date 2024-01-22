@@ -88,6 +88,9 @@ def test_repair_json():
         repair_json('{"": true, "key2": "value2"}') == '{"empty_placeholder": true, "key2": "value_2"}'
     }
 
+    #Test markdown stupidities from ChatGPT
+    assert repair_json('{ "content": "[LINK]("https://google.com")" }') == '{"content": "[LINK](\\"https://google.com\\")"}'
+
 
 
 
@@ -144,6 +147,9 @@ def test_repair_json_with_objects():
     
     #Test with garbage comments
     assert repair_json('{"value_1": true, SHOULD_NOT_EXIST "value_2": "data" AAAA }', True) == {'value_1': True, 'value_2': 'data'}
+
+    #Test markdown stupidities from ChatGPT
+    assert repair_json('{ "content": "[LINK]("https://google.com")" }', True) == { "content": "[LINK](\"https://google.com\")"}
 
 
 def test_repair_json_corner_cases_generate_by_gpt():
