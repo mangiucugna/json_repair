@@ -8,6 +8,7 @@ def test_repair_json():
     assert repair_json("\"") == '""'
     assert repair_json("\n") == '""'
     assert repair_json('{"key": true, "key2": false, "key3": null}') == '{"key": true, "key2": false, "key3": null}'
+    assert repair_json('{"key": TRUE, "key2": FALSE, "key3": Null}') == '{"key": true, "key2": false, "key3": null}'
     assert repair_json("{'key': 'string', 'key2': false, \"key3\": null, \"key4\": unquoted}") == '{"key": "string", "key2": false, "key3": null, "key4": "unquoted"}'
     assert (
         repair_json('{"name": "John", "age": 30, "city": "New York"}')
@@ -90,6 +91,8 @@ def test_repair_json():
 
     #Test markdown stupidities from ChatGPT
     assert repair_json('{ "content": "[LINK]("https://google.com")" }') == '{"content": "[LINK](\\"https://google.com\\")"}'
+    assert repair_json('{ "content": "[LINK](" }') == '{"content": "[LINK]("}'
+    assert repair_json('{ "content": "[LINK](", "key": true }') == '{"content": "[LINK](", "key": true}'
 
 
 

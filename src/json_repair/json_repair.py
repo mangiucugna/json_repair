@@ -67,7 +67,7 @@ class JSONParser:
         elif char.isdigit() or char == "-":
             return self.parse_number()
         # <boolean> could be (T)rue or (F)alse or (N)ull
-        elif char == "t" or char == "f" or char == "n":
+        elif char.lower() in ["t", "f", "n"]:
             return self.parse_boolean_or_null()
         # This might be a <string> that is missing the starting '"'
         elif char.isalpha():
@@ -212,11 +212,12 @@ class JSONParser:
             self.index += 1
             char = self.get_char_at()
             # ChatGPT sometimes forget to quote links in markdown like: { "content": "[LINK]("https://google.com")" }
-            if char == string_terminator and (
-                fix_broken_markdown_link
-                or (
-                    self.index - 2 > 0
-                    and self.json_str[self.index - 2 : self.index] == "]("
+            if (
+                char == string_terminator
+                and self.get_next_char() != ","
+                and (
+                    fix_broken_markdown_link
+                    or (self.get_prev_char(2) + self.get_prev_char()) == "]("
                 )
             ):
                 fix_broken_markdown_link = not fix_broken_markdown_link
@@ -260,7 +261,7 @@ class JSONParser:
         # <boolean> is one of the literal strings 'true', 'false', or 'null' (unquoted)
         boolean_map = {"true": (True, 4), "false": (False, 5), "null": (None, 4)}
         for key, (value, length) in boolean_map.items():
-            if self.json_str.startswith(key, self.index):
+            if self.json_str.lower().startswith(key, self.index):
                 self.index += length
                 return value
 
@@ -275,6 +276,20 @@ class JSONParser:
         # Why not use something simpler? Because we might be out of bounds and doing this check all the time is annoying
         try:
             return self.json_str[self.index]
+        except IndexError:
+            return False
+
+    def get_prev_char(self, count=1):
+        # Why not use something simpler? Because we might be out of bounds and doing this check all the time is annoying
+        try:
+            return self.json_str[self.index - count]
+        except IndexError:
+            return False
+
+    def get_next_char(self, count=1):
+        # Why not use something simpler? Because we might be out of bounds and doing this check all the time is annoying
+        try:
+            return self.json_str[self.index + count]
         except IndexError:
             return False
 
