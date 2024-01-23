@@ -207,17 +207,18 @@ class JSONParser:
             if fixed_quotes:
                 if self.context == "object_key" and (char == ":" or char.isspace()):
                     break
-                elif self.context == "object_value" and (char == "," or char == "}"):
+                elif self.context == "object_value" and char in [",", "}"]:
                     break
             self.index += 1
             char = self.get_char_at()
             # ChatGPT sometimes forget to quote links in markdown like: { "content": "[LINK]("https://google.com")" }
             if (
                 char == string_terminator
-                and self.get_next_char() != ","
+                # Next character is not a comma
+                and self.get_char_at(1) != ","
                 and (
                     fix_broken_markdown_link
-                    or (self.get_prev_char(2) + self.get_prev_char()) == "]("
+                    or (self.get_char_at(-2) == "]" and self.get_char_at(-1)) == "("
                 )
             ):
                 fix_broken_markdown_link = not fix_broken_markdown_link
@@ -239,7 +240,7 @@ class JSONParser:
 
         return self.json_str[start:end]
 
-    def parse_number(self) -> Union[float, int]:
+    def parse_number(self) -> Union[float, int, str]:
         # <number> is a valid real number expressed in one of a number of given formats
         number_str = ""
         number_chars = set("0123456789-.eE")
@@ -257,7 +258,7 @@ class JSONParser:
             # This is a string then
             return self.parse_string()
 
-    def parse_boolean_or_null(self) -> Union[bool, None]:
+    def parse_boolean_or_null(self) -> Union[bool, str, None]:
         # <boolean> is one of the literal strings 'true', 'false', or 'null' (unquoted)
         boolean_map = {"true": (True, 4), "false": (False, 5), "null": (None, 4)}
         for key, (value, length) in boolean_map.items():
@@ -272,21 +273,7 @@ class JSONParser:
         self.json_str = self.json_str[: self.index] + char + self.json_str[self.index :]
         self.index += 1
 
-    def get_char_at(self) -> Union[str, bool]:
-        # Why not use something simpler? Because we might be out of bounds and doing this check all the time is annoying
-        try:
-            return self.json_str[self.index]
-        except IndexError:
-            return False
-
-    def get_prev_char(self, count=1):
-        # Why not use something simpler? Because we might be out of bounds and doing this check all the time is annoying
-        try:
-            return self.json_str[self.index - count]
-        except IndexError:
-            return False
-
-    def get_next_char(self, count=1):
+    def get_char_at(self, count: int = 0) -> Union[str, bool]:
         # Why not use something simpler? Because we might be out of bounds and doing this check all the time is annoying
         try:
             return self.json_str[self.index + count]
