@@ -7,8 +7,9 @@ def test_repair_json():
     assert repair_json("{}") == "{}"
     assert repair_json("\"") == '""'
     assert repair_json("\n") == '""'
-    assert repair_json('{"key": true, "key2": false, "key3": null}') == '{"key": true, "key2": false, "key3": null}'
-    assert repair_json('{"key": TRUE, "key2": FALSE, "key3": Null}') == '{"key": true, "key2": false, "key3": null}'
+    assert repair_json("   /* COMMENT */    ") == '""'
+    assert repair_json('  {"key": true, "key2": false, "key3": null}') == '{"key": true, "key2": false, "key3": null}'
+    assert repair_json('{"key": TRUE, "key2": FALSE, "key3": Null}   ') == '{"key": true, "key2": false, "key3": null}'
     assert repair_json("{'key': 'string', 'key2': false, \"key3\": null, \"key4\": unquoted}") == '{"key": "string", "key2": false, "key3": null, "key4": "unquoted"}'
     assert (
         repair_json('{"name": "John", "age": 30, "city": "New York"}')
