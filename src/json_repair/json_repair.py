@@ -23,7 +23,6 @@ All supported use cases are in the unit tests
 """
 
 import json
-import re
 from typing import Any, Dict, List, Union
 
 
@@ -307,8 +306,6 @@ def repair_json(
     It will return the fixed string by default.
     When `return_objects=True` is passed, it will return the decoded data structure instead.
     """
-    json_str = json_str.strip()
-    json_str = re.sub(r"/\*.*?\*/", "", json_str)
     parser = JSONParser(json_str)
     if skip_json_loads:
         parsed_json = parser.parse()
