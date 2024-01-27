@@ -93,6 +93,11 @@ def test_repair_json():
     assert repair_json('{ "content": "[LINK]("https://google.com")" }') == '{"content": "[LINK](\\"https://google.com\\")"}'
     assert repair_json('{ "content": "[LINK](" }') == '{"content": "[LINK]("}'
     assert repair_json('{ "content": "[LINK](", "key": true }') == '{"content": "[LINK](", "key": true}'
+    assert repair_json("""
+                       ```json
+                       { "key": "value" }
+                       ```""") == '{"key": "value"}'
+    assert repair_json('````{ "key": "value" }```') == '{"key": "value"}'
 
 
 

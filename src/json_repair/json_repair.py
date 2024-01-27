@@ -306,6 +306,7 @@ def repair_json(
     It will return the fixed string by default.
     When `return_objects=True` is passed, it will return the decoded data structure instead.
     """
+    json_str = json_str.strip().lstrip("```json").rstrip("```")
     parser = JSONParser(json_str)
     if skip_json_loads:
         parsed_json = parser.parse()
