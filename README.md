@@ -33,6 +33,16 @@ or just
     except Exception:
         # Not even this library could fix this JSON
 
+## Adding to requirements
+**Please pin this library only on the major version!**
+
+We use TDD and strict semantic versioning, there will be frequent updates and no breaking changes in minor and patch versions.
+To ensure that you only pin the major version of this library in your `requirements.txt`, specify the package name followed by the major version and a wildcard for minor and patch versions. For example:
+
+    json_repair==0.*
+
+In this example, any version that starts with `0.` will be acceptable, allowing for updates on minor and patch versions.
+
 ## Performance considerations
 If you find this library too slow because is using `json.loads()` you can skip that by passing `skip_json_loads=True` to `repair_json`. Like:
 

@@ -46,8 +46,10 @@ def test_repair_json():
     # Test with edge cases
     assert repair_json(" ") == '""'
     assert repair_json("[") == "[]"
+    assert repair_json("]") == '""'
     assert repair_json("[[1\n\n]") == "[[1]]"
     assert repair_json("{") == "{}"
+    assert repair_json("}") == '""'
     assert repair_json('{"') == '{"": ""}'
     assert repair_json('["') == '[]'
     assert repair_json("'\"'") == '"\\\""'

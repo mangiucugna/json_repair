@@ -71,14 +71,10 @@ class JSONParser:
         # This might be a <string> that is missing the starting '"'
         elif char.isalpha():
             return self.parse_string()
-        # Ignore whitespaces outside of strings
-        elif char.isspace():
-            self.index += 1
-            self.skip_whitespaces_at()
-            return self.parse_json()
-        # If everything else fails, then we give up and return an exception
+        # If everything else fails, we just ignore and move on
         else:
-            raise ValueError("Invalid JSON format")
+            self.index += 1
+            return self.parse_json()
 
     def parse_object(self) -> Dict[str, Any]:
         # <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
@@ -306,7 +302,7 @@ def repair_json(
     It will return the fixed string by default.
     When `return_objects=True` is passed, it will return the decoded data structure instead.
     """
-    json_str = json_str.strip().lstrip("```json").rstrip("```")
+    json_str = json_str.strip().lstrip("```json")
     parser = JSONParser(json_str)
     if skip_json_loads:
         parsed_json = parser.parse()
