@@ -23,6 +23,7 @@ All supported use cases are in the unit tests
 """
 
 import json
+import re
 from typing import Any, Dict, List, Union
 
 
@@ -58,6 +59,9 @@ class JSONParser:
         elif char == "}" and self.context == "object_value":
             return ""
         # <string> starts with '"'
+        elif char == '.':
+            self.index += 1
+            return self.parse_json()
         elif char == '"':
             return self.parse_string()
         elif char == "'":
@@ -134,6 +138,7 @@ class JSONParser:
             if (self.get_char_at() or "") == ",":
                 self.index += 1
 
+
             # Remove trailing spaces
             self.skip_whitespaces_at()
 
@@ -153,12 +158,11 @@ class JSONParser:
             # It is possible that parse_json() returns nothing valid, so we stop
             if not value:
                 break
-
             arr.append(value)
 
             # skip over whitespace after a value but before closing ]
             char = self.get_char_at()
-            while char and (char.isspace() or char == ","):
+            while char and (char.isspace() or char in ".,"):
                 self.index += 1
                 char = self.get_char_at()
 
@@ -166,7 +170,7 @@ class JSONParser:
         char = self.get_char_at()
         if char and char != "]":
             # Sometimes when you fix a missing "]" you'll have a trailing "," there that makes the JSON invalid
-            if char == ",":
+            if char in ",":
                 # Remove trailing "," before adding the "]"
                 self.remove_char_at()
             self.insert_char_at("]")
@@ -306,7 +310,8 @@ def repair_json(
     It will return the fixed string by default.
     When `return_objects=True` is passed, it will return the decoded data structure instead.
     """
-    json_str = json_str.strip().lstrip("```json").rstrip("```")
+    json_str = json_str.strip()
+    json_str = re.sub(r"/\*.*?\*/", "", json_str)
     parser = JSONParser(json_str)
     if skip_json_loads:
         parsed_json = parser.parse()
