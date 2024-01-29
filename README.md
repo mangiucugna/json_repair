@@ -12,28 +12,36 @@ I searched for a lightweight python package that was able to reliably fix this p
 
 # How to use
     from json_repair import repair_json
-    try:
-        good_json_string = repair_json(bad_json_string)
-    except Exception:
-        # Not even this library could fix this JSON
+
+    good_json_string = repair_json(bad_json_string)
+    # If the string was super broken this will return an empty string
 
 You can use this library to completely replace `json.loads()`:
 
     import json_repair
-    try:
-        decoded_object = json_repair.loads(json_string)
-    except Exception:
-        # Not even this library could fix this JSON
+    
+    decoded_object = json_repair.loads(json_string)
 
 or just
 
     import json_repair
-    try:
-        decoded_object = json_repair.repair_json(json_string, return_objects=True)
-    except Exception:
-        # Not even this library could fix this JSON
+    
+    decoded_object = json_repair.repair_json(json_string, return_objects=True)
+    
+### Performance considerations
+If you find this library too slow because is using `json.loads()` you can skip that by passing `skip_json_loads=True` to `repair_json`. Like:
 
-## Adding to requirements
+    from json_repair import repair_json
+    
+    good_json_string = repair_json(bad_json_string, skip_json_loads=True)
+
+I made a choice of not using any fast json library to avoid having any external dependency, so that anybody can use it regardless of their stack.
+
+Some rules of thumb to use:
+- Setting `return_objects=True` will always be faster because the parser returns an object already and it doesn't have serialize that object to JSON
+- `skip_json_loads` is faster only if you 100% know that the string is not a valid JSON
+
+# Adding to requirements
 **Please pin this library only on the major version!**
 
 We use TDD and strict semantic versioning, there will be frequent updates and no breaking changes in minor and patch versions.
@@ -42,21 +50,6 @@ To ensure that you only pin the major version of this library in your `requireme
     json_repair==0.*
 
 In this example, any version that starts with `0.` will be acceptable, allowing for updates on minor and patch versions.
-
-## Performance considerations
-If you find this library too slow because is using `json.loads()` you can skip that by passing `skip_json_loads=True` to `repair_json`. Like:
-
-    from json_repair import repair_json
-    try:
-        good_json_string = repair_json(bad_json_string, skip_json_loads=True)
-    except Exception:
-        # Not even this library could fix this JSON
-
-I made a choice of not using any fast json library to avoid having any external dependency, so that anybody can use it regardless of their stack.
-
-Some rules of thumb to use:
-- Setting `return_objects=True` will always be faster because the parser returns an object already and it doesn't have serialize that object to JSON
-- `skip_json_loads` is faster only if you 100% know that the string is not a valid JSON
 
 # How it works
 This module will parse the JSON file following the BNF definition:
