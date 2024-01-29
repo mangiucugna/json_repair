@@ -41,7 +41,7 @@ Some rules of thumb to use:
 - Setting `return_objects=True` will always be faster because the parser returns an object already and it doesn't have serialize that object to JSON
 - `skip_json_loads` is faster only if you 100% know that the string is not a valid JSON
 
-# Adding to requirements
+## Adding to requirements
 **Please pin this library only on the major version!**
 
 We use TDD and strict semantic versioning, there will be frequent updates and no breaking changes in minor and patch versions.
