@@ -247,6 +247,9 @@ class JSONParser:
         if number_str:
             if "." in number_str or "e" in number_str or "E" in number_str:
                 return float(number_str)
+            elif number_str == "-":
+                # If there is a stray "-" this will throw an exception, throw away this character
+                return self.parse_json()
             else:
                 return int(number_str)
         else:

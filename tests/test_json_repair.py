@@ -90,6 +90,8 @@ def test_repair_json():
     assert {
         repair_json('{"": true, "key2": "value2"}') == '{"empty_placeholder": true, "key2": "value_2"}'
     }
+    # Test a nasty corner case
+    assert repair_json(' - { "test_key": ["test_value", "test_value2"] }') == '{"test_key": ["test_value", "test_value2"]}'
 
     #Test markdown stupidities from ChatGPT
     assert repair_json('{ "content": "[LINK]("https://google.com")" }') == '{"content": "[LINK](\\"https://google.com\\")"}'
