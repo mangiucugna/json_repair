@@ -191,6 +191,10 @@ def test_repair_json_corner_cases_generate_by_gpt():
     # Test with null values
     assert repair_json('{"key": null}') == '{"key": null}'
 
+    # Test with numeric-like values
+    assert repair_json('{"key": 10-20}') == '{"key": "10-20"}'
+    assert repair_json('{"key": 1.1.1}') == '{"key": "1.1.1"}'
+
 
 def test_repair_json_corner_cases_generate_by_gpt_with_objects():
     # Test with nested JSON
@@ -220,6 +224,10 @@ def test_repair_json_corner_cases_generate_by_gpt_with_objects():
 
     # Test with null values
     assert repair_json('{"key": null}', True) == {"key": None}
+
+    # Test with numeric-like values
+    assert repair_json('{"key": 10-20}', True) == {"key": "10-20"}
+    assert repair_json('{"key": 1.1.1}', True) == {"key": "1.1.1"}
 
 def test_repair_json_skip_json_loads():
     assert repair_json('{"key": true, "key2": false, "key3": null}', skip_json_loads=True) == '{"key": true, "key2": false, "key3": null}'
