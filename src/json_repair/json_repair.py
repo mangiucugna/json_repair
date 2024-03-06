@@ -209,9 +209,13 @@ class JSONParser:
                     break
             self.index += 1
             char = self.get_char_at()
+            # If the string contains escaped delimiters we should respect that
+            if char == rstring_delimiter and self.get_char_at(-1) == "\\":
+                self.index += 1
+                char = self.get_char_at()
             # ChatGPT sometimes forget to quote links in markdown like: { "content": "[LINK]("https://google.com")" }
             if (
-                (char == lstring_delimiter or char == rstring_delimiter)
+                char == rstring_delimiter
                 # Next character is not a comma
                 and self.get_char_at(1) != ","
                 and (

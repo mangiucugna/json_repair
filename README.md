@@ -19,20 +19,20 @@ I searched for a lightweight python package that was able to reliably fix this p
 You can use this library to completely replace `json.loads()`:
 
     import json_repair
-    
+
     decoded_object = json_repair.loads(json_string)
 
 or just
 
     import json_repair
-    
+
     decoded_object = json_repair.repair_json(json_string, return_objects=True)
-    
+
 ### Performance considerations
 If you find this library too slow because is using `json.loads()` you can skip that by passing `skip_json_loads=True` to `repair_json`. Like:
 
     from json_repair import repair_json
-    
+
     good_json_string = repair_json(bad_json_string, skip_json_loads=True)
 
 I made a choice of not using any fast json library to avoid having any external dependency, so that anybody can use it regardless of their stack.
@@ -40,7 +40,7 @@ I made a choice of not using any fast json library to avoid having any external 
 Some rules of thumb to use:
 - Setting `return_objects=True` will always be faster because the parser returns an object already and it doesn't have serialize that object to JSON
 - `skip_json_loads` is faster only if you 100% know that the string is not a valid JSON
-
+- If you are having issues with escaping pass the string as **raw** string like: `r"string with escaping\""`
 ## Adding to requirements
 **Please pin this library only on the major version!**
 
