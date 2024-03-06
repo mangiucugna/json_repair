@@ -61,7 +61,9 @@ class JSONParser:
         elif char == '"':
             return self.parse_string()
         elif char == "'":
-            return self.parse_string(use_single_quotes=True)
+            return self.parse_string(string_quotes="'")
+        elif char == "“":
+            return self.parse_string(string_quotes=["“", "”"])
         # <number> starts with [0-9] or minus
         elif char.isdigit() or char == "-":
             return self.parse_number()
@@ -102,9 +104,7 @@ class JSONParser:
             # <member> starts with a <string>
             key = ""
             while key == "" and self.get_char_at():
-                key = self.parse_string(
-                    use_single_quotes=(self.json_str[self.index] == "'")
-                )
+                key = self.parse_json()
 
                 # This can happen sometimes like { "": "value" }
                 if key == "" and self.get_char_at() == ":":
@@ -112,7 +112,7 @@ class JSONParser:
                     break
 
             # We reached the end here
-            if key == "}":
+            if (self.get_char_at() or "}") == "}":
                 continue
 
             # An extreme case of missing ":" after a key
@@ -170,19 +170,22 @@ class JSONParser:
         self.index += 1
         return arr
 
-    def parse_string(self, use_single_quotes=False) -> str:
+    def parse_string(self, string_quotes=False) -> str:
         # <string> is a string of valid characters enclosed in quotes
         # i.e. { name: "John" }
         # Somehow all weird cases in an invalid JSON happen to be resolved in this function, so be careful here
 
         # Flag to manage corner cases related to missing starting quote
         fixed_quotes = False
-        string_terminator = '"'
-        if use_single_quotes:
-            string_terminator = "'"
+        lstring_delimiter = rstring_delimiter = '"'
+        if isinstance(string_quotes, list):
+            lstring_delimiter = string_quotes[0]
+            rstring_delimiter = string_quotes[1]
+        elif isinstance(string_quotes, str):
+            lstring_delimiter = rstring_delimiter = string_quotes
         char = self.get_char_at()
-        if char != string_terminator:
-            self.insert_char_at(string_terminator)
+        if char != lstring_delimiter:
+            self.insert_char_at(lstring_delimiter)
             fixed_quotes = True
         else:
             self.index += 1
@@ -198,7 +201,7 @@ class JSONParser:
         # * If we are fixing missing quotes in an object, when it finds the special terminators
         char = self.get_char_at()
         fix_broken_markdown_link = False
-        while char and char != string_terminator:
+        while char and char != rstring_delimiter:
             if fixed_quotes:
                 if self.context == "object_key" and (char == ":" or char.isspace()):
                     break
@@ -208,7 +211,7 @@ class JSONParser:
             char = self.get_char_at()
             # ChatGPT sometimes forget to quote links in markdown like: { "content": "[LINK]("https://google.com")" }
             if (
-                char == string_terminator
+                (char == lstring_delimiter or char == rstring_delimiter)
                 # Next character is not a comma
                 and self.get_char_at(1) != ","
                 and (
@@ -228,8 +231,8 @@ class JSONParser:
         end = self.index
 
         # A fallout of the previous special case in the while loop, we need to update the index only if we had a closing quote
-        if char != string_terminator:
-            self.insert_char_at(string_terminator)
+        if char != rstring_delimiter:
+            self.insert_char_at(rstring_delimiter)
         else:
             self.index += 1
 

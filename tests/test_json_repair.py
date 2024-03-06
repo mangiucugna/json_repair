@@ -50,12 +50,13 @@ def test_repair_json():
     assert repair_json("[[1\n\n]") == "[[1]]"
     assert repair_json("{") == "{}"
     assert repair_json("}") == '""'
-    assert repair_json('{"') == '{"": ""}'
+    assert repair_json('{"') == '{}'
     assert repair_json('["') == '[]'
     assert repair_json("'\"'") == '"\\\""'
     assert repair_json("'string\"") == '"string\\\""'
     assert repair_json('{foo: [}') == '{"foo": []}'
     assert repair_json('{"key": "value:value"}') == '{"key": "value:value"}'
+    assert repair_json('{“slanted_delimiter”: "value"}') == '{"slanted_delimiter": "value"}'
     assert (
         repair_json('{"name": "John", "age": 30, "city": "New')
         == '{"name": "John", "age": 30, "city": "New"}'
