@@ -209,10 +209,13 @@ class JSONParser:
                     break
             self.index += 1
             char = self.get_char_at()
-            # If the string contains escaped delimiters we should respect that
-            if char == rstring_delimiter and self.get_char_at(-1) == "\\":
-                self.index += 1
-                char = self.get_char_at()
+            # If the string contains an escaped character we should respect that or remove the escape
+            if self.get_char_at(-1) == "\\":
+                if char in [rstring_delimiter, "t", "n", "r", "b", "\\"]:
+                    self.index += 1
+                    char = self.get_char_at()
+                else:
+                    self.remove_char_at(-1)
             # ChatGPT sometimes forget to quote links in markdown like: { "content": "[LINK]("https://google.com")" }
             if (
                 char == rstring_delimiter
@@ -288,8 +291,11 @@ class JSONParser:
         except IndexError:
             return False
 
-    def remove_char_at(self) -> None:
-        self.json_str = self.json_str[: self.index] + self.json_str[self.index + 1 :]
+    def remove_char_at(self, count: int = 0) -> None:
+        self.json_str = (
+            self.json_str[: self.index + count]
+            + self.json_str[self.index + count + 1 :]
+        )
 
     def skip_whitespaces_at(self) -> None:
         # Remove trailing spaces

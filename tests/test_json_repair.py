@@ -104,7 +104,7 @@ def test_repair_json():
                        ```""") == '{"key": "value"}'
     assert repair_json('````{ "key": "value" }```') == '{"key": "value"}'
     assert repair_json(r'{"real_content": "Some string: Some other string Some string <a href=\"https://domain.com\">Some link</a>"') == r'{"real_content": "Some string: Some other string Some string <a href=\\\"https://domain.com\\\">Some link</a>"}'
-
+    assert repair_json('{"key\_1\n": "value"}') == '{"key_1\\n": "value"}'
 
 
 
