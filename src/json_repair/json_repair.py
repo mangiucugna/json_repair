@@ -216,6 +216,7 @@ class JSONParser:
                     char = self.get_char_at()
                 else:
                     self.remove_char_at(-1)
+                    self.index -= 1
             # ChatGPT sometimes forget to quote links in markdown like: { "content": "[LINK]("https://google.com")" }
             if (
                 char == rstring_delimiter
