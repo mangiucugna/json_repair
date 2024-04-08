@@ -177,12 +177,16 @@ class JSONParser:
 
         # Flag to manage corner cases related to missing starting quote
         fixed_quotes = False
+        double_double_quotes = False
         lstring_delimiter = rstring_delimiter = '"'
         if isinstance(string_quotes, list):
             lstring_delimiter = string_quotes[0]
             rstring_delimiter = string_quotes[1]
         elif isinstance(string_quotes, str):
             lstring_delimiter = rstring_delimiter = string_quotes
+        if lstring_delimiter == '"' and self.get_char_at(1) == '"':
+            double_double_quotes = True
+            self.index += 1
         char = self.get_char_at()
         if char != lstring_delimiter:
             self.insert_char_at(lstring_delimiter)
@@ -242,6 +246,8 @@ class JSONParser:
         if char != rstring_delimiter:
             self.insert_char_at(rstring_delimiter)
         else:
+            if double_double_quotes:
+                self.index += 1
             self.index += 1
 
         return self.json_str[start:end]
