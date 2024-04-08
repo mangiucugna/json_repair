@@ -1,3 +1,4 @@
+build
 pre-commit
 pytest
 pytest-benchmark
