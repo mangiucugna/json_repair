@@ -246,9 +246,9 @@ class JSONParser:
         if char != rstring_delimiter:
             self.insert_char_at(rstring_delimiter)
         else:
-            if double_double_quotes:
-                self.index += 1
             self.index += 1
+            if double_double_quotes and self.get_char_at() == '"':
+                self.index += 1
 
         return self.json_str[start:end]
 
