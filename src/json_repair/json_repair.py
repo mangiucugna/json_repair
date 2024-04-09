@@ -337,10 +337,27 @@ def repair_json(
             parsed_json = json.loads(json_str)
         except json.JSONDecodeError:
             parsed_json = parser.parse()
-    # It's useful to return the actual object instead of the json string, it allows this lib to be a replacement of the json library
+    # It's useful to return the actual object instead of the JSON string, it allows this lib to be a replacement of the json library
     if return_objects:
         return parsed_json
     return json.dumps(parsed_json)
+
+
+def load_file(
+    file_path: str, return_objects: bool = False, skip_json_loads: bool = False
+) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
+    """
+    This function works like `json.load()` except that it will fix your JSON in the process.
+    It is a wrapper around the `repair_json()` function that takes a file path as input
+    instead of the raw JSON string.
+    """
+    try:
+        with open(file_path, "r") as f:
+            return repair_json(f.read(), return_objects, skip_json_loads)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"File not found: {file_path}")
+    except Exception as e:
+        raise Exception(f"Error loading file at '{file_path}': {e}")
 
 
 def loads(

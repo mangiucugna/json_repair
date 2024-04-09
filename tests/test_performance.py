@@ -560,7 +560,7 @@ def test_true_true_correct(benchmark):
   max_time = 900 / 10 ** 4  # 0.9 millisecond
 
   # Assert that the average time is below the threshold
-  assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
+  assert mean_time <= max_time, f"Benchmark exceeded threshold: {mean_time:.5f}s > {max_time:.5f}s"
 
 def test_true_true_incorrect(benchmark):
   benchmark(repair_json, incorrect_json, True, True)
@@ -572,7 +572,7 @@ def test_true_true_incorrect(benchmark):
   max_time = 900 / 10 ** 4  # 0.9 millisecond
 
   # Assert that the average time is below the threshold
-  assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
+  assert mean_time <= max_time, f"Benchmark exceeded threshold: {mean_time:.5f}s > {max_time:.5f}s"
 
 def test_true_false_correct(benchmark):
   benchmark(repair_json, correct_json, True, False)
@@ -583,7 +583,7 @@ def test_true_false_correct(benchmark):
   max_time = 23 * (1 / 10 ** 6)  # 23 microsecond
 
   # Assert that the average time is below the threshold
-  assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
+  assert mean_time <= max_time, f"Benchmark exceeded threshold: {mean_time:.5f}s > {max_time:.5f}s"
 
 def test_true_false_incorrect(benchmark):
   benchmark(repair_json, incorrect_json, True, False)
@@ -594,7 +594,7 @@ def test_true_false_incorrect(benchmark):
   max_time = 900 / 10 ** 4  # 0.9 millisecond
 
   # Assert that the average time is below the threshold
-  assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
+  assert mean_time <= max_time, f"Benchmark exceeded threshold: {mean_time:.5f}s > {max_time:.5f}s"
 
 def test_false_true_correct(benchmark):
   benchmark(repair_json, correct_json, False, True)
@@ -605,7 +605,7 @@ def test_false_true_correct(benchmark):
   max_time = 900 / 10 ** 4  # 0.9 millisecond
 
   # Assert that the average time is below the threshold
-  assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
+  assert mean_time <= max_time, f"Benchmark exceeded threshold: {mean_time:.5f}s > {max_time:.5f}s"
 
 def test_false_true_incorrect(benchmark):
   benchmark(repair_json, incorrect_json, False, True)
@@ -616,7 +616,7 @@ def test_false_true_incorrect(benchmark):
   max_time = 900 / 10 ** 4  # 0.9 millisecond
 
   # Assert that the average time is below the threshold
-  assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
+  assert mean_time <= max_time, f"Benchmark exceeded threshold: {mean_time:.5f}s > {max_time:.5f}s"
 
 def test_false_false_correct(benchmark):
   benchmark(repair_json, correct_json, False, False)
@@ -627,7 +627,7 @@ def test_false_false_correct(benchmark):
   max_time = 56 / 10 ** 6  # 56 microsecond
 
   # Assert that the average time is below the threshold
-  assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
+  assert mean_time <= max_time, f"Benchmark exceeded threshold: {mean_time:.5f}s > {max_time:.5f}s"
 
 def test_false_false_incorrect(benchmark):
   benchmark(repair_json, incorrect_json, False, False)
@@ -638,4 +638,4 @@ def test_false_false_incorrect(benchmark):
   max_time = 920 / 10 ** 4  # 0.92 millisecond
 
   # Assert that the average time is below the threshold
-  assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
+  assert mean_time <= max_time, f"Benchmark exceeded threshold: {mean_time:.5f}s > {max_time:.5f}s"

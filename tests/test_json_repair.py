@@ -94,7 +94,7 @@ def test_repair_json():
     # Test a nasty corner case
     assert repair_json(' - { "test_key": ["test_value", "test_value2"] }') == '{"test_key": ["test_value", "test_value2"]}'
 
-    #Test markdown stupidities from ChatGPT
+    # Test markdown stupidities from ChatGPT
     assert repair_json('{ "content": "[LINK]("https://google.com")" }') == '{"content": "[LINK](\\"https://google.com\\")"}'
     assert repair_json('{ "content": "[LINK](" }') == '{"content": "[LINK]("}'
     assert repair_json('{ "content": "[LINK](", "key": true }') == '{"content": "[LINK](", "key": true}'
@@ -163,10 +163,10 @@ def test_repair_json_with_objects():
         "employees": ["John", "Anna", "Peter"]
     }
     
-    #Test with garbage comments
+    # Test with garbage comments
     assert repair_json('{"value_1": true, SHOULD_NOT_EXIST "value_2": "data" AAAA }', True) == {'value_1': True, 'value_2': 'data'}
 
-    #Test markdown stupidities from ChatGPT
+    # Test markdown stupidities from ChatGPT
     assert repair_json('{ "content": "[LINK]("https://google.com")" }', True) == { "content": "[LINK](\"https://google.com\")"}
 
 

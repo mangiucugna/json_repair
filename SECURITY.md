@@ -2,4 +2,4 @@
 
 ## Reporting a Vulnerability
 
-Please open an Issue with tag "Security" or propose a PR yourself
+Please open an Issue with the tag "Security" or propose a PR yourself.
