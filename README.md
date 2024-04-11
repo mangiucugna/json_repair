@@ -28,6 +28,33 @@ or just
 
     decoded_object = json_repair.repair_json(json_string, return_objects=True)
 
+### Read json from a file or file descriptor
+
+JSON repair provides also a drop-in replacement for `json.load()`:
+
+    import json_repair
+
+    try:
+        file_descriptor = open(fname, 'rb')
+    except OSError:
+        ...
+
+    with file_descriptor:
+        decoded_object = json_repair.load(file_descriptor)
+
+and another method to read from a file:
+
+    import json_repair
+
+    try:
+        decoded_object = json_repair.from_file(json_file)
+    except OSError:
+        ...
+    except IOError:
+        ...
+
+Keep in mind that the library will not catch any IO-related exception and those will need to be managed by you
+
 ### Performance considerations
 If you find this library too slow because is using `json.loads()` you can skip that by passing `skip_json_loads=True` to `repair_json`. Like:
 

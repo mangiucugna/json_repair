@@ -23,7 +23,7 @@ All supported use cases are in the unit tests
 """
 
 import json
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, TextIO
 
 
 class JSONParser:
@@ -351,3 +351,17 @@ def loads(
     It is a wrapper around the `repair_json()` function with `return_objects=True`.
     """
     return repair_json(json_str, True)
+
+
+def load(fp: TextIO) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
+    return loads(fp.read())
+
+
+def from_file(
+    filename: str,
+) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
+    fd = open(filename)
+    jsonobj = load(fd)
+    fd.close()
+
+    return jsonobj

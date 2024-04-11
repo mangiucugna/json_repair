@@ -1,4 +1,4 @@
-from src.json_repair.json_repair import repair_json
+from src.json_repair.json_repair import from_file, repair_json
 
 
 def test_repair_json():
@@ -241,3 +241,20 @@ def test_repair_json_skip_json_loads():
     assert repair_json('{"key": true, "key2": false, "key3": null}', return_objects=True, skip_json_loads=True) == {"key": True, "key2": False, "key3": None}
     assert repair_json('{"key": true, "key2": false, "key3": }', skip_json_loads=True) == '{"key": true, "key2": false, "key3": ""}'
     assert repair_json('{"key": true, "key2": false, "key3": }', return_objects=True, skip_json_loads=True) == {"key": True, "key2": False, "key3": ""}
+
+def test_repair_json_from_file():
+    import os
+    import tempfile
+
+    # Create a temporary file
+    temp_fd, temp_path = tempfile.mkstemp(suffix=".json")
+    try:
+        # Write content to the temporary file
+        with os.fdopen(temp_fd, 'w') as tmp:
+            tmp.write("{")
+        
+        assert(from_file(temp_path)) == {}
+        
+    finally:
+        # Clean up - delete the temporary file
+        os.remove(temp_path)
