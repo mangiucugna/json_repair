@@ -109,6 +109,7 @@ def test_repair_json():
     assert repair_json('{""answer"":[{""traits"":''Female aged 60+'',""answer1"":""5""}]}') == '{"answer": [{"traits": "Female aged 60+", "answer1": "5"}]}'
     assert repair_json('{""answer":[{""traits":""Female aged 60+",""answer1":""5"}]}') == '{"answer": [{"traits": "Female aged 60+", "answer1": "5"}]}'
     assert repair_json('{"key":"",}') == '{"key": ",}"}'
+    assert repair_json('{ "words": abcdef", "numbers": 12345", "words2": ghijkl" }') == '{"words": "abcdef", "numbers": 12345, "words2": "ghijkl"}'
 
 
 

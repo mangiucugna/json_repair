@@ -127,7 +127,7 @@ class JSONParser:
             self.context = ""
             obj[key] = value
 
-            if (self.get_char_at() or "") == ",":
+            if (self.get_char_at() or "") in [",", "'", '"']:
                 self.index += 1
 
             # Remove trailing spaces
