@@ -34,6 +34,7 @@ class JSONParser:
         self.index = 0
         # This is used in the object member parsing to manage the special cases of missing quotes in key or value
         self.context = ""
+        self.context_stack = []
 
     def parse(self) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
         return self.parse_json()
@@ -97,7 +98,7 @@ class JSONParser:
 
             # We are now searching for they string key
             # Context is used in the string parser to manage the lack of quotes
-            self.context = "object_key"
+            self.update_context("object_key")
 
             self.skip_whitespaces_at()
 
@@ -119,12 +120,13 @@ class JSONParser:
             if (self.get_char_at() or "") != ":":
                 self.insert_char_at(":")
             self.index += 1
-            self.context = "object_value"
+            self.update_context("")
+            self.update_context("object_value")
             # The value can be any valid json
             value = self.parse_json()
 
             # Reset context since our job is done
-            self.context = ""
+            self.update_context("")
             obj[key] = value
 
             if (self.get_char_at() or "") in [",", "'", '"']:
@@ -157,6 +159,9 @@ class JSONParser:
             while char and (char.isspace() or char == ","):
                 self.index += 1
                 char = self.get_char_at()
+            # If this is the right value of an object and we are closing the object, it means the array is over
+            if self.context == "object_value" and char == "}":
+                break
 
         # Especially at the end of an LLM generated json you might miss the last "]"
         char = self.get_char_at()
@@ -166,6 +171,7 @@ class JSONParser:
                 # Remove trailing "," before adding the "]"
                 self.remove_char_at()
             self.insert_char_at("]")
+            self.index -= 1
 
         self.index += 1
         return arr
@@ -318,6 +324,19 @@ class JSONParser:
                 char = self.json_str[self.index]
             except IndexError:
                 return
+
+    def update_context(self, value: str) -> None:
+        # If a value is provided update the context variable and save in stack
+        if value:
+            if self.context:
+                self.context_stack.append(self.context)
+            self.context = value
+        # Otherwise pop and update the context, or empty if the stack is empty
+        else:
+            try:
+                self.context = self.context_stack.pop()
+            except Exception:
+                self.context = ""
 
 
 def repair_json(

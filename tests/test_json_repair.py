@@ -169,6 +169,25 @@ def test_repair_json_with_objects():
 
     #Test markdown stupidities from ChatGPT
     assert repair_json('{ "content": "[LINK]("https://google.com")" }', True) == { "content": "[LINK](\"https://google.com\")"}
+    assert repair_json('''
+{
+  "resourceType": "Bundle",
+  "id": "1",
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "1",
+        "name": [
+          {"use": "official", "family": "Corwin", "given": ["Keisha", "Sunny"], "prefix": ["Mrs."},
+          {"use": "maiden", "family": "Goodwin", "given": ["Keisha", "Sunny"], "prefix": ["Mrs."]}
+        ]
+      }
+    }
+  ]
+}
+''', True) == {"resourceType": "Bundle", "id": "1", "type": "collection", "entry": [{"resource": {"resourceType": "Patient", "id": "1", "name": [{"use": "official", "family": "Corwin", "given": ["Keisha", "Sunny"], "prefix": ["Mrs."]}, {"use": "maiden", "family": "Goodwin", "given": ["Keisha", "Sunny"], "prefix": ["Mrs."]}]}}]}
 
 
 def test_repair_json_corner_cases_generate_by_gpt():
