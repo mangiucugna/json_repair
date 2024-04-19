@@ -104,13 +104,12 @@ def test_repair_json():
                        ```""") == '{"key": "value"}'
     assert repair_json('````{ "key": "value" }```') == '{"key": "value"}'
     assert repair_json(r'{"real_content": "Some string: Some other string Some string <a href=\"https://domain.com\">Some link</a>"') == r'{"real_content": "Some string: Some other string Some string <a href=\\\"https://domain.com\\\">Some link</a>"}'
-    assert repair_json('{"key\_1\n": "value"}') == '{"key_1\\n": "value"}'
+    assert repair_json('{"key\_1\n": "value"}') == '{"key_1": "value"}'
     assert repair_json('{"key\t\_": "value"}') == '{"key\\t_": "value"}'
     assert repair_json('{""answer"":[{""traits"":''Female aged 60+'',""answer1"":""5""}]}') == '{"answer": [{"traits": "Female aged 60+", "answer1": "5"}]}'
     assert repair_json('{""answer":[{""traits":""Female aged 60+",""answer1":""5"}]}') == '{"answer": [{"traits": "Female aged 60+", "answer1": "5"}]}'
     assert repair_json('{"key":"",}') == '{"key": ",}"}'
     assert repair_json('{ "words": abcdef", "numbers": 12345", "words2": ghijkl" }') == '{"words": "abcdef", "numbers": 12345, "words2": "ghijkl"}'
-
 
 
 def test_repair_json_with_objects():
@@ -188,6 +187,7 @@ def test_repair_json_with_objects():
   ]
 }
 ''', True) == {"resourceType": "Bundle", "id": "1", "type": "collection", "entry": [{"resource": {"resourceType": "Patient", "id": "1", "name": [{"use": "official", "family": "Corwin", "given": ["Keisha", "Sunny"], "prefix": ["Mrs."]}, {"use": "maiden", "family": "Goodwin", "given": ["Keisha", "Sunny"], "prefix": ["Mrs."]}]}}]}
+    assert repair_json('{\n"html": "<h3 id="aaa">Waarom meer dan 200 Technical Experts - "Passie voor techniek"?</h3>"}', True) == {'html': '<h3 id="aaa">Waarom meer dan 200 Technical Experts - "Passie voor techniek"?</h3>'}
 
 
 def test_repair_json_corner_cases_generate_by_gpt():

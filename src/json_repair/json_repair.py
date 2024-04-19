@@ -183,15 +183,14 @@ class JSONParser:
 
         # Flag to manage corner cases related to missing starting quote
         fixed_quotes = False
-        double_delimiter = False
         lstring_delimiter = rstring_delimiter = '"'
         if isinstance(string_quotes, list):
             lstring_delimiter = string_quotes[0]
             rstring_delimiter = string_quotes[1]
         elif isinstance(string_quotes, str):
             lstring_delimiter = rstring_delimiter = string_quotes
+        # There is sometimes a weird case of doubled quotes, we manage this also later in the while loop
         if self.get_char_at(1) == lstring_delimiter:
-            double_delimiter = True
             self.index += 1
         char = self.get_char_at()
         if char != lstring_delimiter:
@@ -210,7 +209,6 @@ class JSONParser:
         # * It iterated over the entire sequence
         # * If we are fixing missing quotes in an object, when it finds the special terminators
         char = self.get_char_at()
-        fix_broken_markdown_link = False
         while char and char != rstring_delimiter:
             if fixed_quotes:
                 if self.context == "object_key" and (char == ":" or char.isspace()):
@@ -227,19 +225,27 @@ class JSONParser:
                 else:
                     self.remove_char_at(-1)
                     self.index -= 1
-            # ChatGPT sometimes forget to quote links in markdown like: { "content": "[LINK]("https://google.com")" }
+            # ChatGPT sometimes forget to quote stuff in html tags or markdown, so we do this whole thing here
             if (
                 char == rstring_delimiter
-                # Next character is not a comma
-                and self.get_char_at(1) != ","
-                and (
-                    fix_broken_markdown_link
-                    or (self.get_char_at(-2) == "]" and self.get_char_at(-1)) == "("
-                )
+                # Next character is not a delimiter
+                and self.get_char_at(1) not in [",", ":", "]", "}"]
             ):
-                fix_broken_markdown_link = not fix_broken_markdown_link
-                self.index += 1
-                char = self.get_char_at()
+                # Special case here, in case of double quotes one after another
+                if self.get_char_at(1) == rstring_delimiter:
+                    # self destruct this character
+                    self.remove_char_at()
+                else:
+                    # Check if eventually there is a rstring delimiter, otherwise we bail
+                    i = 2
+                    next_c = self.get_char_at(i)
+                    while next_c and next_c != rstring_delimiter:
+                        i += 1
+                        next_c = self.get_char_at(i)
+                    # In that case we ignore this rstring delimiter
+                    if next_c:
+                        self.index += 1
+                        char = self.get_char_at()
 
         if char and fixed_quotes and self.context == "object_key" and char.isspace():
             self.skip_whitespaces_at()
@@ -253,10 +259,8 @@ class JSONParser:
             self.insert_char_at(rstring_delimiter)
         else:
             self.index += 1
-            if double_delimiter and self.get_char_at() == rstring_delimiter:
-                self.index += 1
 
-        return self.json_str[start:end]
+        return self.json_str[start:end].rstrip()
 
     def parse_number(self) -> Union[float, int, str]:
         # <number> is a valid real number expressed in one of a number of given formats
