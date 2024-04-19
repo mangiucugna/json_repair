@@ -113,7 +113,10 @@ You will need owner access to this repository
 - Run `python -m build`
 - Create a new release in Github, making sure to tag all the issues solved and contributors. Create the new tag, same as the one in the build configuration
 - Once the release is created, a new Github Actions workflow will start to publish on Pypi, make sure it didn't fail
-
+---
+# Repair JSON in other programming languages
+- Typescript: https://github.com/josdejong/jsonrepair
+- Go: https://github.com/RealAlexandreAI/json-repair
 ---
 # Bonus Content
 If you need some good Custom Instructions (System Message) to improve your chatbot responses try https://gist.github.com/mangiucugna/7ec015c4266df11be8aa510be0110fe4
