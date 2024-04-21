@@ -27,16 +27,25 @@ from typing import Any, Dict, List, Union, TextIO
 
 
 class JSONParser:
-    def __init__(self, json_str: str) -> None:
+    def __init__(self, json_str: str, logging: bool = False) -> None:
         # The string to parse
         self.json_str = json_str
         # Index is our iterator that will keep track of which character we are looking at right now
         self.index = 0
         # This is used in the object member parsing to manage the special cases of missing quotes in key or value
         self.context = []
+        # Use this to log the activity, but only if logging is active
+        self.logger = {
+            "log": [],
+            "window": 10,
+            "log_level": "info" if logging else "none",
+        }
 
     def parse(self) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
-        return self.parse_json()
+        if self.logger["log_level"] == "none":
+            return self.parse_json()
+        else:
+            return self.parse_json(), self.logger["log"]
 
     def parse_json(
         self,
@@ -56,6 +65,10 @@ class JSONParser:
         # there can be an edge case in which a key is empty and at the end of an object
         # like "key": }. We return an empty string here to close the object properly
         elif char == "}" and self.get_context() == "object_value":
+            self.log(
+                "At the end of an object we found a key with missing value, skipping",
+                "info",
+            )
             return ""
         # <string> starts with '"'
         elif char == '"':
@@ -91,6 +104,10 @@ class JSONParser:
 
             # Sometimes LLMs do weird things, if we find a ":" so early, we'll change it to "," and move on
             if (self.get_char_at() or "") == ":":
+                self.log(
+                    "While parsing an object we found a : before a key, replacing with ,",
+                    "info",
+                )
                 self.remove_char_at()
                 self.insert_char_at(",")
                 self.index += 1
@@ -109,6 +126,10 @@ class JSONParser:
                 # This can happen sometimes like { "": "value" }
                 if key == "" and self.get_char_at() == ":":
                     key = "empty_placeholder"
+                    self.log(
+                        "While parsing an object we found an empty key, replacing with empty_placeholder",
+                        "info",
+                    )
                     break
 
             # We reached the end here
@@ -117,6 +138,10 @@ class JSONParser:
 
             # An extreme case of missing ":" after a key
             if (self.get_char_at() or "") != ":":
+                self.log(
+                    "While parsing an object we missed a : after a key, adding it back",
+                    "info",
+                )
                 self.insert_char_at(":")
             self.index += 1
             self.reset_context()
@@ -136,6 +161,10 @@ class JSONParser:
 
         # Especially at the end of an LLM generated json you might miss the last "}"
         if (self.get_char_at() or "}") != "}":
+            self.log(
+                "While parsing an object, we couldn't find the closing }, adding it back",
+                "info",
+            )
             self.insert_char_at("}")
         self.index += 1
         return obj
@@ -165,9 +194,16 @@ class JSONParser:
         # Especially at the end of an LLM generated json you might miss the last "]"
         char = self.get_char_at()
         if char and char != "]":
+            self.log(
+                "While parsing an array we missed the closing ], adding it back", "info"
+            )
             # Sometimes when you fix a missing "]" you'll have a trailing "," there that makes the JSON invalid
             if char == ",":
                 # Remove trailing "," before adding the "]"
+                self.log(
+                    "While parsing an array, remove a trailing , before adding ]",
+                    "info",
+                )
                 self.remove_char_at()
             self.insert_char_at("]")
             self.index -= 1
@@ -190,9 +226,15 @@ class JSONParser:
             lstring_delimiter = rstring_delimiter = string_quotes
         # There is sometimes a weird case of doubled quotes, we manage this also later in the while loop
         if self.get_char_at(1) == lstring_delimiter:
+            self.log(
+                "While parsing a string, we found a doubled quote, ignoring it", "info"
+            )
             self.index += 1
         char = self.get_char_at()
         if char != lstring_delimiter:
+            self.log(
+                "While parsing a string, we found no starting quote, adding it", "info"
+            )
             self.insert_char_at(lstring_delimiter)
             fixed_quotes = True
         else:
@@ -234,6 +276,10 @@ class JSONParser:
             ):
                 # Special case here, in case of double quotes one after another
                 if self.get_char_at(1) == rstring_delimiter:
+                    self.log(
+                        "While parsing a string, we found a doubled quote, ignoring it",
+                        "info",
+                    )
                     # self destruct this character
                     self.remove_char_at()
                 else:
@@ -245,6 +291,10 @@ class JSONParser:
                         next_c = self.get_char_at(i)
                     # In that case we ignore this rstring delimiter
                     if next_c:
+                        self.log(
+                            "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
+                            "info",
+                        )
                         self.index += 1
                         char = self.get_char_at()
 
@@ -254,6 +304,10 @@ class JSONParser:
             and self.get_context() == "object_key"
             and char.isspace()
         ):
+            self.log(
+                "While parsing a string, handling an extreme corner case in which the LLM added a comment instead of valid string, invalidate the string and return an empty value",
+                "info",
+            )
             self.skip_whitespaces_at()
             if self.get_char_at() not in [":", ","]:
                 return ""
@@ -262,6 +316,10 @@ class JSONParser:
 
         # A fallout of the previous special case in the while loop, we need to update the index only if we had a closing quote
         if char != rstring_delimiter:
+            self.log(
+                "While parsing a string, we missed the closing quote, adding it back",
+                "info",
+            )
             self.insert_char_at(rstring_delimiter)
         else:
             self.index += 1
@@ -352,17 +410,35 @@ class JSONParser:
         except Exception:
             return ""
 
+    def log(self, text: str, level: str) -> None:
+        if level == self.logger["log_level"]:
+            self.logger["log"].append(
+                {
+                    "text": text,
+                    "context": self.json_str[
+                        self.index
+                        - self.logger["window"] : self.index
+                        + self.logger["window"]
+                    ],
+                }
+            )
+
 
 def repair_json(
-    json_str: str, return_objects: bool = False, skip_json_loads: bool = False
+    json_str: str,
+    return_objects: bool = False,
+    skip_json_loads: bool = False,
+    logging: bool = False,
 ) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
     """
     Given a json formatted string, it will try to decode it and, if it fails, it will try to fix it.
     It will return the fixed string by default.
     When `return_objects=True` is passed, it will return the decoded data structure instead.
+    When `skip_json_loads=True` is passed, it will not call the built-in json.loads() function
+    When `logging=True` is passed, it will return an tuple with the repaired json and a log of all repair actions
     """
     json_str = json_str.strip().lstrip("```json")
-    parser = JSONParser(json_str)
+    parser = JSONParser(json_str, logging)
     if skip_json_loads:
         parsed_json = parser.parse()
     else:
@@ -371,7 +447,7 @@ def repair_json(
         except json.JSONDecodeError:
             parsed_json = parser.parse()
     # It's useful to return the actual object instead of the json string, it allows this lib to be a replacement of the json library
-    if return_objects:
+    if return_objects or logging:
         return parsed_json
     return json.dumps(parsed_json)
 
@@ -398,3 +474,6 @@ def from_file(
     fd.close()
 
     return jsonobj
+
+
+print(repair_json('{ "key": "value", "key2": }', logging=True))
