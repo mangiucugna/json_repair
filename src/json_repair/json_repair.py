@@ -329,7 +329,7 @@ class JSONParser:
     def parse_number(self) -> Union[float, int, str]:
         # <number> is a valid real number expressed in one of a number of given formats
         number_str = ""
-        number_chars = set("0123456789-.eE")
+        number_chars = set("0123456789-.eE/")
         char = self.get_char_at()
         while char and char in number_chars:
             number_str += char

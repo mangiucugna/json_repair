@@ -277,3 +277,9 @@ def test_repair_json_from_file():
     finally:
         # Clean up - delete the temporary file
         os.remove(temp_path)
+
+def test_fractions():
+    assert repair_json('{"key": 1/3}') == '{"key": "1/3"}'
+    assert repair_json('{"key": 1/3, "foo": "bar"}') == '{"key": "1/3", "foo": "bar"}'
+    assert repair_json('{"here": "now", "key": 1/3, "foo": "bar"}') == '{"here": "now", "key": "1/3", "foo": "bar"}'
+    assert repair_json('{"key": 12345/67890}') == '{"key": "12345/67890"}'
