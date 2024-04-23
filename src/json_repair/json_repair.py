@@ -453,27 +453,26 @@ def repair_json(
 
 
 def loads(
-    json_str: str,
+    json_str: str, skip_json_loads: bool = False, logging: bool = False
 ) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
     """
     This function works like `json.loads()` except that it will fix your JSON in the process.
     It is a wrapper around the `repair_json()` function with `return_objects=True`.
     """
-    return repair_json(json_str, True)
+    return repair_json(json_str, True, skip_json_loads, logging)
 
 
-def load(fp: TextIO) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
-    return loads(fp.read())
+def load(
+    fp: TextIO, skip_json_loads: bool = False, logging: bool = False
+) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
+    return loads(fp.read(), skip_json_loads, logging)
 
 
 def from_file(
-    filename: str,
+    filename: str, skip_json_loads: bool = False, logging: bool = False
 ) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
     fd = open(filename)
-    jsonobj = load(fd)
+    jsonobj = load(fd, skip_json_loads, logging)
     fd.close()
 
     return jsonobj
-
-
-print(repair_json('{ "key": "value", "key2": }', logging=True))
