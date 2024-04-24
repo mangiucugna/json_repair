@@ -78,7 +78,7 @@ class JSONParser:
         elif char == "“":
             return self.parse_string(string_quotes=["“", "”"])
         # <number> starts with [0-9] or minus
-        elif char.isdigit() or char == "-":
+        elif char.isdigit() or char == "-" or char == ".":
             return self.parse_number()
         # <boolean> could be (T)rue or (F)alse or (N)ull
         elif char.lower() in ["t", "f", "n"]:

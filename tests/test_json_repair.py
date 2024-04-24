@@ -111,6 +111,7 @@ def test_repair_json():
     assert repair_json('{"key":"",}') == '{"key": ",}"}'
     assert repair_json('{ "words": abcdef", "numbers": 12345", "words2": ghijkl" }') == '{"words": "abcdef", "numbers": 12345, "words2": "ghijkl"}'
     assert repair_json('{"key": 1/3}') == '{"key": "1/3"}'
+    assert repair_json('{"key": .25}') == '{"key": 0.25}'
 
 
 def test_repair_json_with_objects():
@@ -256,11 +257,13 @@ def test_repair_json_corner_cases_generate_by_gpt_with_objects():
     assert repair_json('{"key": 10-20}', True) == {"key": "10-20"}
     assert repair_json('{"key": 1.1.1}', True) == {"key": "1.1.1"}
 
+
 def test_repair_json_skip_json_loads():
     assert repair_json('{"key": true, "key2": false, "key3": null}', skip_json_loads=True) == '{"key": true, "key2": false, "key3": null}'
     assert repair_json('{"key": true, "key2": false, "key3": null}', return_objects=True, skip_json_loads=True) == {"key": True, "key2": False, "key3": None}
     assert repair_json('{"key": true, "key2": false, "key3": }', skip_json_loads=True) == '{"key": true, "key2": false, "key3": ""}'
     assert loads('{"key": true, "key2": false, "key3": }', skip_json_loads=True) == {"key": True, "key2": False, "key3": ""}
+
 
 def test_repair_json_from_file():
     import os
