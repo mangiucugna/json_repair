@@ -226,15 +226,17 @@ class JSONParser:
             lstring_delimiter = rstring_delimiter = string_quotes
         # There is sometimes a weird case of doubled quotes, we manage this also later in the while loop
         if self.get_char_at(1) == lstring_delimiter:
-            next_next_char = self.get_char_at(2) or ""
-            if not next_next_char.isspace() and next_next_char not in [
-                ",",
-                ":",
-                "]",
-                "}",
-            ]:
+            # This is a valid exception only if it's closed by a double delimiter again
+            i = 2
+            next_c = self.get_char_at(i)
+            while next_c and next_c != rstring_delimiter:
+                i += 1
+                next_c = self.get_char_at(i)
+            # Now check that the next character is also a delimiter to ensure that we have "".....""
+            # In that case we ignore this rstring delimiter
+            if next_c and (self.get_char_at(i + 1) or "") == rstring_delimiter:
                 self.log(
-                    "While parsing a string, we found a doubled quote, ignoring it",
+                    "While parsing a string, we found a valid starting doubled quote, ignoring it",
                     "info",
                 )
                 self.index += 1
