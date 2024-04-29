@@ -174,6 +174,7 @@ class JSONParser:
         arr = []
         # Stop when you either find the closing parentheses or you have iterated over the entire string
         while (self.get_char_at() or "]") != "]":
+            self.skip_whitespaces_at()
             value = self.parse_json()
 
             # It is possible that parse_json() returns nothing valid, so we stop
@@ -218,6 +219,7 @@ class JSONParser:
 
         # Flag to manage corner cases related to missing starting quote
         fixed_quotes = False
+        doubled_quotes = False
         lstring_delimiter = rstring_delimiter = '"'
         if isinstance(string_quotes, list):
             lstring_delimiter = string_quotes[0]
@@ -239,6 +241,7 @@ class JSONParser:
                     "While parsing a string, we found a valid starting doubled quote, ignoring it",
                     "info",
                 )
+                doubled_quotes = True
                 self.index += 1
         char = self.get_char_at()
         if char != lstring_delimiter:
@@ -279,13 +282,9 @@ class JSONParser:
                     self.remove_char_at(-1)
                     self.index -= 1
             # ChatGPT sometimes forget to quote stuff in html tags or markdown, so we do this whole thing here
-            if (
-                char == rstring_delimiter
-                # Next character is not a delimiter
-                and self.get_char_at(1) not in [",", ":", "]", "}"]
-            ):
+            if char == rstring_delimiter:
                 # Special case here, in case of double quotes one after another
-                if self.get_char_at(1) == rstring_delimiter:
+                if doubled_quotes and self.get_char_at(1) == rstring_delimiter:
                     self.log(
                         "While parsing a string, we found a doubled quote, ignoring it",
                         "info",
@@ -294,13 +293,20 @@ class JSONParser:
                     self.remove_char_at()
                 else:
                     # Check if eventually there is a rstring delimiter, otherwise we bail
-                    i = 2
+                    i = 1
+                    context = self.get_context()
                     next_c = self.get_char_at(i)
                     while next_c and next_c != rstring_delimiter:
+                        # If we are in an object context, let's check for the right delimiters
+                        if (
+                            (context == "object_key" and next_c == ":")
+                            or (context == "object_value" and next_c in ["}", ","])
+                            or (context == "" and next_c in ["]", ","])
+                        ):
+                            break
                         i += 1
                         next_c = self.get_char_at(i)
-                    # In that case we ignore this rstring delimiter
-                    if next_c:
+                    if next_c == rstring_delimiter:
                         self.log(
                             "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
                             "info",
@@ -416,7 +422,7 @@ class JSONParser:
 
     def get_context(self) -> str:
         try:
-            return self.context[0]
+            return self.context[-1]
         except Exception:
             return ""
 

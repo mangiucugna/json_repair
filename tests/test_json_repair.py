@@ -190,6 +190,18 @@ def test_repair_json_with_objects():
 }
 ''', True) == {"resourceType": "Bundle", "id": "1", "type": "collection", "entry": [{"resource": {"resourceType": "Patient", "id": "1", "name": [{"use": "official", "family": "Corwin", "given": ["Keisha", "Sunny"], "prefix": ["Mrs."]}, {"use": "maiden", "family": "Goodwin", "given": ["Keisha", "Sunny"], "prefix": ["Mrs."]}]}}]}
     assert repair_json('{\n"html": "<h3 id="aaa">Waarom meer dan 200 Technical Experts - "Passie voor techniek"?</h3>"}', True) == {'html': '<h3 id="aaa">Waarom meer dan 200 Technical Experts - "Passie voor techniek"?</h3>'}
+    assert repair_json("""
+        [
+            {
+                "foo": "Foo bar baz",
+                "tag": "#foo-bar-baz"
+            },
+            {
+                "foo": "foo bar "foobar" foo bar baz.",
+                "tag": "#foo-bar-foobar"
+            }
+        ]
+        """, True) == [{"foo": "Foo bar baz", "tag": "#foo-bar-baz"},{"foo": "foo bar \"foobar\" foo bar baz.", "tag": "#foo-bar-foobar" }]
 
 
 def test_repair_json_corner_cases_generate_by_gpt():
