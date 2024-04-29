@@ -64,7 +64,7 @@ class JSONParser:
             return self.parse_array()
         # there can be an edge case in which a key is empty and at the end of an object
         # like "key": }. We return an empty string here to close the object properly
-        elif char == "}" and self.get_context() == "object_value":
+        elif char == "}":
             self.log(
                 "At the end of an object we found a key with missing value, skipping",
                 "info",
@@ -78,13 +78,13 @@ class JSONParser:
         elif char == "“":
             return self.parse_string(string_quotes=["“", "”"])
         # <number> starts with [0-9] or minus
-        elif char.isdigit() or char == "-" or char == ".":
+        elif self.get_context() != "" and char.isdigit() or char == "-" or char == ".":
             return self.parse_number()
         # <boolean> could be (T)rue or (F)alse or (N)ull
-        elif char.lower() in ["t", "f", "n"]:
+        elif self.get_context() != "" and char.lower() in ["t", "f", "n"]:
             return self.parse_boolean_or_null()
         # This might be a <string> that is missing the starting '"'
-        elif char.isalpha():
+        elif self.get_context() != "" and char.isalpha():
             return self.parse_string()
         # If everything else fails, we just ignore and move on
         else:
@@ -131,6 +131,8 @@ class JSONParser:
                         "info",
                     )
                     break
+                elif key == "":
+                    self.index += 1
 
             # We reached the end here
             if (self.get_char_at() or "}") == "}":
@@ -172,6 +174,7 @@ class JSONParser:
     def parse_array(self) -> List[Any]:
         # <array> ::= '[' [ <json> *(', ' <json>) ] ']' ; A sequence of JSON values separated by commas
         arr = []
+        self.set_context("array")
         # Stop when you either find the closing parentheses or you have iterated over the entire string
         while (self.get_char_at() or "]") != "]":
             self.skip_whitespaces_at()
@@ -210,6 +213,7 @@ class JSONParser:
             self.index -= 1
 
         self.index += 1
+        self.reset_context()
         return arr
 
     def parse_string(self, string_quotes=False) -> str:
@@ -294,14 +298,13 @@ class JSONParser:
                 else:
                     # Check if eventually there is a rstring delimiter, otherwise we bail
                     i = 1
-                    context = self.get_context()
                     next_c = self.get_char_at(i)
                     while next_c and next_c != rstring_delimiter:
                         # If we are in an object context, let's check for the right delimiters
                         if (
-                            (context == "object_key" and next_c == ":")
-                            or (context == "object_value" and next_c in ["}", ","])
-                            or (context == "" and next_c in ["]", ","])
+                            ("object_key" in self.context and next_c == ":")
+                            or ("object_value" in self.context and next_c in ["}", ","])
+                            or ("array" in self.context and next_c in ["]", ","])
                         ):
                             break
                         i += 1

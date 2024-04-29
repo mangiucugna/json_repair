@@ -50,6 +50,8 @@ def test_repair_json():
     assert repair_json("[[1\n\n]") == "[[1]]"
     assert repair_json("{") == "{}"
     assert repair_json("}") == '""'
+    assert repair_json("string") == '""'
+    assert repair_json("stringbeforeobject {}") == '{}'
     assert repair_json('{"') == '{}'
     assert repair_json('["') == '[]'
     assert repair_json("'\"'") == '"\\\""'
@@ -112,6 +114,7 @@ def test_repair_json():
     assert repair_json('{"key": 1/3}') == '{"key": "1/3"}'
     assert repair_json('{"key": .25}') == '{"key": 0.25}'
     assert repair_json("""{    "a": "",    "b": [ { "c": 1} ] \n}```""") == '{"a": "", "b": [{"c": 1}]}'
+    assert repair_json("Based on the information extracted, here is the filled JSON output: ```json { 'a': 'b' } ```") == '{"a": "b"}'
 
 
 def test_repair_json_with_objects():
