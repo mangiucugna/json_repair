@@ -11,7 +11,7 @@ This module will parse the JSON file following the BNF definition:
 
     <container> ::= <object> | <array>
     <array> ::= '[' [ <json> *(', ' <json>) ] ']' ; A sequence of JSON values separated by commas
-    <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
+    <object> ::= '{' [ <string> *(', ' <member>) ] '}' ; A sequence of 'members'
     <member> ::= <string> ': ' <json> ; A pair consisting of a name, and a JSON value
 
 If something is wrong (a missing parantheses or quotes for example) it will use a few simple heuristics to fix the JSON string:
@@ -55,16 +55,18 @@ class JSONParser:
         if char is False:
             return ""
         # <object> starts with '{'
-        elif char == "{":
+        # but an object key must be a string
+        elif self.get_context() != "object_key" and char == "{":
             self.index += 1
             return self.parse_object()
         # <array> starts with '['
-        elif char == "[":
+        # but an object key must be a string
+        elif self.get_context() != "object_key" and char == "[":
             self.index += 1
             return self.parse_array()
         # there can be an edge case in which a key is empty and at the end of an object
         # like "key": }. We return an empty string here to close the object properly
-        elif char == "}":
+        elif self.get_context() != "object_key" and char == "}":
             self.log(
                 "At the end of an object we found a key with missing value, skipping",
                 "info",
@@ -78,10 +80,20 @@ class JSONParser:
         elif char == "“":
             return self.parse_string(string_quotes=["“", "”"])
         # <number> starts with [0-9] or minus
-        elif self.get_context() != "" and char.isdigit() or char == "-" or char == ".":
+        elif (
+            self.get_context() != ""
+            and self.get_context() != "object_key"
+            and char.isdigit()
+            or char == "-"
+            or char == "."
+        ):
             return self.parse_number()
         # <boolean> could be (T)rue or (F)alse or (N)ull
-        elif self.get_context() != "" and char.lower() in ["t", "f", "n"]:
+        elif (
+            self.get_context() != ""
+            and self.get_context() != "object_key"
+            and char.lower() in ["t", "f", "n"]
+        ):
             return self.parse_boolean_or_null()
         # This might be a <string> that is missing the starting '"'
         elif self.get_context() != "" and char.isalpha():

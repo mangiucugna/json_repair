@@ -57,6 +57,7 @@ def test_repair_json():
     assert repair_json("'\"'") == '"\\\""'
     assert repair_json("'string\"") == '"string\\\""'
     assert repair_json('{foo: [}') == '{"foo": []}'
+    assert repair_json('''{ "a": "{ b": {} }" }''') == '{"a": "{ b"}'
     assert repair_json('{"key": "value:value"}') == '{"key": "value:value"}'
     assert repair_json('{“slanted_delimiter”: "value"}') == '{"slanted_delimiter": "value"}'
     assert (
