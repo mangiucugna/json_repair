@@ -115,6 +115,7 @@ def test_repair_json():
     assert repair_json('{"key": .25}') == '{"key": 0.25}'
     assert repair_json("""{    "a": "",    "b": [ { "c": 1} ] \n}```""") == '{"a": "", "b": [{"c": 1}]}'
     assert repair_json("Based on the information extracted, here is the filled JSON output: ```json { 'a': 'b' } ```") == '{"a": "b"}'
+    assert repair_json('''{"number": 1,"reason": "According...""ans": "YES"}''') == '{"number": 1, "reason": "According...", "ans": "YES"}'
 
 
 def test_repair_json_with_objects():

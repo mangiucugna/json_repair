@@ -302,7 +302,8 @@ class JSONParser:
                     while next_c and next_c != rstring_delimiter:
                         # If we are in an object context, let's check for the right delimiters
                         if (
-                            ("object_key" in self.context and next_c == ":")
+                            next_c == lstring_delimiter
+                            or ("object_key" in self.context and next_c == ":")
                             or ("object_value" in self.context and next_c in ["}", ","])
                             or ("array" in self.context and next_c in ["]", ","])
                         ):
@@ -310,12 +311,28 @@ class JSONParser:
                         i += 1
                         next_c = self.get_char_at(i)
                     if next_c == rstring_delimiter:
-                        self.log(
-                            "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
-                            "info",
-                        )
-                        self.index += 1
-                        char = self.get_char_at()
+                        # But this might not be it! This could be just a missing comma
+                        # We need to check if we find a rstring_delimiter and a colon after
+                        i += 1
+                        next_c = self.get_char_at(i)
+                        while next_c and next_c != rstring_delimiter:
+                            i += 1
+                            next_c = self.get_char_at(i)
+                        i += 1
+                        next_c = self.get_char_at(i)
+                        while next_c and next_c != ":":
+                            if next_c in [lstring_delimiter, rstring_delimiter, ","]:
+                                break
+                            i += 1
+                            next_c = self.get_char_at(i)
+                        # Only if we fail to find a ':' then we know this is misplaced quote
+                        if next_c != ":":
+                            self.log(
+                                "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
+                                "info",
+                            )
+                            self.index += 1
+                            char = self.get_char_at()
 
         if (
             char
