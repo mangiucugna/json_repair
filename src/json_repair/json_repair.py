@@ -11,7 +11,7 @@ This module will parse the JSON file following the BNF definition:
 
     <container> ::= <object> | <array>
     <array> ::= '[' [ <json> *(', ' <json>) ] ']' ; A sequence of JSON values separated by commas
-    <object> ::= '{' [ <string> *(', ' <member>) ] '}' ; A sequence of 'members'
+    <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
     <member> ::= <string> ': ' <json> ; A pair consisting of a name, and a JSON value
 
 If something is wrong (a missing parantheses or quotes for example) it will use a few simple heuristics to fix the JSON string:
