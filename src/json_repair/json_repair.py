@@ -56,46 +56,33 @@ class JSONParser:
             return ""
         # <object> starts with '{'
         # but an object key must be a string
-        elif self.get_context() != "object_key" and char == "{":
+        elif char == "{":
             self.index += 1
             return self.parse_object()
         # <array> starts with '['
         # but an object key must be a string
-        elif self.get_context() != "object_key" and char == "[":
+        elif char == "[":
             self.index += 1
             return self.parse_array()
         # there can be an edge case in which a key is empty and at the end of an object
         # like "key": }. We return an empty string here to close the object properly
-        elif self.get_context() != "object_key" and char == "}":
+        elif char == "}":
             self.log(
                 "At the end of an object we found a key with missing value, skipping",
                 "info",
             )
             return ""
         # <string> starts with '"'
-        elif char == '"':
+        elif char in ['"', "'", "“"]:
             return self.parse_string()
-        elif char == "'":
-            return self.parse_string(string_quotes="'")
-        elif char == "“":
-            return self.parse_string(string_quotes=["“", "”"])
         # <number> starts with [0-9] or minus
-        elif (
-            self.get_context() != ""
-            and self.get_context() != "object_key"
-            and char.isdigit()
-            or char == "-"
-            or char == "."
-        ):
+        elif char.isdigit() or char == "-" or char == ".":
             return self.parse_number()
         # <boolean> could be (T)rue or (F)alse or (N)ull
-        elif (
-            self.get_context() != ""
-            and self.get_context() != "object_key"
-            and char.lower() in ["t", "f", "n"]
-        ):
+        elif char.lower() in ["t", "f", "n"]:
             return self.parse_boolean_or_null()
         # This might be a <string> that is missing the starting '"'
+        # but this case can happen here only if we are parsing an object or array
         elif self.get_context() != "" and char.isalpha():
             return self.parse_string()
         # If everything else fails, we just ignore and move on
@@ -133,7 +120,7 @@ class JSONParser:
             # <member> starts with a <string>
             key = ""
             while key == "" and self.get_char_at():
-                key = self.parse_json()
+                key = self.parse_string()
 
                 # This can happen sometimes like { "": "value" }
                 if key == "" and self.get_char_at() == ":":
@@ -228,7 +215,7 @@ class JSONParser:
         self.reset_context()
         return arr
 
-    def parse_string(self, string_quotes=False) -> str:
+    def parse_string(self) -> str:
         # <string> is a string of valid characters enclosed in quotes
         # i.e. { name: "John" }
         # Somehow all weird cases in an invalid JSON happen to be resolved in this function, so be careful here
@@ -237,11 +224,19 @@ class JSONParser:
         fixed_quotes = False
         doubled_quotes = False
         lstring_delimiter = rstring_delimiter = '"'
-        if isinstance(string_quotes, list):
-            lstring_delimiter = string_quotes[0]
-            rstring_delimiter = string_quotes[1]
-        elif isinstance(string_quotes, str):
-            lstring_delimiter = rstring_delimiter = string_quotes
+
+        char = self.get_char_at()
+        # A valid string can only start with a valid quote or, in our case, with a literal
+        while char and char not in ['"', "'", "“"] and not char.isalpha():
+            self.index += 1
+            char = self.get_char_at()
+        # Ensuring we use the right delimiter
+        if char == "'":
+            lstring_delimiter = rstring_delimiter = "'"
+        elif char == "“":
+            lstring_delimiter = "“"
+            rstring_delimiter = "”"
+
         # There is sometimes a weird case of doubled quotes, we manage this also later in the while loop
         if self.get_char_at(1) == lstring_delimiter:
             # This is a valid exception only if it's closed by a double delimiter again
@@ -259,7 +254,6 @@ class JSONParser:
                 )
                 doubled_quotes = True
                 self.index += 1
-        char = self.get_char_at()
         if char != lstring_delimiter:
             self.log(
                 "While parsing a string, we found no starting quote, adding it", "info"
@@ -395,8 +389,8 @@ class JSONParser:
             except ValueError:
                 return number_str
         else:
-            # This is a string then
-            return self.parse_string()
+            # If nothing works, let's skip and keep parsing
+            return self.parse_json()
 
     def parse_boolean_or_null(self) -> Union[bool, str, None]:
         # <boolean> is one of the literal strings 'true', 'false', or 'null' (unquoted)
@@ -406,8 +400,14 @@ class JSONParser:
                 self.index += length
                 return value
 
-        # This is a string then
-        return self.parse_string()
+        # If nothing works
+        # If we are in array or object parse a string
+        if self.get_context() != "":
+            return self.parse_string()
+        else:
+            # Otherwise, let's skip this character and keep parsing
+            self.index += 1
+            return self.parse_json()
 
     def insert_char_at(self, char: str) -> None:
         self.json_str = self.json_str[: self.index] + char + self.json_str[self.index :]
@@ -485,7 +485,6 @@ def repair_json(
     When `skip_json_loads=True` is passed, it will not call the built-in json.loads() function
     When `logging=True` is passed, it will return an tuple with the repaired json and a log of all repair actions
     """
-    json_str = json_str.strip().lstrip("```json")
     parser = JSONParser(json_str, logging)
     if skip_json_loads:
         parsed_json = parser.parse()
