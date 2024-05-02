@@ -72,19 +72,12 @@ class JSONParser:
                 "info",
             )
             return ""
-        # <string> starts with '"'
-        elif char in ['"', "'", "“"]:
+        # <string> starts with a quote
+        elif char in ['"', "'", "“"] or char.isalpha():
             return self.parse_string()
         # <number> starts with [0-9] or minus
         elif char.isdigit() or char == "-" or char == ".":
             return self.parse_number()
-        # <boolean> could be (T)rue or (F)alse or (N)ull
-        elif char.lower() in ["t", "f", "n"]:
-            return self.parse_boolean_or_null()
-        # This might be a <string> that is missing the starting '"'
-        # but this case can happen here only if we are parsing an object or array
-        elif self.get_context() != "" and char.isalpha():
-            return self.parse_string()
         # If everything else fails, we just ignore and move on
         else:
             self.index += 1
@@ -192,6 +185,10 @@ class JSONParser:
                 char = self.get_char_at()
             # If this is the right value of an object and we are closing the object, it means the array is over
             if self.get_context() == "object_value" and char == "}":
+                self.log(
+                    "While parsing an array inside an object, we got to the end without finding a ]. Stopped parsing",
+                    "info",
+                )
                 break
 
         # Especially at the end of an LLM generated json you might miss the last "]"
@@ -230,6 +227,26 @@ class JSONParser:
         while char and char not in ['"', "'", "“"] and not char.isalpha():
             self.index += 1
             char = self.get_char_at()
+
+        if char.isalpha():
+            # This could be a <boolean> and not a string. Because (T)rue or (F)alse or (N)ull are valid
+            if char.lower() in ["t", "f", "n"]:
+                value = self.parse_boolean_or_null()
+                if value != "":
+                    return value
+            self.log(
+                "While parsing a string, we found a literal instead of a quote",
+                "info",
+            )
+            if self.get_context() == "":
+                # A string literal in the wild isn't a valid json and not something we can fix
+                self.log(
+                    "While parsing a string, we found a literal outside of context, ignoring it",
+                    "info",
+                )
+                self.index += 1
+                return self.parse_json()
+
         # Ensuring we use the right delimiter
         if char == "'":
             lstring_delimiter = rstring_delimiter = "'"
@@ -401,13 +418,7 @@ class JSONParser:
                 return value
 
         # If nothing works
-        # If we are in array or object parse a string
-        if self.get_context() != "":
-            return self.parse_string()
-        else:
-            # Otherwise, let's skip this character and keep parsing
-            self.index += 1
-            return self.parse_json()
+        return ""
 
     def insert_char_at(self, char: str) -> None:
         self.json_str = self.json_str[: self.index] + char + self.json_str[self.index :]
