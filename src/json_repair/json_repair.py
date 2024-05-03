@@ -97,11 +97,9 @@ class JSONParser:
             # Sometimes LLMs do weird things, if we find a ":" so early, we'll change it to "," and move on
             if (self.get_char_at() or "") == ":":
                 self.log(
-                    "While parsing an object we found a : before a key, replacing with ,",
+                    "While parsing an object we found a : before a key, ignoring",
                     "info",
                 )
-                self.remove_char_at()
-                self.insert_char_at(",")
                 self.index += 1
 
             # We are now searching for they string key
@@ -133,10 +131,10 @@ class JSONParser:
             # An extreme case of missing ":" after a key
             if (self.get_char_at() or "") != ":":
                 self.log(
-                    "While parsing an object we missed a : after a key, adding it back",
+                    "While parsing an object we missed a : after a key",
                     "info",
                 )
-                self.insert_char_at(":")
+
             self.index += 1
             self.reset_context()
             self.set_context("object_value")
@@ -156,10 +154,10 @@ class JSONParser:
         # Especially at the end of an LLM generated json you might miss the last "}"
         if (self.get_char_at() or "}") != "}":
             self.log(
-                "While parsing an object, we couldn't find the closing }, adding it back",
+                "While parsing an object, we couldn't find the closing }, ignoring",
                 "info",
             )
-            self.insert_char_at("}")
+
         self.index += 1
         return obj
 
@@ -201,11 +199,10 @@ class JSONParser:
             if char == ",":
                 # Remove trailing "," before adding the "]"
                 self.log(
-                    "While parsing an array, remove a trailing , before adding ]",
+                    "While parsing an array, found a trailing , before adding ]",
                     "info",
                 )
-                self.remove_char_at()
-            self.insert_char_at("]")
+
             self.index -= 1
 
         self.index += 1
@@ -218,7 +215,7 @@ class JSONParser:
         # Somehow all weird cases in an invalid JSON happen to be resolved in this function, so be careful here
 
         # Flag to manage corner cases related to missing starting quote
-        fixed_quotes = False
+        missing_quotes = False
         doubled_quotes = False
         lstring_delimiter = rstring_delimiter = '"'
 
@@ -228,7 +225,13 @@ class JSONParser:
             self.index += 1
             char = self.get_char_at()
 
-        if char.isalpha():
+        # Ensuring we use the right delimiter
+        if char == "'":
+            lstring_delimiter = rstring_delimiter = "'"
+        elif char == "“":
+            lstring_delimiter = "“"
+            rstring_delimiter = "”"
+        elif char.isalpha():
             # This could be a <boolean> and not a string. Because (T)rue or (F)alse or (N)ull are valid
             if char.lower() in ["t", "f", "n"]:
                 value = self.parse_boolean_or_null()
@@ -246,18 +249,18 @@ class JSONParser:
                 )
                 self.index += 1
                 return self.parse_json()
+            self.log(
+                "While parsing a string, we found no starting quote, ignoring", "info"
+            )
+            missing_quotes = True
 
-        # Ensuring we use the right delimiter
-        if char == "'":
-            lstring_delimiter = rstring_delimiter = "'"
-        elif char == "“":
-            lstring_delimiter = "“"
-            rstring_delimiter = "”"
+        if not missing_quotes:
+            self.index += 1
 
         # There is sometimes a weird case of doubled quotes, we manage this also later in the while loop
-        if self.get_char_at(1) == lstring_delimiter:
+        if self.get_char_at() == lstring_delimiter:
             # This is a valid exception only if it's closed by a double delimiter again
-            i = 2
+            i = 1
             next_c = self.get_char_at(i)
             while next_c and next_c != rstring_delimiter:
                 i += 1
@@ -271,17 +274,9 @@ class JSONParser:
                 )
                 doubled_quotes = True
                 self.index += 1
-        if char != lstring_delimiter:
-            self.log(
-                "While parsing a string, we found no starting quote, adding it", "info"
-            )
-            self.insert_char_at(lstring_delimiter)
-            fixed_quotes = True
-        else:
-            self.index += 1
 
-        # Start position of the string (to use later in the return value)
-        start = self.index
+        # Initialize our return value
+        string_acc = ""
 
         # Here things get a bit hairy because a string missing the final quote can also be a key or a value in an object
         # In that case we need to use the ":|,|}" characters as terminators of the string
@@ -291,22 +286,25 @@ class JSONParser:
         # * If we are fixing missing quotes in an object, when it finds the special terminators
         char = self.get_char_at()
         while char and char != rstring_delimiter:
-            if fixed_quotes:
+            if missing_quotes:
                 if self.get_context() == "object_key" and (
                     char == ":" or char.isspace()
                 ):
                     break
                 elif self.get_context() == "object_value" and char in [",", "}"]:
                     break
+            string_acc += char
             self.index += 1
             char = self.get_char_at()
             # If the string contains an escaped character we should respect that or remove the escape
             if self.get_char_at(-1) == "\\":
                 if char in [rstring_delimiter, "t", "n", "r", "b", "\\"]:
+                    string_acc += char
                     self.index += 1
                     char = self.get_char_at()
                 else:
-                    self.remove_char_at(-1)
+                    # Remove this character from the final output
+                    string_acc = string_acc[:-2] + string_acc[-1:]
                     self.index -= 1
             # ChatGPT sometimes forget to quote stuff in html tags or markdown, so we do this whole thing here
             if char == rstring_delimiter:
@@ -316,8 +314,6 @@ class JSONParser:
                         "While parsing a string, we found a doubled quote, ignoring it",
                         "info",
                     )
-                    # self destruct this character
-                    self.remove_char_at()
                 else:
                     # Check if eventually there is a rstring delimiter, otherwise we bail
                     i = 1
@@ -354,12 +350,13 @@ class JSONParser:
                                 "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
                                 "info",
                             )
+                            string_acc += char
                             self.index += 1
                             char = self.get_char_at()
 
         if (
             char
-            and fixed_quotes
+            and missing_quotes
             and self.get_context() == "object_key"
             and char.isspace()
         ):
@@ -371,19 +368,16 @@ class JSONParser:
             if self.get_char_at() not in [":", ","]:
                 return ""
 
-        end = self.index
-
         # A fallout of the previous special case in the while loop, we need to update the index only if we had a closing quote
         if char != rstring_delimiter:
             self.log(
-                "While parsing a string, we missed the closing quote, adding it back",
+                "While parsing a string, we missed the closing quote, ignoring",
                 "info",
             )
-            self.insert_char_at(rstring_delimiter)
         else:
             self.index += 1
 
-        return self.json_str[start:end].rstrip()
+        return string_acc.rstrip()
 
     def parse_number(self) -> Union[float, int, str]:
         # <number> is a valid real number expressed in one of a number of given formats
@@ -420,22 +414,12 @@ class JSONParser:
         # If nothing works
         return ""
 
-    def insert_char_at(self, char: str) -> None:
-        self.json_str = self.json_str[: self.index] + char + self.json_str[self.index :]
-        self.index += 1
-
     def get_char_at(self, count: int = 0) -> Union[str, bool]:
         # Why not use something simpler? Because we might be out of bounds and doing this check all the time is annoying
         try:
             return self.json_str[self.index + count]
         except IndexError:
             return False
-
-    def remove_char_at(self, count: int = 0) -> None:
-        self.json_str = (
-            self.json_str[: self.index + count]
-            + self.json_str[self.index + count + 1 :]
-        )
 
     def skip_whitespaces_at(self) -> None:
         # Remove trailing spaces
