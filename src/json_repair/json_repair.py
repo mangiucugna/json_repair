@@ -27,9 +27,11 @@ from typing import Any, Dict, List, Union, TextIO
 
 
 class JSONParser:
-    def __init__(self, json_str: str, logging: bool = False) -> None:
+    def __init__(self, json_str: str, json_fd: TextIO, logging: bool = False) -> None:
         # The string to parse
         self.json_str = json_str
+        # Alternatively, the file description with a json file in it
+        self.json_fd = json_fd
         # Index is our iterator that will keep track of which character we are looking at right now
         self.index = 0
         # This is used in the object member parsing to manage the special cases of missing quotes in key or value
@@ -405,36 +407,52 @@ class JSONParser:
 
     def parse_boolean_or_null(self) -> Union[bool, str, None]:
         # <boolean> is one of the literal strings 'true', 'false', or 'null' (unquoted)
-        boolean_map = {"true": (True, 4), "false": (False, 5), "null": (None, 4)}
-        for key, (value, length) in boolean_map.items():
-            if self.json_str.lower().startswith(key, self.index):
-                self.index += length
-                return value
+        starting_index = self.index
+        value = ""
+        char = self.get_char_at().lower()
+        if char == "t":
+            value = ("true", True)
+        elif char == "f":
+            value = ("false", False)
+        elif char == "n":
+            value = ("null", None)
 
-        # If nothing works
+        if len(value):
+            i = 0
+            while char and i < len(value[0]) and char == value[0][i]:
+                i += 1
+                self.index += 1
+                char = self.get_char_at().lower()
+            if i == len(value[0]):
+                return value[1]
+
+        # If nothing works reset the index before returning
+        self.index = starting_index
         return ""
 
     def get_char_at(self, count: int = 0) -> Union[str, bool]:
-        # Why not use something simpler? Because we might be out of bounds and doing this check all the time is annoying
-        try:
-            return self.json_str[self.index + count]
-        except IndexError:
-            return False
+        if self.json_fd:
+            self.json_fd.seek(self.index + count)
+            char = self.json_fd.read(1)
+            if char == "":
+                return False
+            return char
+        else:
+            # Why not use something simpler? Because we might be out of bounds and doing this check all the time is annoying
+            try:
+                return self.json_str[self.index + count]
+            except IndexError:
+                return False
 
     def skip_whitespaces_at(self) -> None:
-        # Remove trailing spaces
-        # I'd rather not do this BUT this method is called so many times that it makes sense to expand get_char_at
-        # At least this is what the profiler said and I believe in our lord and savior the profiler
-        try:
-            char = self.json_str[self.index]
-        except IndexError:
-            return
+        """
+        This function quickly iterates on whitespaces, syntactic sugar to make the code more concise
+        """
+
+        char = self.get_char_at()
         while char and char.isspace():
             self.index += 1
-            try:
-                char = self.json_str[self.index]
-            except IndexError:
-                return
+            char = self.get_char_at()
 
     def set_context(self, value: str) -> None:
         # If a value is provided update the context variable and save in stack
@@ -455,23 +473,31 @@ class JSONParser:
 
     def log(self, text: str, level: str) -> None:
         if level == self.logger["log_level"]:
+            context = ""
+            if self.json_fd:
+                self.json_fd.seek(self.index - self.logger["window"])
+                context = self.json_fd.read(self.logger["window"] * 2)
+                self.json_fd.seek(self.index)
+            else:
+                context = self.json_str[
+                    self.index
+                    - self.logger["window"] : self.index
+                    + self.logger["window"]
+                ]
             self.logger["log"].append(
                 {
                     "text": text,
-                    "context": self.json_str[
-                        self.index
-                        - self.logger["window"] : self.index
-                        + self.logger["window"]
-                    ],
+                    "context": context,
                 }
             )
 
 
 def repair_json(
-    json_str: str,
+    json_str: str = "",
     return_objects: bool = False,
     skip_json_loads: bool = False,
     logging: bool = False,
+    json_fd: TextIO = None,
 ) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
     """
     Given a json formatted string, it will try to decode it and, if it fails, it will try to fix it.
@@ -480,12 +506,15 @@ def repair_json(
     When `skip_json_loads=True` is passed, it will not call the built-in json.loads() function
     When `logging=True` is passed, it will return an tuple with the repaired json and a log of all repair actions
     """
-    parser = JSONParser(json_str, logging)
+    parser = JSONParser(json_str, json_fd, logging)
     if skip_json_loads:
         parsed_json = parser.parse()
     else:
         try:
-            parsed_json = json.loads(json_str)
+            if json_fd:
+                parsed_json = json.load(json_fd)
+            else:
+                parsed_json = json.loads(json_str)
         except json.JSONDecodeError:
             parsed_json = parser.parse()
     # It's useful to return the actual object instead of the json string, it allows this lib to be a replacement of the json library
@@ -501,18 +530,30 @@ def loads(
     This function works like `json.loads()` except that it will fix your JSON in the process.
     It is a wrapper around the `repair_json()` function with `return_objects=True`.
     """
-    return repair_json(json_str, True, skip_json_loads, logging)
+    return repair_json(
+        json_str=json_str,
+        return_objects=True,
+        skip_json_loads=skip_json_loads,
+        logging=logging,
+    )
 
 
 def load(
-    fp: TextIO, skip_json_loads: bool = False, logging: bool = False
+    fd: TextIO, skip_json_loads: bool = False, logging: bool = False
 ) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
-    return loads(fp.read(), skip_json_loads, logging)
+    """
+    This function works like `json.load()` except that it will fix your JSON in the process.
+    It is a wrapper around the `repair_json()` function with `json_fd=fd` and `return_objects=True`.
+    """
+    return repair_json(json_fd=fd, skip_json_loads=skip_json_loads, logging=logging)
 
 
 def from_file(
     filename: str, skip_json_loads: bool = False, logging: bool = False
 ) -> Union[Dict[str, Any], List[Any], str, float, int, bool, None]:
+    """
+    This function is a wrapper around `load()` so you can pass the filename as string
+    """
     fd = open(filename)
     jsonobj = load(fd, skip_json_loads, logging)
     fd.close()
