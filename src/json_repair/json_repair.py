@@ -431,17 +431,17 @@ class JSONParser:
         return ""
 
     def get_char_at(self, count: int = 0) -> Union[str, bool]:
-        if self.json_fd:
-            self.json_fd.seek(self.index + count)
-            char = self.json_fd.read(1)
-            if char == "":
-                return False
-            return char
-        else:
-            # Why not use something simpler? Because try/except in python is a faster alternative to an "if" statement that is often True
-            try:
-                return self.json_str[self.index + count]
-            except IndexError:
+        # Why not use something simpler? Because try/except in python is a faster alternative to an "if" statement that is often True
+        try:
+            return self.json_str[self.index + count]
+        except IndexError:
+            if self.json_fd:
+                self.json_fd.seek(self.index + count)
+                char = self.json_fd.read(1)
+                if char == "":
+                    return False
+                return char
+            else:
                 return False
 
     def skip_whitespaces_at(self) -> None:
