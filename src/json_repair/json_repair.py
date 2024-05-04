@@ -438,7 +438,7 @@ class JSONParser:
                 return False
             return char
         else:
-            # Why not use something simpler? Because we might be out of bounds and doing this check all the time is annoying
+            # Why not use something simpler? Because try/except in python is a faster alternative to an "if" statement that is often True
             try:
                 return self.json_str[self.index + count]
             except IndexError:
@@ -448,11 +448,23 @@ class JSONParser:
         """
         This function quickly iterates on whitespaces, syntactic sugar to make the code more concise
         """
-
-        char = self.get_char_at()
-        while char and char.isspace():
-            self.index += 1
+        if self.json_fd:
             char = self.get_char_at()
+            while char and char.isspace():
+                self.index += 1
+                char = self.get_char_at()
+        else:
+            # If this is not a file stream, we do this monster here to make this function much much faster
+            try:
+                char = self.json_str[self.index]
+            except IndexError:
+                return
+            while char.isspace():
+                self.index += 1
+                try:
+                    char = self.json_str[self.index]
+                except IndexError:
+                    return
 
     def set_context(self, value: str) -> None:
         # If a value is provided update the context variable and save in stack
