@@ -2,6 +2,12 @@ This simple package can be used to fix an invalid json string. To know all cases
 
 Inspired by https://github.com/josdejong/jsonrepair
 
+---
+# Offer me a beer
+If you find this library useful, you can help me by donating toward my monthly beer budget here: https://github.com/sponsors/mangiucugna
+
+---
+
 # Motivation
 Some LLMs are a bit iffy when it comes to returning well formed JSON data, sometimes they skip a parentheses and sometimes they add some words in it, because that's what an LLM does.
 Luckily, the mistakes LLMs make are simple enough to be fixed without destroying the content.
