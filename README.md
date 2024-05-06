@@ -118,10 +118,6 @@ You will need owner access to this repository
 - Typescript: https://github.com/josdejong/jsonrepair
 - Go: https://github.com/RealAlexandreAI/json-repair
 ---
-# Bonus Content
-If you need some good Custom Instructions (System Message) to improve your chatbot responses try https://gist.github.com/mangiucugna/7ec015c4266df11be8aa510be0110fe4
-
----
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=mangiucugna/json_repair&type=Date)](https://star-history.com/#mangiucugna/json_repair&Date)
