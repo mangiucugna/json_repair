@@ -4,6 +4,7 @@ from src.json_repair.json_repair import from_file, repair_json, loads
 def test_repair_json():
     # Test with valid JSON strings
     assert repair_json("[]") == "[]"
+    assert repair_json("[{]") == "[]"
     assert repair_json("   {  }   ") == "{}"
     assert repair_json("\"") == '""'
     assert repair_json("\n") == '""'

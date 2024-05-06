@@ -227,6 +227,10 @@ class JSONParser:
             self.index += 1
             char = self.get_char_at()
 
+        if not char:
+            # This is an empty string
+            return ""
+
         # Ensuring we use the right delimiter
         if char == "'":
             lstring_delimiter = rstring_delimiter = "'"
