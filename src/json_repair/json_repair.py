@@ -302,16 +302,6 @@ class JSONParser:
             string_acc += char
             self.index += 1
             char = self.get_char_at()
-            # If the string contains an escaped character we should respect that or remove the escape
-            if self.get_char_at(-1) == "\\":
-                if char in [rstring_delimiter, "t", "n", "r", "b", "\\"]:
-                    string_acc += char
-                    self.index += 1
-                    char = self.get_char_at()
-                else:
-                    # Remove this character from the final output
-                    string_acc = string_acc[:-2] + string_acc[-1:]
-                    self.index -= 1
             # ChatGPT sometimes forget to quote stuff in html tags or markdown, so we do this whole thing here
             if char == rstring_delimiter:
                 # Special case here, in case of double quotes one after another
@@ -495,11 +485,17 @@ class JSONParser:
                 context = self.json_fd.read(self.logger["window"] * 2)
                 self.json_fd.seek(self.index)
             else:
-                context = self.json_str[
-                    self.index
-                    - self.logger["window"] : self.index
-                    + self.logger["window"]
-                ]
+                start = (
+                    self.index - self.logger["window"]
+                    if (self.index - self.logger["window"]) >= 0
+                    else 0
+                )
+                end = (
+                    self.index + self.logger["window"]
+                    if (self.index + self.logger["window"]) <= len(self.json_str)
+                    else len(self.json_str)
+                )
+                context = self.json_str[start:end]
             self.logger["log"].append(
                 {
                     "text": text,

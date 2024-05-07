@@ -7,7 +7,7 @@ def test_repair_json():
     assert repair_json("[{]") == "[]"
     assert repair_json("   {  }   ") == "{}"
     assert repair_json("\"") == '""'
-    assert repair_json("\n") == '""'
+    assert repair_json("\n") == '""'    
     assert repair_json('  {"key": true, "key2": false, "key3": null}') == '{"key": true, "key2": false, "key3": null}'
     assert repair_json('{"key": TRUE, "key2": FALSE, "key3": Null}   ') == '{"key": true, "key2": false, "key3": null}'
     assert repair_json("{'key': 'string', 'key2': false, \"key3\": null, \"key4\": unquoted}") == '{"key": "string", "key2": false, "key3": null, "key4": "unquoted"}'
@@ -56,7 +56,7 @@ def test_repair_json():
     assert repair_json('{"') == '{}'
     assert repair_json('["') == '[]'
     assert repair_json("'\"'") == '"\\\""'
-    assert repair_json("'string\"") == '"string\\\""'
+    assert repair_json("'string\"\n\t\le") == '"string\\\"\\n\\t\\\\le"'
     assert repair_json('{foo: [}') == '{"foo": []}'
     assert repair_json('''{ "a": "{ b": {} }" }''') == '{"a": "{ b"}'
     assert repair_json('{"key": "value:value"}') == '{"key": "value:value"}'
