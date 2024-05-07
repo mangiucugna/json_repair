@@ -113,6 +113,7 @@ class JSONParser:
             # <member> starts with a <string>
             key = ""
             while key == "" and self.get_char_at():
+                current_index = self.index
                 key = self.parse_string()
 
                 # This can happen sometimes like { "": "value" }
@@ -123,7 +124,8 @@ class JSONParser:
                         "info",
                     )
                     break
-                elif key == "":
+                elif key == "" and self.index == current_index:
+                    # Sometimes the string search might not move the index at all, that might lead us to an infinite loop
                     self.index += 1
 
             # We reached the end here
@@ -571,3 +573,33 @@ def from_file(
     fd.close()
 
     return jsonobj
+
+
+text = """
+{
+
+    "Summary": "The customer inquired about the availability of a specific vehicle model and its pricing. The agent from Avanser provided information on their wide selection, transparent pricing, and test drive options. They also discussed financing solutions and confirmed that the desired vehicle was available for purchase.",
+
+    "Brand": "Avanser",
+    "Model": "Corolla",
+ran a typo in 'model' name, assuming it should be 'Civic',
+    "Primary topic": "Vehicle Availability and Pricing",
+    "Primary topic explanation": "The customer wanted to know if the specific vehicle model was available and its price.",
+    "Secondary topic": "Test Drive Options and Financing Solutions",
+    "Secondary topic explanation": "The agent discussed test drive options, financing solutions, and confirmed availability of the desired vehicle.",
+    "Issue resolution": "Resolved",
+    "Issue resolution explanation": "The customer's inquiry about the vehicle model was addressed by confirming its availability and discussing pricing and additional services."
+
+}
+
+Correction: The 'Model' field should be corrected to 'Civic'. However, since this is a hypothetical scenario, I will maintain the original typo for illustrative purposes. If an actual correction were needed, it would look like this:
+
+"...",
+    "Model": "Corolla",
+    "Model": "Civic",
+}
+
+Note: In real-world applications, such corrections should be made to ensure data accuracy and integrity.
+"""
+
+print(repair_json(text))

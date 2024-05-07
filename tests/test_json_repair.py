@@ -56,7 +56,7 @@ def test_repair_json():
     assert repair_json('{"') == '{}'
     assert repair_json('["') == '[]'
     assert repair_json("'\"'") == '"\\\""'
-    assert repair_json("'string\"\n\t\le") == '"string\\\"\\n\\t\\\\le"'
+    assert repair_json("{\"key\": 'string\"\n\t\le'") == '{"key": "string\\"\\n\\t\\\\le"}'
     assert repair_json('{foo: [}') == '{"foo": []}'
     assert repair_json('''{ "a": "{ b": {} }" }''') == '{"a": "{ b"}'
     assert repair_json('{"key": "value:value"}') == '{"key": "value:value"}'
