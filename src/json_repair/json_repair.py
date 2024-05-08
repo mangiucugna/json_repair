@@ -380,14 +380,20 @@ class JSONParser:
     def parse_number(self) -> Union[float, int, str]:
         # <number> is a valid real number expressed in one of a number of given formats
         number_str = ""
-        number_chars = set("0123456789-.eE/")
+        number_chars = set("0123456789-.eE/,")
         char = self.get_char_at()
         while char and char in number_chars:
             number_str += char
             self.index += 1
             char = self.get_char_at()
+        if len(number_str) > 1 and number_str[-1] in "-eE/,":
+            # The number ends with a non valid character for a number/currency, rolling back one
+            number_str = number_str[:-1]
+            self.index -= 1
         if number_str:
             try:
+                if "," in number_str:
+                    return str(number_str)
                 if "." in number_str or "e" in number_str or "E" in number_str:
                     return float(number_str)
                 elif number_str == "-":

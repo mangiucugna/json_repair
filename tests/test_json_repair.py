@@ -121,6 +121,8 @@ def test_repair_json():
     assert repair_json('{"key": 1/3, "foo": "bar"}') == '{"key": "1/3", "foo": "bar"}'
     assert repair_json('{"here": "now", "key": 1/3, "foo": "bar"}') == '{"here": "now", "key": "1/3", "foo": "bar"}'
     assert repair_json('{"key": 12345/67890}') == '{"key": "12345/67890"}'
+    assert repair_json('[105,12') == '["105,12"]'
+    assert repair_json('{"key", 105,12,') == '{"key": "105,12"}'
 
 
 def test_repair_json_with_objects():
