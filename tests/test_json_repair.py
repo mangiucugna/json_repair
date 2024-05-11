@@ -27,6 +27,14 @@ def test_repair_json():
         == '{"name": "John", "age": 30, "city": "New York"}'
     )
     assert (
+        repair_json('{"name": "John", "age": 30, "city": "New York", ...}')
+        == '{"name": "John", "age": 30, "city": "New York"}'
+    )
+    assert (
+        repair_json('{"name": "John", "age": 30, ..., "city": "New York"}')
+        == '{"name": "John", "age": 30, "city": "New York"}'
+    )
+    assert (
         repair_json('{"name": "John", "age": 30, city: "New York"}')
         == '{"name": "John", "age": 30, "city": "New York"}'
     )
@@ -39,6 +47,8 @@ def test_repair_json():
         == '{"name": "John", "age": 30, "city": "New York"}'
     )
     assert repair_json("[1, 2, 3,") == "[1, 2, 3]"
+    assert repair_json("[1, 2, 3, ...]") == "[1, 2, 3]"
+    assert repair_json("[1, 2, ..., 3]") == "[1, 2, 3]"
     assert (
         repair_json('{"employees":["John", "Anna",')
         == '{"employees": ["John", "Anna"]}'
@@ -146,6 +156,16 @@ def test_repair_json_with_objects():
         "age": 30,
         "city": "New York",
     }
+    assert repair_json('{"name": "John", "age": 30, "city": "New York", ...}', return_objects=True) == {
+        "name": "John",
+        "age": 30,
+        "city": "New York",
+    }
+    assert repair_json('{"name": "John", "age": 30, ..., "city": "New York"}', return_objects=True) == {
+        "name": "John",
+        "age": 30,
+        "city": "New York",
+    }
     assert repair_json('{"name": "John", "age": 30, city: "New York"}', return_objects=True) == {
         "name": "John",
         "age": 30,
@@ -157,6 +177,8 @@ def test_repair_json_with_objects():
         "city": "New York",
     }
     assert repair_json("[1, 2, 3,", return_objects=True) == [1, 2, 3]
+    assert repair_json("[1, 2, 3, ...]", return_objects=True) == [1, 2, 3]
+    assert repair_json("[1, 2, ..., 3]", return_objects=True) == [1, 2, 3]
     assert repair_json('{"employees":["John", "Anna",', return_objects=True) == {
         "employees": ["John", "Anna"]
     }
