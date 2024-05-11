@@ -172,6 +172,20 @@ class JSONParser:
         # Stop when you either find the closing parentheses or you have iterated over the entire string
         while (self.get_char_at() or "]") != "]":
             self.skip_whitespaces_at()
+            # Check for ellipsis '...' and skip it if present
+            if (
+                self.get_char_at() == "."
+                and self.get_char_at(1) == "."
+                and self.get_char_at(2) == "."
+            ):
+                self.index += 3  # Skip the ellipsis
+                self.skip_whitespaces_at()
+                # Continue parsing if there's more after the ellipsis, otherwise break
+                if self.get_char_at() in [",", " "]:
+                    continue
+                else:
+                    break
+
             value = self.parse_json()
 
             # It is possible that parse_json() returns nothing valid, so we stop
