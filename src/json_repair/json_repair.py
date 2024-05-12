@@ -179,7 +179,9 @@ class JSONParser:
                 break
 
             if value == "..." and self.get_char_at(-1) == ".":
-                self.log("While parsing an array, found '...'; ignoring it", "info")
+                self.log(
+                    "While parsing an array, found a stray '...'; ignoring it", "info"
+                )
             else:
                 arr.append(value)
 
