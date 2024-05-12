@@ -178,7 +178,10 @@ class JSONParser:
             if not value:
                 break
 
-            arr.append(value)
+            if value == "..." and self.get_char_at(-1) == ".":
+                self.log("While parsing an array, found '...'; ignoring it", "info")
+            else:
+                arr.append(value)
 
             # skip over whitespace after a value but before closing ]
             char = self.get_char_at()
