@@ -309,6 +309,15 @@ class JSONParser:
             string_acc += char
             self.index += 1
             char = self.get_char_at()
+            if len(string_acc) > 1 and string_acc[-1] == "\\":
+                # This is a special case, if people use real strings this might happen
+                self.log("Found a stray escape sequence, normalizing it", "info")
+                string_acc = string_acc[:-1]
+                if char in [rstring_delimiter, "t", "n", "r", "b", "\\"]:
+                    escape_seqs = {"t": "\t", "n": "\n", "r": "\r", "b": "\b"}
+                    string_acc += escape_seqs.get(char, char)
+                    self.index += 1
+                    char = self.get_char_at()
             # ChatGPT sometimes forget to quote stuff in html tags or markdown, so we do this whole thing here
             if char == rstring_delimiter:
                 # Special case here, in case of double quotes one after another
