@@ -1,27 +1,61 @@
 from src.json_repair.json_repair import from_file, repair_json, loads
 
 
-def test_repair_json():
-    # Test with valid JSON strings
+def test_valid_json():
     assert repair_json("[]") == "[]"
-    assert repair_json("[{]") == "[]"
-    assert repair_json("   {  }   ") == "{}"
-    assert repair_json("\"") == '""'
-    assert repair_json("\n") == '""'    
-    assert repair_json('  {"key": true, "key2": false, "key3": null}') == '{"key": true, "key2": false, "key3": null}'
-    assert repair_json('{"key": TRUE, "key2": FALSE, "key3": Null}   ') == '{"key": true, "key2": false, "key3": null}'
-    assert repair_json("{'key': 'string', 'key2': false, \"key3\": null, \"key4\": unquoted}") == '{"key": "string", "key2": false, "key3": null, "key4": "unquoted"}'
+    assert repair_json("[1, 2, 3, 4]") == "[1, 2, 3, 4]"
     assert (
         repair_json('{"name": "John", "age": 30, "city": "New York"}')
         == '{"name": "John", "age": 30, "city": "New York"}'
     )
-    assert repair_json("[1, 2, 3, 4]") == "[1, 2, 3, 4]"
     assert (
         repair_json('{"employees":["John", "Anna", "Peter"]} ')
         == '{"employees": ["John", "Anna", "Peter"]}'
     )
+    assert repair_json('{"key": "value:value"}') == '{"key": "value:value"}'
+    assert (
+        repair_json('{"text": "The quick brown fox,"}')
+        == '{"text": "The quick brown fox,"}'
+    )
+    assert (
+        repair_json('{"text": "The quick brown fox won\'t jump"}')
+        == '{"text": "The quick brown fox won\'t jump"}'
+    )
+    assert repair_json('{"key": ""') == '{"key": ""}'
+    assert (
+        repair_json('{"key1": {"key2": [1, 2, 3]}}') == '{"key1": {"key2": [1, 2, 3]}}'
+    )
+    assert (
+        repair_json('{"key": 12345678901234567890}') == '{"key": 12345678901234567890}'
+    )
+    assert repair_json('{"key": "value\u263A"}') == '{"key": "value\\u263a"}'
+    assert repair_json('{"key": "value\\nvalue"}') == '{"key": "value\\nvalue"}'
 
-    # Test with invalid JSON strings
+def test_brackets_edge_cases():
+    assert repair_json("[{]") == "[]"
+    assert repair_json("   {  }   ") == "{}"
+    assert repair_json("[") == "[]"
+    assert repair_json("]") == '""'
+    assert repair_json("{") == "{}"
+    assert repair_json("}") == '""'
+    assert repair_json('{"') == '{}'
+    assert repair_json('["') == '[]'
+    assert repair_json('{foo: [}') == '{"foo": []}'
+
+def test_general_edge_cases():
+    assert repair_json("\"") == '""'
+    assert repair_json("\n") == '""'
+    assert repair_json(" ") == '""'
+    assert repair_json("[[1\n\n]") == "[[1]]"
+    assert repair_json("string") == '""'
+    assert repair_json("stringbeforeobject {}") == '{}'
+
+def test_mixed_data_types(): 
+    assert repair_json('  {"key": true, "key2": false, "key3": null}') == '{"key": true, "key2": false, "key3": null}'
+    assert repair_json('{"key": TRUE, "key2": FALSE, "key3": Null}   ') == '{"key": true, "key2": false, "key3": null}'
+
+def test_missing_and_mixed_quotes():
+    assert repair_json("{'key': 'string', 'key2': false, \"key3\": null, \"key4\": unquoted}") == '{"key": "string", "key2": false, "key3": null, "key4": "unquoted"}'
     assert (
         repair_json('{"name": "John", "age": 30, "city": "New York')
         == '{"name": "John", "age": 30, "city": "New York"}'
@@ -38,6 +72,13 @@ def test_repair_json():
         repair_json('{"name": John, "age": 30, "city": "New York"}')
         == '{"name": "John", "age": 30, "city": "New York"}'
     )
+    assert repair_json('{“slanted_delimiter”: "value"}') == '{"slanted_delimiter": "value"}'
+    assert (
+        repair_json('{"name": "John", "age": 30, "city": "New')
+        == '{"name": "John", "age": 30, "city": "New"}'
+    )
+
+def test_array_edge_cases():
     assert repair_json("[1, 2, 3,") == "[1, 2, 3]"
     assert repair_json("[1, 2, 3, ...]") == "[1, 2, 3]"
     assert repair_json("[1, 2, ... , 3]") == "[1, 2, 3]"
@@ -46,51 +87,28 @@ def test_repair_json():
         repair_json('{"employees":["John", "Anna",')
         == '{"employees": ["John", "Anna"]}'
     )
-
-    # Test with edge cases
-    assert repair_json(" ") == '""'
-    assert repair_json("[") == "[]"
-    assert repair_json("]") == '""'
-    assert repair_json("[[1\n\n]") == "[[1]]"
-    assert repair_json("{") == "{}"
-    assert repair_json("}") == '""'
-    assert repair_json("string") == '""'
-    assert repair_json("stringbeforeobject {}") == '{}'
-    assert repair_json('{"') == '{}'
-    assert repair_json('["') == '[]'
-    assert repair_json("'\"'") == '"\\\""'
-    assert repair_json("{\"key\": 'string\"\n\t\le'") == '{"key": "string\\"\\n\\tle"}'
-    assert repair_json('{foo: [}') == '{"foo": []}'
-    assert repair_json('''{ "a": "{ b": {} }" }''') == '{"a": "{ b"}'
-    assert repair_json('{"key": "value:value"}') == '{"key": "value:value"}'
-    assert repair_json('{“slanted_delimiter”: "value"}') == '{"slanted_delimiter": "value"}'
-    assert (
-        repair_json('{"name": "John", "age": 30, "city": "New')
-        == '{"name": "John", "age": 30, "city": "New"}'
-    )
     assert (
         repair_json('{"employees":["John", "Anna", "Peter')
         == '{"employees": ["John", "Anna", "Peter"]}'
     )
-    assert (
-        repair_json('{"employees":["John", "Anna", "Peter"]}')
-        == '{"employees": ["John", "Anna", "Peter"]}'
-    )
-    assert (
-        repair_json('{"text": "The quick brown fox,"}')
-        == '{"text": "The quick brown fox,"}'
-    )
-    assert (
-        repair_json('{"text": "The quick brown fox won\'t jump"}')
-        == '{"text": "The quick brown fox won\'t jump"}'
-    )
+    assert repair_json('{"key1": {"key2": [1, 2, 3') == '{"key1": {"key2": [1, 2, 3]}}'
+
+    
+def test_escaping():
+    assert repair_json("'\"'") == '"\\\""'
+    assert repair_json("{\"key\": 'string\"\n\t\le'") == '{"key": "string\\"\\n\\tle"}'
+    assert repair_json(r'{"real_content": "Some string: Some other string \t Some string <a href=\"https://domain.com\">Some link</a>"') == r'{"real_content": "Some string: Some other string \t Some string <a href=\"https://domain.com\">Some link</a>"}'
+    assert repair_json('{"key_1\n": "value"}') == '{"key_1": "value"}'
+    assert repair_json('{"key\t_": "value"}') == '{"key\\t_": "value"}'
+    
+    
+def test_object_edge_cases():    
     assert {
         repair_json('{"value_1": "value_2": "data"}') == '{"value_1": "value_2", "data": ""}'
     }
     assert {
         repair_json('{"value_1": true, COMMENT "value_2": "data"}') == '{"value_1": "value_2", "": "data"}'
     }
-    # Test with garbage comments
     assert repair_json('{"value_1": true, SHOULD_NOT_EXIST "value_2": "data" AAAA }') == '{"value_1": true, "value_2": "data"}'
     assert {
         repair_json('{"" : true, "key2": "value2"}') == '{" ": true, "key2": "value_2"}'
@@ -98,35 +116,36 @@ def test_repair_json():
     assert {
         repair_json('{"": true, "key2": "value2"}') == '{"empty_placeholder": true, "key2": "value_2"}'
     }
-    # Test a nasty corner case
-    assert repair_json(' - { "test_key": ["test_value", "test_value2"] }') == '{"test_key": ["test_value", "test_value2"]}'
-
-    #Test markdown stupidities from ChatGPT
-    assert repair_json('{ "content": "[LINK]("https://google.com")" }') == '{"content": "[LINK](\\"https://google.com\\")"}'
-    assert repair_json('{ "content": "[LINK](" }') == '{"content": "[LINK]("}'
-    assert repair_json('{ "content": "[LINK](", "key": true }') == '{"content": "[LINK](", "key": true}'
-    assert repair_json("""
-                       ```json
-                       { "key": "value" }
-                       ```""") == '{"key": "value"}'
-    assert repair_json('````{ "key": "value" }```') == '{"key": "value"}'
-    assert repair_json(r'{"real_content": "Some string: Some other string \t Some string <a href=\"https://domain.com\">Some link</a>"') == r'{"real_content": "Some string: Some other string \t Some string <a href=\"https://domain.com\">Some link</a>"}'
-    assert repair_json('{"key_1\n": "value"}') == '{"key_1": "value"}'
-    assert repair_json('{"key\t_": "value"}') == '{"key\\t_": "value"}'
     assert repair_json('{""answer"":[{""traits"":''Female aged 60+'',""answer1"":""5""}]}') == '{"answer": [{"traits": "Female aged 60+", "answer1": "5"}]}'
-    assert repair_json('{"key":""') == '{"key": ""}'
     assert repair_json('{ "words": abcdef", "numbers": 12345", "words2": ghijkl" }') == '{"words": "abcdef", "numbers": 12345, "words2": "ghijkl"}'
+    assert repair_json('''{"number": 1,"reason": "According...""ans": "YES"}''') == '{"number": 1, "reason": "According...", "ans": "YES"}'
+    assert repair_json('''{ "a": "{ b": {} }" }''') == '{"a": "{ b"}'
+
+def test_number_edge_cases():
+    assert repair_json(' - { "test_key": ["test_value", "test_value2"] }') == '{"test_key": ["test_value", "test_value2"]}'
     assert repair_json('{"key": 1/3}') == '{"key": "1/3"}'
     assert repair_json('{"key": .25}') == '{"key": 0.25}'
-    assert repair_json("""{    "a": "",    "b": [ { "c": 1} ] \n}```""") == '{"a": "", "b": [{"c": 1}]}'
-    assert repair_json("Based on the information extracted, here is the filled JSON output: ```json { 'a': 'b' } ```") == '{"a": "b"}'
-    assert repair_json('''{"number": 1,"reason": "According...""ans": "YES"}''') == '{"number": 1, "reason": "According...", "ans": "YES"}'
-    assert repair_json('{"key": 1/3, "foo": "bar"}') == '{"key": "1/3", "foo": "bar"}'
     assert repair_json('{"here": "now", "key": 1/3, "foo": "bar"}') == '{"here": "now", "key": "1/3", "foo": "bar"}'
     assert repair_json('{"key": 12345/67890}') == '{"key": "12345/67890"}'
     assert repair_json('[105,12') == '["105,12"]'
     assert repair_json('{"key", 105,12,') == '{"key": "105,12"}'
+    assert repair_json('{"key": 1/3, "foo": "bar"}') == '{"key": "1/3", "foo": "bar"}'
+    assert repair_json('{"key": 10-20}') == '{"key": "10-20"}'
+    assert repair_json('{"key": 1.1.1}') == '{"key": "1.1.1"}'
 
+def test_markdown():
+    assert repair_json('{ "content": "[LINK]("https://google.com")" }') == '{"content": "[LINK](\\"https://google.com\\")"}'
+    assert repair_json('{ "content": "[LINK](" }') == '{"content": "[LINK]("}'
+    assert repair_json('{ "content": "[LINK](", "key": true }') == '{"content": "[LINK](", "key": true}'
+
+def test_leading_trailing_characters():
+    assert repair_json('````{ "key": "value" }```') == '{"key": "value"}'
+    assert repair_json("""{    "a": "",    "b": [ { "c": 1} ] \n}```""") == '{"a": "", "b": [{"c": 1}]}'
+    assert repair_json("Based on the information extracted, here is the filled JSON output: ```json { 'a': 'b' } ```") == '{"a": "b"}'
+    assert repair_json("""
+                       ```json
+                       { "key": "value" }
+                       ```""") == '{"key": "value"}'
 
 def test_repair_json_with_objects():
     # Test with valid JSON strings
@@ -142,47 +161,6 @@ def test_repair_json_with_objects():
     assert repair_json('{"employees":["John", "Anna", "Peter"]} ', return_objects=True) == {
         "employees": ["John", "Anna", "Peter"]
     }
-
-    # Test with invalid JSON strings
-    assert repair_json('{"name": "John", "age": 30, "city": "New York', return_objects=True) == {
-        "name": "John",
-        "age": 30,
-        "city": "New York",
-    }
-    assert repair_json('{"name": "John", "age": 30, city: "New York"}', return_objects=True) == {
-        "name": "John",
-        "age": 30,
-        "city": "New York",
-    }
-    assert repair_json('{"name": "John", "age": 30, "city": New York}', return_objects=True) == {
-        "name": "John",
-        "age": 30,
-        "city": "New York",
-    }
-    assert repair_json('{"employees":["John", "Anna",', return_objects=True) == {
-        "employees": ["John", "Anna"]
-    }
-
-    # Test with edge cases
-    assert repair_json(" ", return_objects=True) == ""
-    assert repair_json("[", return_objects=True) == []
-    assert repair_json("{", return_objects=True) == {}
-    assert repair_json('{"key": "value:value"}', return_objects=True) == {"key": "value:value"}
-    assert repair_json("{'key': 'string', 'key2': false, \"key3\": null, \"key4\": unquoted}", return_objects=True) == {"key": "string", "key2": False, "key3": None, "key4": "unquoted"}
-    assert repair_json('{"name": "John", "age": 30, "city": "New', return_objects=True) == {
-        "name": "John",
-        "age": 30,
-        "city": "New",
-    }
-    assert repair_json('{"employees":["John", "Anna", "Peter', return_objects=True) == {
-        "employees": ["John", "Anna", "Peter"]
-    }
-    
-    #Test with garbage comments
-    assert repair_json('{"value_1": true, SHOULD_NOT_EXIST "value_2": "data" AAAA }', return_objects=True) == {'value_1': True, 'value_2': 'data'}
-
-    #Test markdown stupidities from ChatGPT
-    assert repair_json('{ "content": "[LINK]("https://google.com")" }', return_objects=True) == { "content": "[LINK](\"https://google.com\")"}
     assert repair_json('''
 {
   "resourceType": "Bundle",
@@ -216,73 +194,6 @@ def test_repair_json_with_objects():
         ]
         """, return_objects=True) == [{"foo": "Foo bar baz", "tag": "#foo-bar-baz"},{"foo": "foo bar \"foobar\" foo bar baz.", "tag": "#foo-bar-foobar" }]
 
-
-def test_repair_json_corner_cases_generate_by_gpt():
-    # Test with nested JSON
-    assert (
-        repair_json('{"key1": {"key2": [1, 2, 3]}}') == '{"key1": {"key2": [1, 2, 3]}}'
-    )
-    assert repair_json('{"key1": {"key2": [1, 2, 3') == '{"key1": {"key2": [1, 2, 3]}}'
-
-    # Test with empty keys
-    assert repair_json('{"": "value"}') == '{"": "value"}'
-
-    # Test with Unicode characters
-    assert repair_json('{"key": "value\u263A"}') == '{"key": "value\\u263a"}'
-
-    # Test with special characters
-    assert repair_json('{"key": "value\\nvalue"}') == '{"key": "value\\nvalue"}'
-
-    # Test with large numbers
-    assert (
-        repair_json('{"key": 12345678901234567890}') == '{"key": 12345678901234567890}'
-    )
-
-    # Test with whitespace
-    assert repair_json(' { "key" : "value" } ') == '{"key": "value"}'
-
-    # Test with null values
-    assert repair_json('{"key": null}') == '{"key": null}'
-
-    # Test with numeric-like values
-    assert repair_json('{"key": 10-20}') == '{"key": "10-20"}'
-    assert repair_json('{"key": 1.1.1}') == '{"key": "1.1.1"}'
-
-
-def test_repair_json_corner_cases_generate_by_gpt_with_objects():
-    # Test with nested JSON
-    assert repair_json('{"key1": {"key2": [1, 2, 3]}}', return_objects=True) == {
-        "key1": {"key2": [1, 2, 3]}
-    }
-    assert repair_json('{"key1": {"key2": [1, 2, 3', return_objects=True) == {
-        "key1": {"key2": [1, 2, 3]}
-    }
-
-    # Test with empty keys
-    assert repair_json('{"": "value"}', return_objects=True) == {"": "value"}
-
-    # Test with Unicode characters
-    assert repair_json('{"key": "value\u263A"}', return_objects=True) == {"key": "value☺"}
-
-    # Test with special characters
-    assert repair_json('{"key": "value\\nvalue"}', return_objects=True) == {"key": "value\nvalue"}
-
-    # Test with large numbers
-    assert repair_json('{"key": 12345678901234567890}', return_objects=True) == {
-        "key": 12345678901234567890
-    }
-
-    # Test with whitespace
-    assert repair_json(' { "key" : "value" } ', return_objects=True) == {"key": "value"}
-
-    # Test with null values
-    assert repair_json('{"key": null}', return_objects=True) == {"key": None}
-
-    # Test with numeric-like values
-    assert repair_json('{"key": 10-20}', return_objects=True) == {"key": "10-20"}
-    assert repair_json('{"key": 1.1.1}', return_objects=True) == {"key": "1.1.1"}
-
-
 def test_repair_json_skip_json_loads():
     assert repair_json('{"key": true, "key2": false, "key3": null}', skip_json_loads=True) == '{"key": true, "key2": false, "key3": null}'
     assert repair_json('{"key": true, "key2": false, "key3": null}', return_objects=True, skip_json_loads=True) == {"key": True, "key2": False, "key3": None}
@@ -291,7 +202,6 @@ def test_repair_json_skip_json_loads():
 
 
 def test_repair_json_from_file():
-
     import os.path
     import pathlib
     path = pathlib.Path(__file__).parent.resolve()
