@@ -33,6 +33,7 @@ class JSONParser:
         self.json_str = json_str
         # Alternatively, the file description with a json file in it
         if json_fd:
+            # This is a trick we do to treat the file wrapper as an array
             self.json_str = StringFileWrapper(json_fd)
         # Index is our iterator that will keep track of which character we are looking at right now
         self.index = 0
@@ -265,7 +266,8 @@ class JSONParser:
                 self.index += 1
                 return self.parse_json()
             self.log(
-                "While parsing a string, we found no starting quote, ignoring", "info"
+                "While parsing a string, we found no starting quote. Will add the quote back",
+                "info",
             )
             missing_quotes = True
 
@@ -459,7 +461,6 @@ class JSONParser:
         """
         This function quickly iterates on whitespaces, syntactic sugar to make the code more concise
         """
-        # If this is not a file stream, we do this monster here to make this function much much faster
         try:
             char = self.json_str[self.index]
         except IndexError:
@@ -491,16 +492,8 @@ class JSONParser:
     def log(self, text: str, level: str) -> None:
         if level == self.logger["log_level"]:
             context = ""
-            start = (
-                self.index - self.logger["window"]
-                if (self.index - self.logger["window"]) >= 0
-                else 0
-            )
-            end = (
-                self.index + self.logger["window"]
-                if (self.index + self.logger["window"]) <= len(self.json_str)
-                else len(self.json_str)
-            )
+            start = max(self.index - self.logger["window"], 0)
+            end = min(self.index + self.logger["window"], len(self.json_str))
             context = self.json_str[start:end]
             self.logger["log"].append(
                 {
@@ -581,25 +574,21 @@ def from_file(
 
 class StringFileWrapper:
     # This is a trick to simplify the code above, transform the filedescriptor handling into an array handling
-    def __init__(self, fd):
+    def __init__(self, fd: TextIO) -> None:
         self.fd = fd
         self.length = None
 
-    def __getitem__(self, index):
-        # Custom logic before accessing the string
-        if self.fd:
-            if isinstance(index, slice):
-                self.fd.seek(index.start)
-                value = self.fd.read(index.stop - index.start)
-                self.fd.seek(index.start)
-                return value
-            else:
-                self.fd.seek(index)
-                return self.fd.read(1)
-            # Optionally handle the character here
-        raise Exception("File descriptor not set, this isn't supposed to happen")
+    def __getitem__(self, index: int) -> Any:
+        if isinstance(index, slice):
+            self.fd.seek(index.start)
+            value = self.fd.read(index.stop - index.start)
+            self.fd.seek(index.start)
+            return value
+        else:
+            self.fd.seek(index)
+            return self.fd.read(1)
 
-    def __len__(self):
+    def __len__(self) -> int:
         if not self.length:
             current_position = self.fd.tell()
             self.fd.seek(0, os.SEEK_END)

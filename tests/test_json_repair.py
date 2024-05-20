@@ -215,7 +215,7 @@ def test_repair_json_from_file():
     # Write content to the temporary file
         with os.fdopen(temp_fd, 'w') as tmp:
             tmp.write("{key:value}")
-        assert(from_file(temp_path, logging=True)) == ({'key': 'value'}, [{'text': 'While parsing a string, we found a literal instead of a quote', 'context': '{key:value}'}, {'text': 'While parsing a string, we found no starting quote, ignoring', 'context': '{key:value}'}, {'text': 'While parsing a string, we missed the closing quote, ignoring', 'context': '{key:value}'}, {'text': 'While parsing a string, we found a literal instead of a quote', 'context': '{key:value}'}, {'text': 'While parsing a string, we found no starting quote, ignoring', 'context': '{key:value}'}, {'text': 'While parsing a string, we missed the closing quote, ignoring', 'context': '{key:value}'}])
+        assert(from_file(temp_path, logging=True)) == ({'key': 'value'}, [{'text': 'While parsing a string, we found a literal instead of a quote', 'context': '{key:value}'}, {'text': 'While parsing a string, we found no starting quote. Will add the quote back', 'context': '{key:value}'}, {'text': 'While parsing a string, we missed the closing quote, ignoring', 'context': '{key:value}'}, {'text': 'While parsing a string, we found a literal instead of a quote', 'context': '{key:value}'}, {'text': 'While parsing a string, we found no starting quote. Will add the quote back', 'context': '{key:value}'}, {'text': 'While parsing a string, we missed the closing quote, ignoring', 'context': '{key:value}'}])
     finally:
         # Clean up - delete the temporary file
         os.remove(temp_path)
