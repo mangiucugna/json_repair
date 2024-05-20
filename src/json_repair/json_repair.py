@@ -22,6 +22,7 @@ If something is wrong (a missing parantheses or quotes for example) it will use 
 All supported use cases are in the unit tests
 """
 
+import os
 import json
 from typing import Any, Dict, List, Union, TextIO
 
@@ -31,7 +32,8 @@ class JSONParser:
         # The string to parse
         self.json_str = json_str
         # Alternatively, the file description with a json file in it
-        self.json_fd = json_fd
+        if json_fd:
+            self.json_str = StringFileWrapper(json_fd)
         # Index is our iterator that will keep track of which character we are looking at right now
         self.index = 0
         # This is used in the object member parsing to manage the special cases of missing quotes in key or value
@@ -451,36 +453,23 @@ class JSONParser:
         try:
             return self.json_str[self.index + count]
         except IndexError:
-            if self.json_fd:
-                self.json_fd.seek(self.index + count)
-                char = self.json_fd.read(1)
-                if char == "":
-                    return False
-                return char
-            else:
-                return False
+            return False
 
     def skip_whitespaces_at(self) -> None:
         """
         This function quickly iterates on whitespaces, syntactic sugar to make the code more concise
         """
-        if self.json_fd:
-            char = self.get_char_at()
-            while char and char.isspace():
-                self.index += 1
-                char = self.get_char_at()
-        else:
-            # If this is not a file stream, we do this monster here to make this function much much faster
+        # If this is not a file stream, we do this monster here to make this function much much faster
+        try:
+            char = self.json_str[self.index]
+        except IndexError:
+            return
+        while char.isspace():
+            self.index += 1
             try:
                 char = self.json_str[self.index]
             except IndexError:
                 return
-            while char.isspace():
-                self.index += 1
-                try:
-                    char = self.json_str[self.index]
-                except IndexError:
-                    return
 
     def set_context(self, value: str) -> None:
         # If a value is provided update the context variable and save in stack
@@ -502,22 +491,17 @@ class JSONParser:
     def log(self, text: str, level: str) -> None:
         if level == self.logger["log_level"]:
             context = ""
-            if self.json_fd:
-                self.json_fd.seek(self.index - self.logger["window"])
-                context = self.json_fd.read(self.logger["window"] * 2)
-                self.json_fd.seek(self.index)
-            else:
-                start = (
-                    self.index - self.logger["window"]
-                    if (self.index - self.logger["window"]) >= 0
-                    else 0
-                )
-                end = (
-                    self.index + self.logger["window"]
-                    if (self.index + self.logger["window"]) <= len(self.json_str)
-                    else len(self.json_str)
-                )
-                context = self.json_str[start:end]
+            start = (
+                self.index - self.logger["window"]
+                if (self.index - self.logger["window"]) >= 0
+                else 0
+            )
+            end = (
+                self.index + self.logger["window"]
+                if (self.index + self.logger["window"]) <= len(self.json_str)
+                else len(self.json_str)
+            )
+            context = self.json_str[start:end]
             self.logger["log"].append(
                 {
                     "text": text,
@@ -593,3 +577,35 @@ def from_file(
     fd.close()
 
     return jsonobj
+
+
+class StringFileWrapper:
+    # This is a trick to simplify the code above, transform the filedescriptor handling into an array handling
+    def __init__(self, fd):
+        self.fd = fd
+        self.length = None
+
+    def __getitem__(self, index):
+        # Custom logic before accessing the string
+        if self.fd:
+            if isinstance(index, slice):
+                self.fd.seek(index.start)
+                value = self.fd.read(index.stop - index.start)
+                self.fd.seek(index.start)
+                return value
+            else:
+                self.fd.seek(index)
+                return self.fd.read(1)
+            # Optionally handle the character here
+        raise Exception("File descriptor not set, this isn't supposed to happen")
+
+    def __len__(self):
+        if not self.length:
+            current_position = self.fd.tell()
+            self.fd.seek(0, os.SEEK_END)
+            self.length = self.fd.tell()
+            self.fd.seek(current_position)
+        return self.length
+
+    def __setitem__(self):
+        raise Exception("This is read-only!")
