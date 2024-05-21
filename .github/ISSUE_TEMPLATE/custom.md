@@ -1,7 +1,38 @@
-**Library version**:
-
-**Expected behavior**
-A clear and concise description of what you expected to happen.
-
-**Additional context**
-Add any other context about the problem here.
+name: Bug Report
+description: File a bug report.
+title: "[Bug]: "
+labels: ["bug"]
+assignees:
+  - mangiucugna
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: input
+    id: version
+    attributes:
+      label: Version of the library
+      description: Please test with latest before reporting a bug
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: Describe the bug in detail
+      value: ""
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: A step-by-step guide on how to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen
+    validations:
+      required: true
