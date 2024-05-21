@@ -1,0 +1,25 @@
+name: Feature Request
+description: File a feature request
+title: "[Feature Request]: "
+labels: ["feature"]
+assignees:
+  - mangiucugna
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please test this feature does not exist in the latest before reporting a bug
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the solution you'd like
+      description: A clear and concise description of what you want to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Context
+      description: Why is this feature important for you?
+    validations:
+      required: true
