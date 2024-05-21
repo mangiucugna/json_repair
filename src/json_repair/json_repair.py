@@ -249,7 +249,8 @@ class JSONParser:
             rstring_delimiter = "”"
         elif char.isalpha():
             # This could be a <boolean> and not a string. Because (T)rue or (F)alse or (N)ull are valid
-            if char.lower() in ["t", "f", "n"]:
+            # But remember, object keys are only of type string
+            if char.lower() in ["t", "f", "n"] and self.get_context() != "object_key":
                 value = self.parse_boolean_or_null()
                 if value != "":
                     return value
