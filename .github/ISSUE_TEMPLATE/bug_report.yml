@@ -14,7 +14,6 @@ body:
     attributes:
       label: Version of the library
       description: Please test with latest before reporting a bug
-      value: ""
     validations:
       required: true
   - type: textarea
@@ -22,7 +21,6 @@ body:
     attributes:
       label: Describe the bug
       description: Describe the bug in detail
-      value: ""
     validations:
       required: true
   - type: textarea
@@ -30,7 +28,6 @@ body:
     attributes:
       label: How to reproduce
       description: A step-by-step guide on how to reproduce
-      value: ""
     validations:
       required: true
   - type: textarea
