@@ -121,6 +121,7 @@ def test_object_edge_cases():
     assert repair_json('''{"number": 1,"reason": "According...""ans": "YES"}''') == '{"number": 1, "reason": "According...", "ans": "YES"}'
     assert repair_json('''{ "a": "{ b": {} }" }''') == '{"a": "{ b"}'
     assert repair_json("""{"b": "xxxxx" true}""") == '{"b": "xxxxx"}'
+    assert repair_json('{"key": "Lorem "ipsum" s,"}') == '{"key": "Lorem \\"ipsum\\" s,"}'
 
 def test_number_edge_cases():
     assert repair_json(' - { "test_key": ["test_value", "test_value2"] }') == '{"test_key": ["test_value", "test_value2"]}'

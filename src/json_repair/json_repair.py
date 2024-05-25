@@ -335,32 +335,50 @@ class JSONParser:
                     # Check if eventually there is a rstring delimiter, otherwise we bail
                     i = 1
                     next_c = self.get_char_at(i)
-                    while next_c and next_c != rstring_delimiter:
+                    check_comma_in_object_value = True
+                    while next_c and next_c not in [
+                        rstring_delimiter,
+                        lstring_delimiter,
+                    ]:
+                        # This is a bit of a weird workaround, essentially in object_value context we don't always break on commas
+                        # This is because the routine after will make sure to correct any bad guess and this solves a corner case
+                        if next_c.isalpha():
+                            check_comma_in_object_value = False
                         # If we are in an object context, let's check for the right delimiters
                         if (
-                            next_c == lstring_delimiter
-                            or ("object_key" in self.context and next_c == ":")
-                            or ("object_value" in self.context and next_c in ["}", ","])
+                            ("object_key" in self.context and next_c in [":", "}"])
+                            or ("object_value" in self.context and next_c == "}")
                             or ("array" in self.context and next_c in ["]", ","])
+                            or (
+                                check_comma_in_object_value
+                                and self.get_context() == "object_value"
+                                and next_c == ","
+                            )
                         ):
                             break
                         i += 1
                         next_c = self.get_char_at(i)
                     if next_c == rstring_delimiter:
-                        # But this might not be it! This could be just a missing comma
-                        # We need to check if we find a rstring_delimiter and a colon after
-                        i += 1
-                        next_c = self.get_char_at(i)
-                        while next_c and next_c != rstring_delimiter:
+                        if self.get_context() == "object_value":
+                            # But this might not be it! This could be just a missing comma
+                            # We found a delimiter and we need to check if this is a key
+                            # so find a rstring_delimiter and a colon after
                             i += 1
                             next_c = self.get_char_at(i)
-                        i += 1
-                        next_c = self.get_char_at(i)
-                        while next_c and next_c != ":":
-                            if next_c in [lstring_delimiter, rstring_delimiter, ","]:
-                                break
+                            while next_c and next_c != rstring_delimiter:
+                                i += 1
+                                next_c = self.get_char_at(i)
                             i += 1
                             next_c = self.get_char_at(i)
+                            while next_c and next_c != ":":
+                                if next_c in [
+                                    lstring_delimiter,
+                                    rstring_delimiter,
+                                    ",",
+                                ]:
+                                    break
+                                i += 1
+                                next_c = self.get_char_at(i)
                         # Only if we fail to find a ':' then we know this is misplaced quote
                         if next_c != ":":
                             self.log(
