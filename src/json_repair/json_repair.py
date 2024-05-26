@@ -24,7 +24,7 @@ All supported use cases are in the unit tests
 
 import os
 import json
-from typing import Any, Dict, List, Literal, Optional, Union, TextIO, Tuple, TypeAlias
+from typing import Any, Dict, List, Literal, Optional, Union, TextIO, Tuple
 
 
 class StringFileWrapper:
@@ -63,9 +63,7 @@ class LoggerConfig:
         self.log_level: str = log_level if log_level else "none"
 
 
-JSONReturnType: TypeAlias = Union[
-    Dict[str, Any], List[Any], str, float, int, bool, None
-]
+JSONReturnType = Union[Dict[str, Any], List[Any], str, float, int, bool, None]
 
 
 class JSONParser:
