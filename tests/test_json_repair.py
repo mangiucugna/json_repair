@@ -32,7 +32,7 @@ def test_valid_json():
     assert repair_json('{"key": "value\\nvalue"}') == '{"key": "value\\nvalue"}'
 
 def test_brackets_edge_cases():
-    assert repair_json("[{]") == "[]"
+    assert repair_json("[{]") == "[{}]"
     assert repair_json("   {  }   ") == "{}"
     assert repair_json("[") == "[]"
     assert repair_json("]") == '""'
@@ -83,6 +83,7 @@ def test_array_edge_cases():
     assert repair_json("[1, 2, 3, ...]") == "[1, 2, 3]"
     assert repair_json("[1, 2, ... , 3]") == "[1, 2, 3]"
     assert repair_json("[1, 2, '...', 3]") == '[1, 2, "...", 3]'
+    assert repair_json("[true, false, null, ...]") == '[true, false, null]'
     assert (
         repair_json('{"employees":["John", "Anna",')
         == '{"employees": ["John", "Anna"]}'
@@ -119,7 +120,7 @@ def test_object_edge_cases():
     assert repair_json('{""answer"":[{""traits"":''Female aged 60+'',""answer1"":""5""}]}') == '{"answer": [{"traits": "Female aged 60+", "answer1": "5"}]}'
     assert repair_json('{ "words": abcdef", "numbers": 12345", "words2": ghijkl" }') == '{"words": "abcdef", "numbers": 12345, "words2": "ghijkl"}'
     assert repair_json('''{"number": 1,"reason": "According...""ans": "YES"}''') == '{"number": 1, "reason": "According...", "ans": "YES"}'
-    assert repair_json('''{ "a": "{ b": {} }" }''') == '{"a": "{ b"}'
+    assert repair_json('''{ "a" : "{ b": {} }" }''') == '{"a": "{ b"}'
     assert repair_json("""{"b": "xxxxx" true}""") == '{"b": "xxxxx"}'
     assert repair_json('{"key": "Lorem "ipsum" s,"}') == '{"key": "Lorem \\"ipsum\\" s,"}'
 

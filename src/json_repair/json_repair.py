@@ -131,9 +131,13 @@ class JSONParser:
                     # Sometimes the string search might not move the index at all, that might lead us to an infinite loop
                     self.index += 1
 
+            self.skip_whitespaces_at()
+
             # We reached the end here
             if (self.get_char_at() or "}") == "}":
                 continue
+
+            self.skip_whitespaces_at()
 
             # An extreme case of missing ":" after a key
             if (self.get_char_at() or "") != ":":
@@ -178,7 +182,7 @@ class JSONParser:
             value = self.parse_json()
 
             # It is possible that parse_json() returns nothing valid, so we stop
-            if not value:
+            if value == "":
                 break
 
             if value == "..." and self.get_char_at(-1) == ".":
