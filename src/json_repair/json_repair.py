@@ -69,7 +69,7 @@ JSONReturnType = Union[Dict[str, Any], List[Any], str, float, int, bool, None]
 class JSONParser:
     def __init__(
         self,
-        json_str: str | StringFileWrapper,
+        json_str: Union[str, StringFileWrapper],
         json_fd: Optional[TextIO],
         logging: Optional[bool],
     ) -> None:
