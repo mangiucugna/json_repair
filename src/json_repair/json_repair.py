@@ -24,7 +24,7 @@ All supported use cases are in the unit tests
 
 import os
 import json
-from typing import Any, Dict, List, Literal, Optional, Union, TextIO, Tuple
+from typing import Any, Dict, List, Optional, Union, TextIO, Tuple
 
 
 class StringFileWrapper:
@@ -86,7 +86,9 @@ class JSONParser:
         # Use this to log the activity, but only if logging is active
         self.logger = LoggerConfig(log_level="info" if logging else None)
 
-    def parse(self) -> JSONReturnType | Tuple[JSONReturnType, List[Dict[str, str]]]:
+    def parse(
+        self,
+    ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
         if self.logger.log_level == "none":
             return self.parse_json()
         else:
@@ -265,7 +267,7 @@ class JSONParser:
         self.reset_context()
         return arr
 
-    def parse_string(self) -> str | JSONReturnType:
+    def parse_string(self) -> Union[str, JSONReturnType]:
         # <string> is a string of valid characters enclosed in quotes
         # i.e. { name: "John" }
         # Somehow all weird cases in an invalid JSON happen to be resolved in this function, so be careful here
@@ -458,7 +460,7 @@ class JSONParser:
 
         return string_acc.rstrip()
 
-    def parse_number(self) -> float | int | str | JSONReturnType:
+    def parse_number(self) -> Union[float, int, str, JSONReturnType]:
         # <number> is a valid real number expressed in one of a number of given formats
         number_str = ""
         number_chars = set("0123456789-.eE/,")
@@ -512,7 +514,7 @@ class JSONParser:
         self.index = starting_index
         return ""
 
-    def get_char_at(self, count: int = 0) -> Union[str, Literal[False]]:
+    def get_char_at(self, count: int = 0) -> Union[str, bool]:
         # Why not use something simpler? Because try/except in python is a faster alternative to an "if" statement that is often True
         try:
             return self.json_str[self.index + count]
@@ -571,7 +573,7 @@ def repair_json(
     skip_json_loads: Optional[bool] = False,
     logging: Optional[bool] = False,
     json_fd: Optional[TextIO] = None,
-) -> JSONReturnType | Tuple[JSONReturnType, List[Dict[str, str]]]:
+) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     Given a json formatted string, it will try to decode it and, if it fails, it will try to fix it.
     It will return the fixed string by default.
@@ -598,7 +600,7 @@ def repair_json(
 
 def loads(
     json_str: str, skip_json_loads: bool = False, logging: bool = False
-) -> JSONReturnType | Tuple[JSONReturnType, List[Dict[str, str]]]:
+) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     This function works like `json.loads()` except that it will fix your JSON in the process.
     It is a wrapper around the `repair_json()` function with `return_objects=True`.
@@ -613,7 +615,7 @@ def loads(
 
 def load(
     fd: TextIO, skip_json_loads: bool = False, logging: bool = False
-) -> JSONReturnType | Tuple[JSONReturnType, List[Dict[str, str]]]:
+) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     This function works like `json.load()` except that it will fix your JSON in the process.
     It is a wrapper around the `repair_json()` function with `json_fd=fd` and `return_objects=True`.
@@ -623,7 +625,7 @@ def load(
 
 def from_file(
     filename: str, skip_json_loads: bool = False, logging: bool = False
-) -> JSONReturnType | Tuple[JSONReturnType, List[Dict[str, str]]]:
+) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     This function is a wrapper around `load()` so you can pass the filename as string
     """
