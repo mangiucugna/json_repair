@@ -404,7 +404,29 @@ class JSONParser:
                             break
                         i += 1
                         next_c = self.get_char_at(i)
-                    if next_c == rstring_delimiter:
+                    # If we stopped for a comma in object_value context, let's check if find a "} at the end of the string
+                    if next_c == "," and self.get_context() == "object_value":
+                        i += 1
+                        next_c = self.get_char_at(i)
+                        while next_c and next_c != rstring_delimiter:
+                            i += 1
+                            next_c = self.get_char_at(i)
+                        # Ok now I found a delimiter, let's skip whitespaces and see if next we find a }
+                        i += 1
+                        next_c = self.get_char_at(i)
+                        while next_c and next_c.isspace():
+                            i += 1
+                            next_c = self.get_char_at(i)
+                        if next_c == "}":
+                            # OK this is valid then
+                            self.log(
+                                "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here since this is the last element of the object, ignoring it",
+                                "info",
+                            )
+                            string_acc += char
+                            self.index += 1
+                            char = self.get_char_at()
+                    elif next_c == rstring_delimiter:
                         if self.get_context() == "object_value":
                             # But this might not be it! This could be just a missing comma
                             # We found a delimiter and we need to check if this is a key

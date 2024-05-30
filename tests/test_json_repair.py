@@ -1,9 +1,26 @@
 from src.json_repair.json_repair import from_file, repair_json, loads
 
+def test_basic_types_valid():
+    assert repair_json("True", return_objects=True) == True
+    assert repair_json("False", return_objects=True) == False
+    assert repair_json("Null", return_objects=True) == None
+    assert repair_json("1", return_objects=True) == 1
+    assert repair_json("[]", return_objects=True) == []
+    assert repair_json("[1, 2, 3, 4]", return_objects=True) == [1, 2, 3, 4]
+    assert repair_json("{}", return_objects=True) == {}
+    assert repair_json('{ "key": "value", "key2": 1, "key3": True }', return_objects=True) == { "key": "value", "key2": 1, "key3": True }
+
+def test_basic_types_invalid():
+    assert repair_json("true", return_objects=True) == True
+    assert repair_json("false", return_objects=True) == False
+    assert repair_json("null", return_objects=True) == None
+    assert repair_json("1.2", return_objects=True) == 1.2
+    assert repair_json("[", return_objects=True) == []
+    assert repair_json("[1, 2, 3, 4", return_objects=True) == [1, 2, 3, 4]
+    assert repair_json("{", return_objects=True) == {}
+    assert repair_json('{ "key": value, "key2": 1 "key3": null }', return_objects=True) == { "key": "value", "key2": 1, "key3": None }
 
 def test_valid_json():
-    assert repair_json("[]") == "[]"
-    assert repair_json("[1, 2, 3, 4]") == "[1, 2, 3, 4]"
     assert (
         repair_json('{"name": "John", "age": 30, "city": "New York"}')
         == '{"name": "John", "age": 30, "city": "New York"}'
@@ -77,6 +94,7 @@ def test_missing_and_mixed_quotes():
         repair_json('{"name": "John", "age": 30, "city": "New')
         == '{"name": "John", "age": 30, "city": "New"}'
     )
+    assert repair_json('[{"key": "value", COMMENT "notes": "lorem "ipsum", sic."}]') == '[{"key": "value", "notes": "lorem \\"ipsum\\", sic."}]'
 
 def test_array_edge_cases():
     assert repair_json("[1, 2, 3,") == "[1, 2, 3]"
