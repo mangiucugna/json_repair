@@ -1,9 +1,9 @@
 from src.json_repair.json_repair import from_file, repair_json, loads
 
 def test_basic_types_valid():
-    assert repair_json("True", return_objects=True) == True
-    assert repair_json("False", return_objects=True) == False
-    assert repair_json("Null", return_objects=True) == None
+    assert repair_json("True", return_objects=True) == ""
+    assert repair_json("False", return_objects=True) == ""
+    assert repair_json("Null", return_objects=True) == ""
     assert repair_json("1", return_objects=True) == 1
     assert repair_json("[]", return_objects=True) == []
     assert repair_json("[1, 2, 3, 4]", return_objects=True) == [1, 2, 3, 4]
@@ -114,7 +114,7 @@ def test_array_edge_cases():
 
     
 def test_escaping():
-    assert repair_json("'\"'") == '"\\\""'
+    assert repair_json("'\"'") == '""'
     assert repair_json("{\"key\": 'string\"\n\t\le'") == '{"key": "string\\"\\n\\tle"}'
     assert repair_json(r'{"real_content": "Some string: Some other string \t Some string <a href=\"https://domain.com\">Some link</a>"') == r'{"real_content": "Some string: Some other string \t Some string <a href=\"https://domain.com\">Some link</a>"}'
     assert repair_json('{"key_1\n": "value"}') == '{"key_1": "value"}'
@@ -164,6 +164,7 @@ def test_leading_trailing_characters():
     assert repair_json("""{    "a": "",    "b": [ { "c": 1} ] \n}```""") == '{"a": "", "b": [{"c": 1}]}'
     assert repair_json("Based on the information extracted, here is the filled JSON output: ```json { 'a': 'b' } ```") == '{"a": "b"}'
     assert repair_json("""
+                       The next 64 elements are:
                        ```json
                        { "key": "value" }
                        ```""") == '{"key": "value"}'

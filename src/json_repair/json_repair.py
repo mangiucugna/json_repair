@@ -1,7 +1,7 @@
 """
 This module will parse the JSON file following the BNF definition:
 
-    <json> ::= <primitive> | <container>
+    <json> ::= <container>
 
     <primitive> ::= <number> | <string> | <boolean>
     ; Where:
@@ -98,6 +98,8 @@ class JSONParser:
         self,
     ) -> JSONReturnType:
         char = self.get_char_at()
+        # This parser will ignore any basic element (string or number) that is not inside an array or object
+        is_in_context = len(self.context) > 0
         # False means that we are at the end of the string provided, is the base case for recursion
         if char is False:
             return ""
@@ -120,10 +122,10 @@ class JSONParser:
             )
             return ""
         # <string> starts with a quote
-        elif char in ['"', "'", "“"] or char.isalpha():
+        elif is_in_context and (char in ['"', "'", "“"] or char.isalpha()):
             return self.parse_string()
         # <number> starts with [0-9] or minus
-        elif char.isdigit() or char == "-" or char == ".":
+        elif is_in_context and (char.isdigit() or char == "-" or char == "."):
             return self.parse_number()
         # If everything else fails, we just ignore and move on
         else:

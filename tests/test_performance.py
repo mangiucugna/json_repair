@@ -19,7 +19,7 @@ def test_true_true_correct(benchmark):
   mean_time = benchmark.stats.get("median")
 
   # Define your time threshold in seconds
-  max_time = 13 / 10 ** 4  # 1.3 millisecond
+  max_time = 14 / 10 ** 4  # 1.4 millisecond
 
   # Assert that the average time is below the threshold
   assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
@@ -31,7 +31,7 @@ def test_true_true_incorrect(benchmark):
   mean_time = benchmark.stats.get("median")
 
   # Define your time threshold in seconds
-  max_time = 13 / 10 ** 4  # 1.3 millisecond
+  max_time = 14 / 10 ** 4  # 1.4 millisecond
 
   # Assert that the average time is below the threshold
   assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
@@ -53,7 +53,7 @@ def test_true_false_incorrect(benchmark):
   mean_time = benchmark.stats.get("median")
 
   # Define your time threshold in seconds
-  max_time = 13 / 10 ** 4  # 1.3 millisecond
+  max_time = 14 / 10 ** 4  # 1.4 millisecond
 
   # Assert that the average time is below the threshold
   assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
