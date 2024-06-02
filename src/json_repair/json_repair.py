@@ -306,14 +306,6 @@ class JSONParser:
                 "While parsing a string, we found a literal instead of a quote",
                 "info",
             )
-            if self.get_context() == "":
-                # A string literal in the wild isn't a valid json and not something we can fix
-                self.log(
-                    "While parsing a string, we found a literal outside of context, ignoring it",
-                    "info",
-                )
-                self.index += 1
-                return self.parse_json()
             self.log(
                 "While parsing a string, we found no starting quote. Will add the quote back",
                 "info",
