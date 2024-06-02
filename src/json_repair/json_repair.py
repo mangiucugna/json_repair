@@ -91,6 +91,10 @@ class JSONParser:
     ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
         json = self.parse_json()
         if self.index < len(self.json_str):
+            self.log(
+                "The parser returned early, checking if there's more json elements",
+                "info",
+            )
             json = [json]
             last_index = self.index
             while self.index < len(self.json_str):
@@ -100,10 +104,13 @@ class JSONParser:
                 if self.index == last_index:
                     self.index += 1
                 last_index = self.index
+            # If nothing extra was found, don't return an array
             if len(json) == 1:
+                self.log(
+                    "There were no more elements, returning the element without the array",
+                    "info",
+                )
                 json = json[0]
-            elif len(json) == 0:
-                json = ""
         if self.logger.log_level == "none":
             return json
         else:
