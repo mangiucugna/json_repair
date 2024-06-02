@@ -89,10 +89,25 @@ class JSONParser:
     def parse(
         self,
     ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
+        json = self.parse_json()
+        if self.index < len(self.json_str):
+            json = [json]
+            last_index = self.index
+            while self.index < len(self.json_str):
+                j = self.parse_json()
+                if j != "":
+                    json.append(j)
+                if self.index == last_index:
+                    self.index += 1
+                last_index = self.index
+            if len(json) == 1:
+                json = json[0]
+            elif len(json) == 0:
+                json = ""
         if self.logger.log_level == "none":
-            return self.parse_json()
+            return json
         else:
-            return self.parse_json(), self.logger.log
+            return json, self.logger.log
 
     def parse_json(
         self,
@@ -650,3 +665,6 @@ def from_file(
     fd.close()
 
     return jsonobj
+
+
+repair_json("[]{}")
