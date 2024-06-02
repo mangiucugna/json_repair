@@ -665,6 +665,3 @@ def from_file(
     fd.close()
 
     return jsonobj
-
-
-repair_json("[]{}")
