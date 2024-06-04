@@ -123,6 +123,7 @@ You will need owner access to this repository
 # Repair JSON in other programming languages
 - Typescript: https://github.com/josdejong/jsonrepair
 - Go: https://github.com/RealAlexandreAI/json-repair
+- Ruby: https://github.com/sashazykov/json-repair-rb
 ---
 ## Star History
 
