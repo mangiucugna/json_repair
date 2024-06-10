@@ -8,6 +8,11 @@ If you find this library useful, you can help me by donating toward my monthly b
 
 ---
 
+# Demo
+If you are unsure if this library will fix your specific problem, or simply want your json validated online, you can visit the demo site on GitHub pages: https://mangiucugna.github.io/json_repair/
+
+---
+
 # Motivation
 Some LLMs are a bit iffy when it comes to returning well formed JSON data, sometimes they skip a parentheses and sometimes they add some words in it, because that's what an LLM does.
 Luckily, the mistakes LLMs make are simple enough to be fixed without destroying the content.
