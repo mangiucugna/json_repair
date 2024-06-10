@@ -1,9 +1,34 @@
 let timeoutId;
 let controller;
 
+// Function to update the URL with the input JSON
+function updateURL(inputJSON) {
+    const url = new URL(window.location);
+    url.searchParams.set('json', encodeURIComponent(inputJSON));
+    window.history.replaceState({}, '', url);
+}
+
+// Function to get JSON from the URL
+function getJSONFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('json') ? decodeURIComponent(urlParams.get('json')) : '';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const initialJSON = getJSONFromURL();
+    if (initialJSON) {
+        document.getElementById('input-json').value = initialJSON;
+        processInput(initialJSON);
+    }
+});
+
 document.getElementById('input-json').addEventListener('input', function () {
     const inputJSON = document.getElementById('input-json').value;
+    updateURL(inputJSON);
+    processInput(inputJSON);
+});
 
+function processInput(inputJSON) {
     if (inputJSON.trim() === '') {
         document.getElementById('output-json').value = '';
         document.getElementById('log-output').value = '';
@@ -44,4 +69,4 @@ document.getElementById('input-json').addEventListener('input', function () {
             }
         });
     }, 500);
-});
+}
