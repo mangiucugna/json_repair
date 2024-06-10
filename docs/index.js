@@ -6,6 +6,7 @@ document.getElementById('input-json').addEventListener('input', function () {
 
     if (inputJSON.trim() === '') {
         document.getElementById('output-json').value = '';
+        document.getElementById('log-output').value = '';
         return;
     }
 
@@ -29,12 +30,17 @@ document.getElementById('input-json').addEventListener('input', function () {
         })
         .then(response => response.json())
         .then(data => {
-            const formattedJSON = JSON.stringify(data, null, 4);
-            document.getElementById('output-json').value = formattedJSON;
+            const [formattedJSON, logs] = data;
+            document.getElementById('output-json').value = JSON.stringify(formattedJSON, null, 4);
+            const formattedLogs = logs.map(log => {
+                return `Context: ${log.context}\nMessage: ${log.text}`;
+            }).join('\n\n');
+            document.getElementById('log-output').value = formattedLogs;
         })
         .catch(error => {
             if (error.name !== 'AbortError') {
                 document.getElementById('output-json').value = 'Error formatting JSON: ' + error.message;
+                document.getElementById('log-output').value = '';
             }
         });
     }, 500);

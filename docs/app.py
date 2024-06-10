@@ -13,7 +13,7 @@ def format_json():
         malformed_json = data["malformedJSON"]
 
         # Repair the malformed JSON
-        parsed_json = loads(malformed_json)
+        parsed_json = loads(malformed_json, logging=True)
 
         return jsonify(parsed_json)
     except Exception as e:

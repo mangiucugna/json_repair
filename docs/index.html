@@ -21,8 +21,18 @@
             </p>
         </section>
         <div class="container">
-            <textarea id="input-json" placeholder="Paste malformed JSON here..."></textarea>
-            <textarea id="output-json" readonly placeholder="Formatted JSON will appear here..."></textarea>
+            <div class="textarea-container">
+                <h3>Input JSON</h3>
+                <textarea id="input-json" placeholder="Paste malformed JSON here..."></textarea>
+            </div>
+            <div class="textarea-container">
+                <h3>Repaired JSON</h3>
+                <textarea id="output-json" readonly placeholder="Formatted JSON will appear here..."></textarea>
+            </div>
+        </div>
+        <div class="log-container">
+            <h3>Repair actions that the library performed</h3>
+            <textarea id="log-output" readonly placeholder="Logs will appear here..."></textarea>
         </div>
         <script src="index.js"></script>
     </body>
