@@ -1,1 +1,24 @@
-Test
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>JSON Repair - Online Demo</title>
+        <link rel="stylesheet" href="styles.css">
+    </head>
+    <body>
+        <header>
+            <h1>JSON Repair Demo</h1>
+        </header>
+        <section class="info">
+            <p>This is a demo page for the Python package <a href="https://github.com/mangiucugna/json_repair/" target="_blank">json_repair</a>, you can find more information visting the GitHub repository: <a href="https://github.com/mangiucugna/json_repair/" target="_blank">https://github.com/mangiucugna/json_repair/</a>.</p>
+            <p>Paste malformed JSON in the left textarea and the repaired JSON will be displayed on the right.</p>
+            <p>Please note: the api is hosted on pythonanywhere for free. So if too many have used it in a day, it might reach quota and not work</p>
+        </section>
+        <div class="container">
+            <textarea id="input-json" placeholder="Paste malformed JSON here..."></textarea>
+            <textarea id="output-json" readonly placeholder="Formatted JSON will appear here..."></textarea>
+        </div>
+        <script src="index.js"></script>
+    </body>
+</html>
