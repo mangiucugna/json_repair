@@ -141,6 +141,7 @@ def test_object_edge_cases():
     assert repair_json('''{ "a" : "{ b": {} }" }''') == '{"a": "{ b"}'
     assert repair_json("""{"b": "xxxxx" true}""") == '{"b": "xxxxx"}'
     assert repair_json('{"key": "Lorem "ipsum" s,"}') == '{"key": "Lorem \\"ipsum\\" s,"}'
+    assert repair_json('{"lorem": ipsum, sic, datum.",}') == '{"lorem": "ipsum, sic, datum."}'
 
 def test_number_edge_cases():
     assert repair_json(' - { "test_key": ["test_value", "test_value2"] }') == '{"test_key": ["test_value", "test_value2"]}'
@@ -148,7 +149,7 @@ def test_number_edge_cases():
     assert repair_json('{"key": .25}') == '{"key": 0.25}'
     assert repair_json('{"here": "now", "key": 1/3, "foo": "bar"}') == '{"here": "now", "key": "1/3", "foo": "bar"}'
     assert repair_json('{"key": 12345/67890}') == '{"key": "12345/67890"}'
-    assert repair_json('[105,12') == '["105,12"]'
+    assert repair_json('[105,12') == '[105, 12]'
     assert repair_json('{"key", 105,12,') == '{"key": "105,12"}'
     assert repair_json('{"key": 1/3, "foo": "bar"}') == '{"key": "1/3", "foo": "bar"}'
     assert repair_json('{"key": 10-20}') == '{"key": "10-20"}'
@@ -171,8 +172,8 @@ def test_leading_trailing_characters():
 def test_multiple_jsons():
     assert repair_json("[]{}") == "[[], {}]"
     assert repair_json("{}[]{}") == "[{}, [], {}]"
-    assert repair_json('{"key":"value"}[1,2,3,True]') == '[{"key": "value"}, ["1,2,3", true]]'
-    assert repair_json('lorem ```json {"key":"value"} ``` ipsum ```json [1,2,3,True] ``` 42') == '[{"key": "value"}, ["1,2,3", true]]'
+    assert repair_json('{"key":"value"}[1,2,3,True]') == '[{"key": "value"}, [1, 2, 3, true]]'
+    assert repair_json('lorem ```json {"key":"value"} ``` ipsum ```json [1,2,3,True] ``` 42') == '[{"key": "value"}, [1, 2, 3, true]]'
 
 def test_repair_json_with_objects():
     # Test with valid JSON strings

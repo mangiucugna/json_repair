@@ -372,7 +372,24 @@ class JSONParser:
                 ):
                     break
                 elif self.get_context() == "object_value" and char in [",", "}"]:
-                    break
+                    rstring_delimiter_missing = True
+                    # check if this is a case in which the closing comma is NOT missing instead
+                    i = 1
+                    next_c = self.get_char_at(i)
+                    while next_c and next_c != rstring_delimiter:
+                        i += 1
+                        next_c = self.get_char_at(i)
+                    if next_c:
+                        i += 1
+                        next_c = self.get_char_at(i)
+                        # found a delimiter, now we need to check that is followed strictly by a comma or brace
+                        while next_c and next_c.isspace():
+                            i += 1
+                            next_c = self.get_char_at(i)
+                        if next_c and next_c in [",", "}"]:
+                            rstring_delimiter_missing = False
+                    if rstring_delimiter_missing:
+                        break
             string_acc += char
             self.index += 1
             char = self.get_char_at()
@@ -503,7 +520,8 @@ class JSONParser:
         number_str = ""
         number_chars = set("0123456789-.eE/,")
         char = self.get_char_at()
-        while char and char in number_chars:
+        is_array = self.get_context() == "array"
+        while char and char in number_chars and (char != "," or not is_array):
             number_str += char
             self.index += 1
             char = self.get_char_at()
