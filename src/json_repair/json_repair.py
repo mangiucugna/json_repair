@@ -370,6 +370,10 @@ class JSONParser:
                 if self.get_context() == "object_key" and (
                     char == ":" or char.isspace()
                 ):
+                    self.log(
+                        "While parsing a string missing the left delimiter in object key context, we found a :, stopping here",
+                        "info",
+                    )
                     break
                 elif self.get_context() == "object_value" and char in [",", "}"]:
                     rstring_delimiter_missing = True
@@ -389,6 +393,10 @@ class JSONParser:
                         if next_c and next_c in [",", "}"]:
                             rstring_delimiter_missing = False
                     if rstring_delimiter_missing:
+                        self.log(
+                            "While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn't determine that a right delimiter was present. Stopping here",
+                            "info",
+                        )
                         break
             string_acc += char
             self.index += 1
