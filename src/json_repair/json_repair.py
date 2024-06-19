@@ -418,6 +418,33 @@ class JSONParser:
                         "While parsing a string, we found a doubled quote, ignoring it",
                         "info",
                     )
+                elif missing_quotes and self.get_context() == "object_value":
+                    # In case of missing starting quote I need to check if the delimeter is the end or the beginning of a key
+                    i = 1
+                    next_c = self.get_char_at(i)
+                    while next_c and next_c not in [
+                        rstring_delimiter,
+                        lstring_delimiter,
+                    ]:
+                        i += 1
+                        next_c = self.get_char_at(i)
+                    if next_c:
+                        # We found a quote, now let's make sure there's a ":" following
+                        i += 1
+                        next_c = self.get_char_at(i)
+                        # found a delimiter, now we need to check that is followed strictly by a comma or brace
+                        while next_c and next_c.isspace():
+                            i += 1
+                            next_c = self.get_char_at(i)
+                        if next_c and next_c == ":":
+                            # Reset the cursor
+                            self.index -= 1
+                            char = self.get_char_at()
+                            self.log(
+                                "In a string with missing quotes and object value context, I found a delimeter but it turns out it was the beginning on the next key. Stopping here.",
+                                "info",
+                            )
+                            break
                 else:
                     # Check if eventually there is a rstring delimiter, otherwise we bail
                     i = 1
