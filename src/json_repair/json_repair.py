@@ -119,40 +119,38 @@ class JSONParser:
     def parse_json(
         self,
     ) -> JSONReturnType:
-        char = self.get_char_at()
-        # This parser will ignore any basic element (string or number) that is not inside an array or object
-        is_in_context = len(self.context) > 0
-        # False means that we are at the end of the string provided, is the base case for recursion
-        if char is False:
-            return ""
-        # <object> starts with '{'
-        # but an object key must be a string
-        elif char == "{":
-            self.index += 1
-            return self.parse_object()
-        # <array> starts with '['
-        # but an object key must be a string
-        elif char == "[":
-            self.index += 1
-            return self.parse_array()
-        # there can be an edge case in which a key is empty and at the end of an object
-        # like "key": }. We return an empty string here to close the object properly
-        elif char == "}":
-            self.log(
-                "At the end of an object we found a key with missing value, skipping",
-                "info",
-            )
-            return ""
-        # <string> starts with a quote
-        elif is_in_context and (char in ['"', "'", "“"] or char.isalpha()):
-            return self.parse_string()
-        # <number> starts with [0-9] or minus
-        elif is_in_context and (char.isdigit() or char == "-" or char == "."):
-            return self.parse_number()
-        # If everything else fails, we just ignore and move on
-        else:
-            self.index += 1
-            return self.parse_json()
+        while True:
+            char = self.get_char_at()
+            # This parser will ignore any basic element (string or number) that is not inside an array or object
+            is_in_context = len(self.context) > 0
+            # False means that we are at the end of the string provided
+            if char is False:
+                return ""
+            # <object> starts with '{'
+            elif char == "{":
+                self.index += 1
+                return self.parse_object()
+            # <array> starts with '['
+            elif char == "[":
+                self.index += 1
+                return self.parse_array()
+            # there can be an edge case in which a key is empty and at the end of an object
+            # like "key": }. We return an empty string here to close the object properly
+            elif char == "}":
+                self.log(
+                    "At the end of an object we found a key with missing value, skipping",
+                    "info",
+                )
+                return ""
+            # <string> starts with a quote
+            elif is_in_context and (char in ['"', "'", "“"] or char.isalpha()):
+                return self.parse_string()
+            # <number> starts with [0-9] or minus
+            elif is_in_context and (char.isdigit() or char == "-" or char == "."):
+                return self.parse_number()
+            # If everything else fails, we just ignore and move on
+            else:
+                self.index += 1
 
     def parse_object(self) -> Dict[str, Any]:
         # <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
