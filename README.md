@@ -1,3 +1,5 @@
+![Downloads](https://img.shields.io/pypi/dm/json-repair)
+
 This simple package can be used to fix an invalid json string. To know all cases in which this package will work, check out the unit test.
 
 Inspired by https://github.com/josdejong/jsonrepair
