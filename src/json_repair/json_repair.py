@@ -513,15 +513,15 @@ class JSONParser:
                                     break
                                 i += 1
                                 next_c = self.get_char_at(i)
-                        # Only if we fail to find a ':' then we know this is misplaced quote
-                        if next_c != ":":
-                            self.log(
-                                "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
-                                "info",
-                            )
-                            string_acc += char
-                            self.index += 1
-                            char = self.get_char_at()
+                            # Only if we fail to find a ':' then we know this is misplaced quote
+                            if next_c != ":":
+                                self.log(
+                                    "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
+                                    "info",
+                                )
+                                string_acc += char
+                                self.index += 1
+                                char = self.get_char_at()
 
         if (
             char

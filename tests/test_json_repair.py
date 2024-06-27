@@ -102,6 +102,7 @@ def test_array_edge_cases():
     assert repair_json("[1, 2, ... , 3]") == "[1, 2, 3]"
     assert repair_json("[1, 2, '...', 3]") == '[1, 2, "...", 3]'
     assert repair_json("[true, false, null, ...]") == '[true, false, null]'
+    assert repair_json('["a" "b" "c" 1') == '["a", "b", "c", 1]'
     assert (
         repair_json('{"employees":["John", "Anna",')
         == '{"employees": ["John", "Anna"]}'
