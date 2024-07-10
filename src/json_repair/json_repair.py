@@ -352,6 +352,19 @@ class JSONParser:
                 )
                 doubled_quotes = True
                 self.index += 1
+            else:
+                # Ok this is not a doubled quote, check if this is an empty string or not
+                i = 1
+                next_c = self.get_char_at(i)
+                while next_c and next_c.isspace():
+                    i += 1
+                    next_c = self.get_char_at(i)
+                if next_c not in [",", "]", "}"]:
+                    self.log(
+                        "While parsing a string, we found a doubled quote but it was a mistake, removing one quote",
+                        "info",
+                    )
+                    self.index += 1
 
         # Initialize our return value
         string_acc = ""
