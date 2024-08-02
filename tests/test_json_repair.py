@@ -250,3 +250,6 @@ def test_repair_json_from_file():
     finally:
         # Clean up - delete the temporary file
         os.remove(temp_path)
+
+def test_ensure_ascii():
+    assert repair_json('{"测试key": "测试value"}', ensure_ascii=False) == '{"测试key": "测试value"}'
