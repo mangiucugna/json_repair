@@ -675,6 +675,7 @@ def repair_json(
     skip_json_loads: Optional[bool] = False,
     logging: Optional[bool] = False,
     json_fd: Optional[TextIO] = None,
+    ensure_ascii: Optional[bool] = True,
 ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     Given a json formatted string, it will try to decode it and, if it fails, it will try to fix it.
@@ -697,11 +698,13 @@ def repair_json(
     # It's useful to return the actual object instead of the json string, it allows this lib to be a replacement of the json library
     if return_objects or logging:
         return parsed_json
-    return json.dumps(parsed_json)
+    return json.dumps(parsed_json, ensure_ascii=ensure_ascii)
 
 
 def loads(
-    json_str: str, skip_json_loads: bool = False, logging: bool = False
+    json_str: str,
+    skip_json_loads: Optional[bool] = False,
+    logging: Optional[bool] = False,
 ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     This function works like `json.loads()` except that it will fix your JSON in the process.
@@ -716,17 +719,24 @@ def loads(
 
 
 def load(
-    fd: TextIO, skip_json_loads: bool = False, logging: bool = False
+    fd: TextIO, skip_json_loads: Optional[bool] = False, logging: Optional[bool] = False
 ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     This function works like `json.load()` except that it will fix your JSON in the process.
     It is a wrapper around the `repair_json()` function with `json_fd=fd` and `return_objects=True`.
     """
-    return repair_json(json_fd=fd, skip_json_loads=skip_json_loads, logging=logging)
+    return repair_json(
+        json_fd=fd,
+        return_objects=True,
+        skip_json_loads=skip_json_loads,
+        logging=logging,
+    )
 
 
 def from_file(
-    filename: str, skip_json_loads: bool = False, logging: bool = False
+    filename: str,
+    skip_json_loads: Optional[bool] = False,
+    logging: Optional[bool] = False,
 ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     This function is a wrapper around `load()` so you can pass the filename as string
