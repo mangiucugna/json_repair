@@ -301,7 +301,7 @@ class JSONParser:
 
         char = self.get_char_at()
         # A valid string can only start with a valid quote or, in our case, with a literal
-        while char and char not in ['"', "'", "“"] and not char.isalpha():
+        while char and char not in ['"', "'", "“"] and not char.isalnum():
             self.index += 1
             char = self.get_char_at()
 
@@ -315,7 +315,7 @@ class JSONParser:
         elif char == "“":
             lstring_delimiter = "“"
             rstring_delimiter = "”"
-        elif char.isalpha():
+        elif char.isalnum():
             # This could be a <boolean> and not a string. Because (T)rue or (F)alse or (N)ull are valid
             # But remember, object keys are only of type string
             if char.lower() in ["t", "f", "n"] and self.get_context() != "object_key":
