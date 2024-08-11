@@ -179,21 +179,12 @@ class JSONParser:
 
             # <member> starts with a <string>
             key = ""
-            while key == "" and self.get_char_at():
-                current_index = self.index
+            while self.get_char_at():
                 key = self.parse_string()
 
-                # This can happen sometimes like { "": "value" }
-                if key == "" and self.get_char_at() == ":":
-                    key = "empty_placeholder"
-                    self.log(
-                        "While parsing an object we found an empty key, replacing with empty_placeholder",
-                        "info",
-                    )
+                if key != "" or (key == "" and self.get_char_at() == ":"):
+                    # If the string is empty but there is a object divider, we are done here
                     break
-                elif key == "" and self.index == current_index:
-                    # Sometimes the string search might not move the index at all, that might lead us to an infinite loop
-                    self.index += 1
 
             self.skip_whitespaces_at()
 
@@ -226,13 +217,6 @@ class JSONParser:
             # Remove trailing spaces
             self.skip_whitespaces_at()
 
-        # Especially at the end of an LLM generated json you might miss the last "}"
-        if (self.get_char_at() or "}") != "}":
-            self.log(
-                "While parsing an object, we couldn't find the closing }, ignoring",
-                "info",
-            )
-
         self.index += 1
         return obj
 
@@ -261,13 +245,6 @@ class JSONParser:
             while char and (char.isspace() or char == ","):
                 self.index += 1
                 char = self.get_char_at()
-            # If this is the right value of an object and we are closing the object, it means the array is over
-            if self.get_context() == "object_value" and char == "}":
-                self.log(
-                    "While parsing an array inside an object, we got to the end without finding a ]. Stopped parsing",
-                    "info",
-                )
-                break
 
         # Especially at the end of an LLM generated json you might miss the last "]"
         char = self.get_char_at()
@@ -275,14 +252,6 @@ class JSONParser:
             self.log(
                 "While parsing an array we missed the closing ], adding it back", "info"
             )
-            # Sometimes when you fix a missing "]" you'll have a trailing "," there that makes the JSON invalid
-            if char == ",":
-                # Remove trailing "," before adding the "]"
-                self.log(
-                    "While parsing an array, found a trailing , before adding ]",
-                    "info",
-                )
-
             self.index -= 1
 
         self.index += 1
@@ -337,6 +306,11 @@ class JSONParser:
 
         # There is sometimes a weird case of doubled quotes, we manage this also later in the while loop
         if self.get_char_at() == lstring_delimiter:
+            # If it's an empty key, this was easy
+            if self.get_context() == "object_key" and self.get_char_at(1) == ":":
+                self.index += 1
+                return ""
+
             # This is a valid exception only if it's closed by a double delimiter again
             i = 1
             next_c = self.get_char_at(i)
@@ -429,6 +403,7 @@ class JSONParser:
                         "While parsing a string, we found a doubled quote, ignoring it",
                         "info",
                     )
+                    self.index += 1
                 elif missing_quotes and self.get_context() == "object_value":
                     # In case of missing starting quote I need to check if the delimeter is the end or the beginning of a key
                     i = 1
@@ -575,22 +550,18 @@ class JSONParser:
             # The number ends with a non valid character for a number/currency, rolling back one
             number_str = number_str[:-1]
             self.index -= 1
-        if number_str:
-            try:
-                if "," in number_str:
-                    return str(number_str)
-                if "." in number_str or "e" in number_str or "E" in number_str:
-                    return float(number_str)
-                elif number_str == "-":
-                    # If there is a stray "-" this will throw an exception, throw away this character
-                    return self.parse_json()
-                else:
-                    return int(number_str)
-            except ValueError:
-                return number_str
-        else:
-            # If nothing works, let's skip and keep parsing
-            return self.parse_json()
+        try:
+            if "," in number_str:
+                return str(number_str)
+            if "." in number_str or "e" in number_str or "E" in number_str:
+                return float(number_str)
+            elif number_str == "-":
+                # If there is a stray "-" this will throw an exception, throw away this character
+                return self.parse_json()
+            else:
+                return int(number_str)
+        except ValueError:
+            return number_str
 
     def parse_boolean_or_null(self) -> Union[bool, str, None]:
         # <boolean> is one of the literal strings 'true', 'false', or 'null' (unquoted)

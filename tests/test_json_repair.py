@@ -125,20 +125,11 @@ def test_escaping():
     assert repair_json('{"key\t_": "value"}') == '{"key\\t_": "value"}'
     
     
-def test_object_edge_cases():    
-    assert {
-        repair_json('{"value_1": "value_2": "data"}') == '{"value_1": "value_2", "data": ""}'
-    }
-    assert {
-        repair_json('{"value_1": true, COMMENT "value_2": "data"}') == '{"value_1": "value_2", "": "data"}'
-    }
+def test_object_edge_cases():
+    assert repair_json('{       ') == '{}'
+    assert repair_json('{"value_1": true, COMMENT "value_2": "data"}') == '{"value_1": true, "value_2": "data"}'
     assert repair_json('{"value_1": true, SHOULD_NOT_EXIST "value_2": "data" AAAA }') == '{"value_1": true, "value_2": "data"}'
-    assert {
-        repair_json('{"" : true, "key2": "value2"}') == '{" ": true, "key2": "value_2"}'
-    }
-    assert {
-        repair_json('{"": true, "key2": "value2"}') == '{"empty_placeholder": true, "key2": "value_2"}'
-    }
+    assert repair_json('{"" : true, "key2": "value2"}') == '{"": true, "key2": "value2"}'
     assert repair_json('{""answer"":[{""traits"":''Female aged 60+'',""answer1"":""5""}]}') == '{"answer": [{"traits": "Female aged 60+", "answer1": "5"}]}'
     assert repair_json('{ "words": abcdef", "numbers": 12345", "words2": ghijkl" }') == '{"words": "abcdef", "numbers": 12345, "words2": "ghijkl"}'
     assert repair_json('''{"number": 1,"reason": "According...""ans": "YES"}''') == '{"number": 1, "reason": "According...", "ans": "YES"}'
@@ -159,6 +150,7 @@ def test_number_edge_cases():
     assert repair_json('{"key": 1/3, "foo": "bar"}') == '{"key": "1/3", "foo": "bar"}'
     assert repair_json('{"key": 10-20}') == '{"key": "10-20"}'
     assert repair_json('{"key": 1.1.1}') == '{"key": "1.1.1"}'
+    assert repair_json('[- ') == '[]'
 
 def test_markdown():
     assert repair_json('{ "content": "[LINK]("https://google.com")" }') == '{"content": "[LINK](\\"https://google.com\\")"}'
