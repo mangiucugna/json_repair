@@ -7,7 +7,7 @@ repos:
   - id: mixed-line-ending
   - id: end-of-file-fixer
 - repo: https://github.com/pycqa/flake8
-  rev: 7.1.0
+  rev: 7.1.1
   hooks:
     - id: flake8
       args: ["--extend-ignore=E203,E501", "--per-file-ignores=__init__.py:F401"]
@@ -17,7 +17,7 @@ repos:
     - id: bandit
       args: [ --exclude, tests ]
 - repo: https://github.com/psf/black
-  rev: 24.4.2
+  rev: 24.8.0
   hooks:
     - id: black
 #- repo: https://github.com/pre-commit/mirrors-mypy/

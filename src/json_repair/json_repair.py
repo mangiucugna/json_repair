@@ -412,7 +412,7 @@ class JSONParser:
             string_acc += char
             self.index += 1
             char = self.get_char_at()
-            if len(string_acc) > 1 and string_acc[-1] == "\\":
+            if len(string_acc) > 0 and string_acc[-1] == "\\":
                 # This is a special case, if people use real strings this might happen
                 self.log("Found a stray escape sequence, normalizing it", "info")
                 string_acc = string_acc[:-1]
