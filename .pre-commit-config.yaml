@@ -32,3 +32,8 @@ repos:
     language: system
     always_run: true
     pass_filenames: false
+  - id: check-coverage
+    name: Check Coverage
+    entry: .venv/bin/python tests/test_coverage.py
+    language: python
+    always_run: true

@@ -1,0 +1,11 @@
+[run]
+source = src.json_repair.json_repair
+omit =
+    */.cursor/extensions/*
+    */pythonFiles/lib/python/*
+    */site-packages/*
+
+[report]
+exclude_lines =
+    if __name__ == '__main__':
+    pragma: no cover
