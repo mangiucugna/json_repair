@@ -1,7 +1,7 @@
 [![PyPI](https://img.shields.io/pypi/v/json-repair)](https://pypi.org/project/json-repair/)
 ![Python version](https://img.shields.io/badge/python-3.8+-important)
 [![PyPI downloads](https://img.shields.io/pypi/dm/json-repair)](https://pypi.org/project/json-repair/)
-
+[![Github Sponsors](https://img.shields.io/github/sponsors/mangiucugna)](https://github.com/sponsors/mangiucugna)
 
 This simple package can be used to fix an invalid json string. To know all cases in which this package will work, check out the unit test.
 
