@@ -55,7 +55,13 @@ function processInput(inputJSON) {
         })
         .then(response => response.json())
         .then(data => {
-            const [formattedJSON, logs] = data;
+            let formattedJSON, logs;
+            if (Array.isArray(data)) {
+                [formattedJSON, logs] = data;
+            } else {
+                formattedJSON = data;
+                logs = [{context: "", text: "Nothing to do, this was a valid JSON"}];
+            }
             document.getElementById('output-json').value = JSON.stringify(formattedJSON, null, 4);
             const formattedLogs = logs.map(log => {
                 return `Context: ${log.context}\nMessage: ${log.text}`;
