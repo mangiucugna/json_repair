@@ -1,7 +1,7 @@
 import coverage
 import sys
 
-COVERAGE_THRESHOLD = 96
+COVERAGE_THRESHOLD = 100
 
 cov = coverage.Coverage()
 cov.start()

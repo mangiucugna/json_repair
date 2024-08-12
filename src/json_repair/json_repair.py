@@ -51,9 +51,6 @@ class StringFileWrapper:
             self.fd.seek(current_position)
         return self.length
 
-    def __setitem__(self) -> None:
-        raise Exception("This is read-only!")
-
 
 class LoggerConfig:
     # This is a type class to simplify the declaration
@@ -310,8 +307,7 @@ class JSONParser:
             if self.get_context() == "object_key" and self.get_char_at(1) == ":":
                 self.index += 1
                 return ""
-
-            # This is a valid exception only if it's closed by a double delimiter again
+            # Find the next delimiter
             i = 1
             next_c = self.get_char_at(i)
             while next_c and next_c != rstring_delimiter:
@@ -442,7 +438,7 @@ class JSONParser:
                     ]:
                         # This is a bit of a weird workaround, essentially in object_value context we don't always break on commas
                         # This is because the routine after will make sure to correct any bad guess and this solves a corner case
-                        if next_c.isalpha():
+                        if check_comma_in_object_value and next_c.isalpha():
                             check_comma_in_object_value = False
                         # If we are in an object context, let's check for the right delimiters
                         if (
@@ -615,16 +611,10 @@ class JSONParser:
             self.context.append(value)
 
     def reset_context(self) -> None:
-        try:
-            self.context.pop()
-        except Exception:
-            return
+        self.context.pop()
 
     def get_context(self) -> str:
-        try:
-            return self.context[-1]
-        except Exception:
-            return ""
+        return self.context[-1]
 
     def log(self, text: str, level: str) -> None:
         if level == self.logger.log_level:
