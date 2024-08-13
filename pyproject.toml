@@ -21,6 +21,7 @@ classifiers = [
 [project.urls]
 "Homepage" = "https://github.com/mangiucugna/json_repair/"
 "Bug Tracker" = "https://github.com/mangiucugna/json_repair/issues"
+"Live demo" = "https://mangiucugna.github.io/json_repair/"
 [tool.pytest.ini_options]
 pythonpath = [
   "."
