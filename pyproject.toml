@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 [project]
 name = "json_repair"
-version = "0.27.2"
+version = "0.28.0"
 license = {file = "LICENSE"}
 authors = [
   { name="Stefano Baccianella", email="4247706+mangiucugna@users.noreply.github.com" },
@@ -17,7 +17,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-
 [project.urls]
 "Homepage" = "https://github.com/mangiucugna/json_repair/"
 "Bug Tracker" = "https://github.com/mangiucugna/json_repair/issues"
@@ -26,3 +25,7 @@ classifiers = [
 pythonpath = [
   "."
 ]
+[tool.setuptools.package-data]
+"pkgname" = ["py.typed"]
+[tool.setuptools.packages.find]
+where = ["src"]
