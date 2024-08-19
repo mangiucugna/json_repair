@@ -24,7 +24,7 @@ All supported use cases are in the unit tests
 
 import os
 import json
-from typing import Any, Dict, List, Optional, Union, TextIO, Tuple, overload, Literal
+from typing import Any, Dict, List, Optional, Union, TextIO, Tuple, Literal
 
 
 class StringFileWrapper:
@@ -33,7 +33,7 @@ class StringFileWrapper:
         self.fd = fd
         self.length: int = 0
 
-    def __getitem__(self, index: int) -> str:
+    def __getitem__(self, index: int | slice) -> str:
         if isinstance(index, slice):
             self.fd.seek(index.start)
             value = self.fd.read(index.stop - index.start)
@@ -564,7 +564,7 @@ class JSONParser:
         # <boolean> is one of the literal strings 'true', 'false', or 'null' (unquoted)
         starting_index = self.index
         char = (self.get_char_at() or "").lower()
-        value = None
+        value: Optional[Tuple[str, Optional[bool]]]
         if char == "t":
             value = ("true", True)
         elif char == "f":
@@ -632,57 +632,13 @@ class JSONParser:
             )
 
 
-@overload
 def repair_json(
     json_str: str = "",
-    return_objects: Optional[Literal[False]] = False,
-    skip_json_loads: Optional[bool] = False,
-    logging: Optional[Literal[False]] = False,  # None is treated as False
+    return_objects: bool = False,
+    skip_json_loads: bool = False,
+    logging: bool = False,
     json_fd: Optional[TextIO] = None,
-    ensure_ascii: Optional[bool] = True,
-) -> str: ...
-
-
-@overload
-def repair_json(
-    json_str: str = "",
-    return_objects: Literal[True] = True,
-    skip_json_loads: Optional[bool] = False,
-    logging: Optional[Literal[False]] = False,  # None is treated as False
-    json_fd: Optional[TextIO] = None,
-    ensure_ascii: Optional[bool] = True,
-) -> JSONReturnType: ...
-
-
-@overload
-def repair_json(
-    json_str: str = "",
-    return_objects: Optional[Literal[False]] = False,  # None is treated as False
-    skip_json_loads: Optional[bool] = False,
-    logging: Literal[True] = True,
-    json_fd: Optional[TextIO] = None,
-    ensure_ascii: Optional[bool] = True,
-) -> Tuple[str, List[Dict[str, str]]]: ...
-
-
-@overload
-def repair_json(
-    json_str: str = "",
-    return_objects: Literal[True] = True,
-    skip_json_loads: Optional[bool] = False,
-    logging: Literal[True] = True,
-    json_fd: Optional[TextIO] = None,
-    ensure_ascii: Optional[bool] = True,
-) -> Tuple[JSONReturnType, List[Dict[str, str]]]: ...
-
-
-def repair_json(
-    json_str: str = "",
-    return_objects: Optional[bool] = False,
-    skip_json_loads: Optional[bool] = False,
-    logging: Optional[bool] = False,
-    json_fd: Optional[TextIO] = None,
-    ensure_ascii: Optional[bool] = True,
+    ensure_ascii: bool = True,
 ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     Given a json formatted string, it will try to decode it and, if it fails, it will try to fix it.
@@ -709,26 +665,10 @@ def repair_json(
     return json.dumps(parsed_json, ensure_ascii=ensure_ascii)
 
 
-@overload
 def loads(
     json_str: str,
-    skip_json_loads: Optional[bool] = False,
-    logging: Optional[Literal[False]] = False,  # None is treated as False
-) -> JSONReturnType: ...
-
-
-@overload
-def loads(
-    json_str: str,
-    skip_json_loads: Optional[bool] = False,
-    logging: Literal[True] = True,
-) -> Tuple[JSONReturnType, List[Dict[str, str]]]: ...
-
-
-def loads(
-    json_str: str,
-    skip_json_loads: Optional[bool] = False,
-    logging: Optional[bool] = False,
+    skip_json_loads: bool = False,
+    logging: bool = False,
 ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     This function works like `json.loads()` except that it will fix your JSON in the process.
@@ -742,22 +682,8 @@ def loads(
     )
 
 
-@overload
 def load(
-    fd: TextIO,
-    skip_json_loads: Optional[bool] = False,
-    logging: Optional[Literal[False]] = False,
-) -> JSONReturnType: ...
-
-
-@overload
-def load(
-    fd: TextIO, skip_json_loads: Optional[bool] = False, logging: Literal[True] = True
-) -> Tuple[JSONReturnType, List[Dict[str, str]]]: ...
-
-
-def load(
-    fd: TextIO, skip_json_loads: Optional[bool] = False, logging: Optional[bool] = False
+    fd: TextIO, skip_json_loads: bool = False, logging: bool = False
 ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     This function works like `json.load()` except that it will fix your JSON in the process.
@@ -771,26 +697,10 @@ def load(
     )
 
 
-@overload
 def from_file(
     filename: str,
-    skip_json_loads: Optional[bool] = False,
-    logging: Optional[Literal[False]] = False,
-) -> JSONReturnType: ...
-
-
-@overload
-def from_file(
-    filename: str,
-    skip_json_loads: Optional[bool] = False,
-    logging: Literal[True] = True,
-) -> Tuple[JSONReturnType, List[Dict[str, str]]]: ...
-
-
-def from_file(
-    filename: str,
-    skip_json_loads: Optional[bool] = False,
-    logging: Optional[bool] = False,
+    skip_json_loads: bool = False,
+    logging: bool = False,
 ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     This function is a wrapper around `load()` so you can pass the filename as string

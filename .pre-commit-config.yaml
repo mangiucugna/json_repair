@@ -20,10 +20,10 @@ repos:
   rev: 24.8.0
   hooks:
     - id: black
-#- repo: https://github.com/pre-commit/mirrors-mypy/
-#  rev: "v1.10.0"
-#  hooks:
-#    - id: mypy
+- repo: https://github.com/pre-commit/mirrors-mypy/
+  rev: "v1.11.1"
+  hooks:
+    - id: mypy
 - repo: local
   hooks:
   - id: run-tests
