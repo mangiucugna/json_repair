@@ -33,7 +33,7 @@ class StringFileWrapper:
         self.fd = fd
         self.length: int = 0
 
-    def __getitem__(self, index: int | slice) -> str:
+    def __getitem__(self, index: Union[int, slice]) -> str:
         if isinstance(index, slice):
             self.fd.seek(index.start)
             value = self.fd.read(index.stop - index.start)
