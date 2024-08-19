@@ -635,7 +635,7 @@ class JSONParser:
 @overload
 def repair_json(
     json_str: str = "",
-    return_objects: Literal[False] = False,
+    return_objects: Optional[Literal[False]] = False,
     skip_json_loads: Optional[bool] = False,
     logging: Optional[Literal[False]] = False,  # None is treated as False
     json_fd: Optional[TextIO] = None,
