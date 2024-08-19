@@ -177,7 +177,7 @@ class JSONParser:
             # <member> starts with a <string>
             key = ""
             while self.get_char_at():
-                key = self.parse_string()
+                key = str(self.parse_string())
 
                 if key != "" or (key == "" and self.get_char_at() == ":"):
                     # If the string is empty but there is a object divider, we are done here
@@ -255,7 +255,7 @@ class JSONParser:
         self.reset_context()
         return arr
 
-    def parse_string(self) -> Union[str, JSONReturnType]:
+    def parse_string(self) -> Union[str, bool, None]:
         # <string> is a string of valid characters enclosed in quotes
         # i.e. { name: "John" }
         # Somehow all weird cases in an invalid JSON happen to be resolved in this function, so be careful here
@@ -382,7 +382,7 @@ class JSONParser:
             string_acc += char
             self.index += 1
             char = self.get_char_at()
-            if len(string_acc) > 0 and string_acc[-1] == "\\":
+            if char and len(string_acc) > 0 and string_acc[-1] == "\\":
                 # This is a special case, if people use real strings this might happen
                 self.log("Found a stray escape sequence, normalizing it", "info")
                 string_acc = string_acc[:-1]
@@ -473,7 +473,7 @@ class JSONParser:
                                 "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here since this is the last element of the object, ignoring it",
                                 "info",
                             )
-                            string_acc += char
+                            string_acc += str(char)
                             self.index += 1
                             char = self.get_char_at()
                     elif next_c == rstring_delimiter:
@@ -503,7 +503,7 @@ class JSONParser:
                                     "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
                                     "info",
                                 )
-                                string_acc += char
+                                string_acc += str(char)
                                 self.index += 1
                                 char = self.get_char_at()
 
@@ -585,7 +585,7 @@ class JSONParser:
         self.index = starting_index
         return ""
 
-    def get_char_at(self, count: int = 0) -> Union[str, bool]:
+    def get_char_at(self, count: int = 0) -> Union[str, Literal[False]]:
         # Why not use something simpler? Because try/except in python is a faster alternative to an "if" statement that is often True
         try:
             return self.json_str[self.index + count]
