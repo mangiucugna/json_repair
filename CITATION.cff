@@ -4,7 +4,7 @@ authors:
 - family-names: "Baccianella"
   given-names: "Stefano"
   orcid: "https://orcid.org/0009-0005-7654-4471"
-title: "JSON Repair"
+title: "JSON Repair - A python module to repair invalid JSON, commonly used to parse the output of LLMs"
 version: 0.28.3
 doi: 
 date-released: 2024-08-19
