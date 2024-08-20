@@ -5,7 +5,7 @@ authors:
   given-names: "Stefano"
   orcid: "https://orcid.org/0009-0005-7654-4471"
 title: "json_repair"
-version: 1.0.0
+version: 0.28.3
 doi: 
 date-released: 2023-09-07
 url: "https://github.com/mangiucugna/json_repair"
