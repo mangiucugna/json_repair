@@ -4,7 +4,7 @@ authors:
 - family-names: "Baccianella"
   given-names: "Stefano"
   orcid: "https://orcid.org/0009-0005-7654-4471"
-title: "json_repair"
+title: "JSON Repair"
 version: 0.28.3
 doi: 
 date-released: 2023-09-07
