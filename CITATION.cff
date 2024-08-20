@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "Please cite this software in your academic work, it will help my work a lot! Please use the format as below."
+authors:
+- family-names: "Baccianella"
+  given-names: "Stefano"
+  orcid: "https://orcid.org/0009-0005-7654-4471"
+title: "json_repair"
+version: 1.0.0
+doi: 
+date-released: 2023-09-07
+url: "https://github.com/mangiucugna/json_repair"
