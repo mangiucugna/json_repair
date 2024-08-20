@@ -11,10 +11,10 @@ Inspired by https://github.com/josdejong/jsonrepair
 # How to cite
 If you are using this library in your academic work (as I know many folks are) please find the BibTex here:
 
-    @software{Baccianella_json_repair_2023,
+    @software{Baccianella_JSON_Repair_2023,
         author = {Baccianella, Stefano},
         month = sep,
-        title = {{json\_repair}},
+        title = {{JSON Repair}},
         url = {https://github.com/mangiucugna/json_repair},
         version = {0.28.3},
         year = {2023}
