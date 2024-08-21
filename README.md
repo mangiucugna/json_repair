@@ -20,7 +20,7 @@ If you are using this library in your academic work (as I know many folks are) p
         year = {2024}
     }
 
-Thank you for citing my work!
+Thank you for citing my work and please send me a link to the paper if you can!
 
 ---
 # Offer me a beer
