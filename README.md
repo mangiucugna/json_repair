@@ -59,6 +59,18 @@ or just
 
     decoded_object = json_repair.repair_json(json_string, return_objects=True)
 
+### Avoid this antipattern
+Some users of this library adopt the following pattern:
+
+    obj = {}
+    try:
+        obj = json.loads(string)
+    except json.JSONDecodeError as e:
+        obj = json_repair.loads(string)
+        ...
+
+This is wasteful because `json_repair` will already verify for you if the JSON is valid, if you still want to do that then add `skip_json_loads=True` to the call as explained the section below.
+
 ### Read json from a file or file descriptor
 
 JSON repair provides also a drop-in replacement for `json.load()`:
@@ -99,6 +111,7 @@ Some rules of thumb to use:
 - Setting `return_objects=True` will always be faster because the parser returns an object already and it doesn't have serialize that object to JSON
 - `skip_json_loads` is faster only if you 100% know that the string is not a valid JSON
 - If you are having issues with escaping pass the string as **raw** string like: `r"string with escaping\""`
+
 ## Adding to requirements
 **Please pin this library only on the major version!**
 
