@@ -32,16 +32,40 @@ class StringFileWrapper:
     def __init__(self, fd: TextIO) -> None:
         self.fd = fd
         self.length: int = 0
+        # Buffers are 1MB strings that are read from the file 
+        # and kept in memory to keep reads low
+        self.buffers: Dict[int, str] = {}
+
+    def fill_buffer(self, index: int) -> None:
+        if self.buffers.get(index) is None:
+            self.fd.seek(index * 1_000_000)
+            self.buffers[index] = self
 
     def __getitem__(self, index: Union[int, slice]) -> str:
         if isinstance(index, slice):
-            self.fd.seek(index.start)
-            value = self.fd.read(index.stop - index.start)
-            self.fd.seek(index.start)
-            return value
+            buffer_index = index.start // 1_000_000
+            buffer_end = index.stop // 1_000_000
+            if buffer_index == buffer_end:
+                self.fill_buffer(buffer_index)
+                return self.buffers.get(buffer_index)[index.start % 1_000_000 : index.stop % 1_000_000]
+            for i in range(buffer_index, buffer_end + 1):
+                self.fill_buffer(i)
+            start_slice = self.buffers.get(buffer_index)[index.start % 1_000_000 :]
+            end_slice = self.buffers.get(buffer_end)[: index.stop % 1_000_000] 
+            middle_slices = [
+                self.buffers.get(i) for i in range(buffer_index + 1, buffer_end)
+            ]
+            return start_slice + "".join(middle_slices) + end_slice
+            # self.fd.seek(index.start)
+            # value = self.fd.read(index.stop - index.start)
+            # self.fd.seek(index.start)
+            # return value
         else:
-            self.fd.seek(index)
-            return self.fd.read(1)
+            buffer_index = index // 1000
+            if self.buffers.get(buffer_index) is None:
+                self.fd.seek(buffer_index * 1000)
+                self.buffers[buffer_index] = self.fd.read(1000)
+            return self.buffers[buffer_index][index % 1000]
 
     def __len__(self) -> int:
         if self.length < 1:

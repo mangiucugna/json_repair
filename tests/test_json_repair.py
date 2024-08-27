@@ -243,5 +243,33 @@ def test_repair_json_from_file():
         # Clean up - delete the temporary file
         os.remove(temp_path)
 
+def test_repair_json_from_file_many_seeks():
+    import os.path
+    import pathlib
+    path = pathlib.Path(__file__).parent.resolve()
+
+    # https://github.com/mangiucugna/json_repair/issues/66
+    # This call should finish, we are testing it finishes and doesn't hang
+    assert from_file(os.path.join(path, "invalid_many_seeks.json"))
+
+def test_repair_json_from_file_many_seeks_multiple_chunks():
+    import os.path
+
+    # https://github.com/mangiucugna/json_repair/issues/66
+    # This call should finish, we are testing it finishes and doesn't hang
+    import tempfile
+    temp_fd, temp_path = tempfile.mkstemp(suffix=".json")
+
+    try:
+    # Write content to the temporary file
+        with os.fdopen(temp_fd, 'w') as tmp:
+            # create very large array with trailing comma
+            tmp.write(("    \n" * 1_000_000) + "[{key:value},]")
+            assert from_file(temp_path)
+    finally:
+        os.remove(temp_path)
+
+        
+
 def test_ensure_ascii():
     assert repair_json("{'test_中国人_ascii':'统一码'}", ensure_ascii=False) == '{"test_中国人_ascii": "统一码"}'
