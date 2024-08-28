@@ -6,6 +6,7 @@ __pycache__
 .gitattributes
 .pytest_cache
 .coverage
+.mypy_cache
 build/
 dist/
 src/json_repair.egg-info/
