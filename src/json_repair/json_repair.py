@@ -40,14 +40,16 @@ class StringFileWrapper:
             CHUNK_LENGTH = 1_000_000
         self.buffer_length = CHUNK_LENGTH
 
-    def fill_buffer(self, index: int) -> None:
+    def get_buffer(self, index: int) -> str:
         if self.buffers.get(index) is None:
             self.fd.seek(index * self.buffer_length)
             self.buffers[index] = self.fd.read(self.buffer_length)
             # Save memory by keeping max 2MB buffer chunks and min 2 chunks
             if len(self.buffers) > max(2, 2_000_000 / self.buffer_length):
                 oldest_key = next(iter(self.buffers))
-                self.buffers.pop(oldest_key)
+                if oldest_key != index:
+                    self.buffers.pop(oldest_key)
+        return self.buffers[index]
 
     def __getitem__(self, index: Union[int, slice]) -> str:
         # The buffer is an array that is seek like a RAM:
@@ -56,25 +58,24 @@ class StringFileWrapper:
         if isinstance(index, slice):
             buffer_index = index.start // self.buffer_length
             buffer_end = index.stop // self.buffer_length
-            for i in range(buffer_index, buffer_end + 1):
-                self.fill_buffer(i)
             if buffer_index == buffer_end:
-                return self.buffers[buffer_index][
+                return self.get_buffer(buffer_index)[
                     index.start % self.buffer_length : index.stop % self.buffer_length
                 ]
             else:
-                start_slice = self.buffers[buffer_index][
+                start_slice = self.get_buffer(buffer_index)[
                     index.start % self.buffer_length :
                 ]
-                end_slice = self.buffers[buffer_end][: index.stop % self.buffer_length]
+                end_slice = self.get_buffer(buffer_end)[
+                    : index.stop % self.buffer_length
+                ]
                 middle_slices = [
-                    self.buffers[i] for i in range(buffer_index + 1, buffer_end)
+                    self.get_buffer(i) for i in range(buffer_index + 1, buffer_end)
                 ]
                 return start_slice + "".join(middle_slices) + end_slice
         else:
             buffer_index = index // self.buffer_length
-            self.fill_buffer(buffer_index)
-            return self.buffers[buffer_index][index % self.buffer_length]
+            return self.get_buffer(buffer_index)[index % self.buffer_length]
 
     def __len__(self) -> int:
         if self.length < 1:
