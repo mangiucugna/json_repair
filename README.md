@@ -112,6 +112,31 @@ Some rules of thumb to use:
 - `skip_json_loads` is faster only if you 100% know that the string is not a valid JSON
 - If you are having issues with escaping pass the string as **raw** string like: `r"string with escaping\""`
 
+### Use json_repair from CLI
+
+Install the library for command-line with:
+```
+pipx install json-repair
+```
+then run
+```
+$ json_repair -h
+
+usage: json_repair [-h] [-i] [--ensure_ascii] [--indent INDENT] filename
+
+Repair and parse JSON files.
+
+positional arguments:
+  filename         The JSON file to repair
+
+options:
+  -h, --help       show this help message and exit
+  -i, --inline     Replace the file inline instead of returning the output to stdout
+  --ensure_ascii   Pass the ensure_ascii parameter to json.dumps()
+  --indent INDENT  Number of spaces for indentation (Default 2)
+```
+to learn how to use it
+
 ## Adding to requirements
 **Please pin this library only on the major version!**
 

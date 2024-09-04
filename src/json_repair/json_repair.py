@@ -22,7 +22,9 @@ If something is wrong (a missing parantheses or quotes for example) it will use 
 All supported use cases are in the unit tests
 """
 
+import argparse
 import os
+import sys
 import json
 from typing import Any, Dict, List, Optional, Union, TextIO, Tuple, Literal
 
@@ -756,3 +758,47 @@ def from_file(
     fd.close()
 
     return jsonobj
+
+
+def cli():  # pragma: no cover
+    parser = argparse.ArgumentParser(description="Repair and parse JSON files.")
+    parser.add_argument("filename", help="The JSON file to repair")
+    parser.add_argument(
+        "-i",
+        "--inline",
+        action="store_true",
+        help="Replace the file inline instead of returning the output to stdout",
+    )
+    parser.add_argument(
+        "--ensure_ascii",
+        action="store_true",
+        help="Pass the ensure_ascii parameter to json.dumps()",
+    )
+    parser.add_argument(
+        "--indent",
+        type=int,
+        default=2,
+        help="Number of spaces for indentation (Default 2)",
+    )
+
+    args = parser.parse_args()
+
+    ensure_ascii = False
+    if args.ensure_ascii:
+        ensure_ascii = True
+    try:
+        result = from_file(args.filename)
+
+        if args.inline:
+            fd = open(args.filename, mode="w")
+            json.dump(result, fd, indent=args.indent, ensure_ascii=ensure_ascii)
+            fd.close()
+        else:
+            print(json.dumps(result, indent=args.indent, ensure_ascii=ensure_ascii))
+    except Exception as e:
+        print(f"Error: {str(e)}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":  # pragma: no cover
+    cli()
