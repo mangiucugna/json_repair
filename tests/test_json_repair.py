@@ -1,4 +1,8 @@
-from src.json_repair.json_repair import from_file, repair_json, loads
+from src.json_repair.json_repair import from_file, repair_json, loads, cli
+from unittest.mock import patch
+import os.path
+import pathlib
+import tempfile
 
 def test_basic_types_valid():
     assert repair_json("True", return_objects=True) == ""
@@ -225,10 +229,6 @@ def test_repair_json_skip_json_loads():
 
 
 def test_repair_json_from_file():
-    import os.path
-    import pathlib
-    import tempfile
-
     path = pathlib.Path(__file__).parent.resolve()
 
     # Use chunk_length 2 to test the buffering feature
@@ -263,3 +263,50 @@ def test_repair_json_from_file():
 
 def test_ensure_ascii():
     assert repair_json("{'test_中国人_ascii':'统一码'}", ensure_ascii=False) == '{"test_中国人_ascii": "统一码"}'
+
+
+
+def test_cli(capsys):
+    # Create a temporary file
+    temp_fd, temp_path = tempfile.mkstemp(suffix=".json")
+    try:
+        # Write content to the temporary file
+        with os.fdopen(temp_fd, 'w') as tmp:
+            tmp.write("{key:value")
+        cli(inline_args=[temp_path, '--indent', 0, '--ensure_ascii'])
+        captured = capsys.readouterr()
+        assert captured.out == '{\n"key": "value"\n}\n'
+        
+        # Test the output option
+        tempout_fd, tempout_path = tempfile.mkstemp(suffix=".json")
+        cli(inline_args=[temp_path, '--indent', 0, '-o', tempout_path])
+        with open(tempout_path, 'r') as tmp:
+            out = tmp.read()
+        assert out == '{\n"key": "value"\n}'
+
+        # Test the inline option
+        cli(inline_args=[temp_path, '--indent', 0, '-i'])
+        with open(temp_path, 'r') as tmp:
+            out = tmp.read()
+        assert out == '{\n"key": "value"\n}'
+
+
+    finally:
+        # Clean up - delete the temporary file
+        os.remove(temp_path)
+        os.remove(tempout_path)
+
+"""
+def test_cli_inline(sample_json_file):
+    with patch('sys.argv', ['json_repair', sample_json_file, '-i']):
+        cli()
+    with open(sample_json_file, 'r') as f:
+        assert json.load(f) == {"key": "value"}
+
+def test_cli_output_file(sample_json_file, tmp_path):
+    output_file = tmp_path / "output.json"
+    with patch('sys.argv', ['json_repair', sample_json_file, '-o', str(output_file)]):
+        cli()
+    with open(output_file, 'r') as f:
+        assert json.load(f) == {"key": "value"}
+"""

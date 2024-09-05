@@ -760,7 +760,7 @@ def from_file(
     return jsonobj
 
 
-def cli():  # pragma: no cover
+def cli(inline_args: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Repair and parse JSON files.")
     parser.add_argument("filename", help="The JSON file to repair")
     parser.add_argument(
@@ -770,9 +770,15 @@ def cli():  # pragma: no cover
         help="Replace the file inline instead of returning the output to stdout",
     )
     parser.add_argument(
+        "-o",
+        "--output",
+        metavar="TARGET",
+        help="If specified, the output will be written to TARGET filename instead of stdout",
+    )
+    parser.add_argument(
         "--ensure_ascii",
         action="store_true",
-        help="Pass the ensure_ascii parameter to json.dumps()",
+        help="Pass ensure_ascii=True to json.dumps()",
     )
     parser.add_argument(
         "--indent",
@@ -781,24 +787,36 @@ def cli():  # pragma: no cover
         help="Number of spaces for indentation (Default 2)",
     )
 
-    args = parser.parse_args()
+    if inline_args is None:  # pragma: no cover
+        args = parser.parse_args()
+    else:
+        args = parser.parse_args(
+            inline_args
+        )  # This is needed so this function is testable
+
+    if args.inline and args.output:  # pragma: no cover
+        print("Error: You cannot pass both --inline and --output", file=sys.stderr)
+        sys.exit(1)
 
     ensure_ascii = False
     if args.ensure_ascii:
         ensure_ascii = True
+
     try:
         result = from_file(args.filename)
 
-        if args.inline:
-            fd = open(args.filename, mode="w")
+        if args.inline or args.output:
+            fd = open(args.output or args.filename, mode="w")
             json.dump(result, fd, indent=args.indent, ensure_ascii=ensure_ascii)
             fd.close()
         else:
             print(json.dumps(result, indent=args.indent, ensure_ascii=ensure_ascii))
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         print(f"Error: {str(e)}", file=sys.stderr)
         sys.exit(1)
 
+    return 0  # Success
+
 
 if __name__ == "__main__":  # pragma: no cover
-    cli()
+    sys.exit(cli())
