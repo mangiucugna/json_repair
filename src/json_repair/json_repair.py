@@ -384,38 +384,39 @@ class JSONParser:
         # * If we are fixing missing quotes in an object, when it finds the special terminators
         char = self.get_char_at()
         while char and char != rstring_delimiter:
-            if missing_quotes:
-                if self.get_context() == "object_key" and (
-                    char == ":" or char.isspace()
-                ):
+            if (
+                missing_quotes
+                and self.get_context() == "object_key"
+                and (char == ":" or char.isspace())
+            ):
+                self.log(
+                    "While parsing a string missing the left delimiter in object key context, we found a :, stopping here",
+                    "info",
+                )
+                break
+            if self.get_context() == "object_value" and char in [",", "}"]:
+                rstring_delimiter_missing = True
+                # check if this is a case in which the closing comma is NOT missing instead
+                i = 1
+                next_c = self.get_char_at(i)
+                while next_c and next_c != rstring_delimiter:
+                    i += 1
+                    next_c = self.get_char_at(i)
+                if next_c:
+                    i += 1
+                    next_c = self.get_char_at(i)
+                    # found a delimiter, now we need to check that is followed strictly by a comma or brace
+                    while next_c and next_c.isspace():
+                        i += 1
+                        next_c = self.get_char_at(i)
+                    if next_c and next_c in [",", "}"]:
+                        rstring_delimiter_missing = False
+                if rstring_delimiter_missing:
                     self.log(
-                        "While parsing a string missing the left delimiter in object key context, we found a :, stopping here",
+                        "While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn't determine that a right delimiter was present. Stopping here",
                         "info",
                     )
                     break
-                elif self.get_context() == "object_value" and char in [",", "}"]:
-                    rstring_delimiter_missing = True
-                    # check if this is a case in which the closing comma is NOT missing instead
-                    i = 1
-                    next_c = self.get_char_at(i)
-                    while next_c and next_c != rstring_delimiter:
-                        i += 1
-                        next_c = self.get_char_at(i)
-                    if next_c:
-                        i += 1
-                        next_c = self.get_char_at(i)
-                        # found a delimiter, now we need to check that is followed strictly by a comma or brace
-                        while next_c and next_c.isspace():
-                            i += 1
-                            next_c = self.get_char_at(i)
-                        if next_c and next_c in [",", "}"]:
-                            rstring_delimiter_missing = False
-                    if rstring_delimiter_missing:
-                        self.log(
-                            "While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn't determine that a right delimiter was present. Stopping here",
-                            "info",
-                        )
-                        break
             string_acc += char
             self.index += 1
             char = self.get_char_at()
@@ -507,7 +508,7 @@ class JSONParser:
                         if next_c == "}":
                             # OK this is valid then
                             self.log(
-                                "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here since this is the last element of the object, ignoring it",
+                                "While parsing a string, we misplaced a quote that would have closed the string but has a different meaning here since this is the last element of the object, ignoring it",
                                 "info",
                             )
                             string_acc += str(char)

@@ -98,6 +98,8 @@ def test_missing_and_mixed_quotes():
         repair_json('{"name": "John", "age": 30, "city": "New')
         == '{"name": "John", "age": 30, "city": "New"}'
     )
+    assert repair_json('{"name": "John", "age": 30, "city": "New York, "gender": "male"}')  == '{"name": "John", "age": 30, "city": "New York", "gender": "male"}'
+
     assert repair_json('[{"key": "value", COMMENT "notes": "lorem "ipsum", sic." }]') == '[{"key": "value", "notes": "lorem \\"ipsum\\", sic."}]'
     assert repair_json('{"key": ""value"}') == '{"key": "value"}'
     assert repair_json('{"key": "value", 5: "value"}') == '{"key": "value", "5": "value"}'
