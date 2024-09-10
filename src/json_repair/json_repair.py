@@ -345,11 +345,10 @@ class JSONParser:
                 self.index += 1
                 return ""
             # Find the next delimiter
-            i = 1
+            i = self.skip_to_character(
+                character=rstring_delimiter, idx=1, move_main_index=False
+            )
             next_c = self.get_char_at(i)
-            while next_c and next_c != rstring_delimiter:
-                i += 1
-                next_c = self.get_char_at(i)
             # Now check that the next character is also a delimiter to ensure that we have "".....""
             # In that case we ignore this rstring delimiter
             if next_c and (self.get_char_at(i + 1) or "") == rstring_delimiter:
@@ -361,11 +360,8 @@ class JSONParser:
                 self.index += 1
             else:
                 # Ok this is not a doubled quote, check if this is an empty string or not
-                i = 1
+                i = self.skip_whitespaces_at(idx=1, move_main_index=False)
                 next_c = self.get_char_at(i)
-                while next_c and next_c.isspace():
-                    i += 1
-                    next_c = self.get_char_at(i)
                 if next_c not in [",", "]", "}"]:
                     self.log(
                         "While parsing a string, we found a doubled quote but it was a mistake, removing one quote",
@@ -397,18 +393,15 @@ class JSONParser:
             if self.get_context() == "object_value" and char in [",", "}"]:
                 rstring_delimiter_missing = True
                 # check if this is a case in which the closing comma is NOT missing instead
-                i = 1
+                i = self.skip_to_character(
+                    character=rstring_delimiter, idx=1, move_main_index=False
+                )
                 next_c = self.get_char_at(i)
-                while next_c and next_c != rstring_delimiter:
-                    i += 1
-                    next_c = self.get_char_at(i)
                 if next_c:
                     i += 1
-                    next_c = self.get_char_at(i)
                     # found a delimiter, now we need to check that is followed strictly by a comma or brace
-                    while next_c and next_c.isspace():
-                        i += 1
-                        next_c = self.get_char_at(i)
+                    i = self.skip_whitespaces_at(idx=i, move_main_index=False)
+                    next_c = self.get_char_at(i)
                     if next_c and next_c in [",", "}"]:
                         rstring_delimiter_missing = False
                 if rstring_delimiter_missing:
@@ -451,11 +444,9 @@ class JSONParser:
                     if next_c:
                         # We found a quote, now let's make sure there's a ":" following
                         i += 1
-                        next_c = self.get_char_at(i)
                         # found a delimiter, now we need to check that is followed strictly by a comma or brace
-                        while next_c and next_c.isspace():
-                            i += 1
-                            next_c = self.get_char_at(i)
+                        i = self.skip_whitespaces_at(idx=i, move_main_index=False)
+                        next_c = self.get_char_at(i)
                         if next_c and next_c == ":":
                             # Reset the cursor
                             self.index -= 1
@@ -495,16 +486,14 @@ class JSONParser:
                     # If we stopped for a comma in object_value context, let's check if find a "} at the end of the string
                     if next_c == "," and self.get_context() == "object_value":
                         i += 1
+                        i = self.skip_to_character(
+                            character=rstring_delimiter, idx=i, move_main_index=False
+                        )
                         next_c = self.get_char_at(i)
-                        while next_c and next_c != rstring_delimiter:
-                            i += 1
-                            next_c = self.get_char_at(i)
                         # Ok now I found a delimiter, let's skip whitespaces and see if next we find a }
                         i += 1
+                        i = self.skip_whitespaces_at(idx=i, move_main_index=False)
                         next_c = self.get_char_at(i)
-                        while next_c and next_c.isspace():
-                            i += 1
-                            next_c = self.get_char_at(i)
                         if next_c == "}":
                             # OK this is valid then
                             self.log(
@@ -520,10 +509,11 @@ class JSONParser:
                             # We found a delimiter and we need to check if this is a key
                             # so find a rstring_delimiter and a colon after
                             i += 1
-                            next_c = self.get_char_at(i)
-                            while next_c and next_c != rstring_delimiter:
-                                i += 1
-                                next_c = self.get_char_at(i)
+                            i = self.skip_to_character(
+                                character=rstring_delimiter,
+                                idx=i,
+                                move_main_index=False,
+                            )
                             i += 1
                             next_c = self.get_char_at(i)
                             while next_c and next_c != ":":
@@ -630,20 +620,45 @@ class JSONParser:
         except IndexError:
             return False
 
-    def skip_whitespaces_at(self) -> None:
+    def skip_whitespaces_at(self, idx: int = 0, move_main_index=True) -> int:
         """
         This function quickly iterates on whitespaces, syntactic sugar to make the code more concise
         """
         try:
-            char = self.json_str[self.index]
+            char = self.json_str[self.index + idx]
         except IndexError:
-            return
+            return idx
         while char.isspace():
-            self.index += 1
+            if move_main_index:
+                self.index += 1
+            else:
+                idx += 1
             try:
-                char = self.json_str[self.index]
+                char = self.json_str[self.index + idx]
             except IndexError:
-                return
+                return idx
+        return idx
+
+    def skip_to_character(
+        self, character: str, idx: int = 0, move_main_index=True
+    ) -> int:
+        """
+        This function quickly iterates to find a character, syntactic sugar to make the code more concise
+        """
+        try:
+            char = self.json_str[self.index + idx]
+        except IndexError:
+            return idx
+        while char != character:
+            if move_main_index:  # pragma: no cover
+                self.index += 1
+            else:
+                idx += 1
+            try:
+                char = self.json_str[self.index + idx]
+            except IndexError:
+                return idx
+        return idx
 
     def set_context(self, value: str) -> None:
         # If a value is provided update the context variable and save in stack
