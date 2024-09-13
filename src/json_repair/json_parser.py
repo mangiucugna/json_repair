@@ -16,7 +16,7 @@ class JSONParser:
         json_fd_chunk_length: int = 0,
     ) -> None:
         # The string to parse
-        self.json_str = json_str
+        self.json_str: Union[str, StringFileWrapper] = json_str
         # Alternatively, the file description with a json file in it
         if json_fd:
             # This is a trick we do to treat the file wrapper as an array
@@ -98,7 +98,7 @@ class JSONParser:
             else:
                 self.index += 1
 
-    def parse_object(self) -> Dict[str, Any]:
+    def parse_object(self) -> Dict[str, JSONReturnType]:
         # <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
         obj = {}
         # Stop when you either find the closing parentheses or you have iterated over the entire string
@@ -166,7 +166,7 @@ class JSONParser:
         self.index += 1
         return obj
 
-    def parse_array(self) -> List[Any]:
+    def parse_array(self) -> List[JSONReturnType]:
         # <array> ::= '[' [ <json> *(', ' <json>) ] ']' ; A sequence of JSON values separated by commas
         arr = []
         self.context.set(ContextValues.ARRAY)
