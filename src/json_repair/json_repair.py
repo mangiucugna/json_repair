@@ -25,10 +25,8 @@ All supported use cases are in the unit tests
 import argparse
 import sys
 import json
-from typing import Any, Dict, List, Optional, Union, TextIO, Tuple
-from .json_parser import JSONParser
-
-JSONReturnType = Union[Dict[str, Any], List[Any], str, float, int, bool, None]
+from typing import Dict, List, Optional, Union, TextIO, Tuple
+from .json_parser import JSONParser, JSONReturnType
 
 
 def repair_json(
