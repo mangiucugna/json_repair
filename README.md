@@ -42,6 +42,13 @@ I searched for a lightweight python package that was able to reliably fix this p
 *So I wrote one*
 
 # How to use
+
+Install the library with pip
+
+    pip install json-repair
+
+then you can use use it in your code like this
+
     from json_repair import repair_json
 
     good_json_string = repair_json(bad_json_string)
