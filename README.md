@@ -8,21 +8,6 @@ This simple package can be used to fix an invalid json string. To know all cases
 Inspired by https://github.com/josdejong/jsonrepair
 
 ---
-# How to cite
-If you are using this library in your academic work (as I know many folks are) please find the BibTex here:
-
-    @software{Baccianella_JSON_Repair_-_2024,
-        author = {Baccianella, Stefano},
-        month = aug,
-        title = {{JSON Repair - A python module to repair invalid JSON, commonly used to parse the output of LLMs}},
-        url = {https://github.com/mangiucugna/json_repair},
-        version = {0.28.3},
-        year = {2024}
-    }
-
-Thank you for citing my work and please send me a link to the paper if you can!
-
----
 # Offer me a beer
 If you find this library useful, you can help me by donating toward my monthly beer budget here: https://github.com/sponsors/mangiucugna
 
@@ -40,6 +25,22 @@ Luckily, the mistakes LLMs make are simple enough to be fixed without destroying
 I searched for a lightweight python package that was able to reliably fix this problem but couldn't find any.
 
 *So I wrote one*
+
+# Supported use cases
+
+### Fixing Syntax Errors in JSON
+
+- Missing quotes, misplaced commas, unescaped characters, and incomplete key-value pairs.
+- Missing quotation marks, improperly formatted values (true, false, null), and repairs corrupted key-value structures.
+
+### Repairing Malformed JSON Arrays and Objects
+
+- Incomplete or broken arrays/objects by adding necessary elements (e.g., commas, brackets) or default values (null, "").
+- The library can process JSON that includes extra non-JSON characters like comments or improperly placed characters, cleaning them up while maintaining valid structure.
+
+### Auto-Completion for Missing JSON Values
+
+- Automatically completes missing values in JSON fields with reasonable defaults (like empty strings or null), ensuring validity.
 
 # How to use
 
@@ -153,6 +154,23 @@ To ensure that you only pin the major version of this library in your `requireme
     json_repair==0.*
 
 In this example, any version that starts with `0.` will be acceptable, allowing for updates on minor and patch versions.
+
+---
+# How to cite
+If you are using this library in your academic work (as I know many folks are) please find the BibTex here:
+
+    @software{Baccianella_JSON_Repair_-_2024,
+        author = {Baccianella, Stefano},
+        month = aug,
+        title = {{JSON Repair - A python module to repair invalid JSON, commonly used to parse the output of LLMs}},
+        url = {https://github.com/mangiucugna/json_repair},
+        version = {0.28.3},
+        year = {2024}
+    }
+
+Thank you for citing my work and please send me a link to the paper if you can!
+
+---
 
 # How it works
 This module will parse the JSON file following the BNF definition:
