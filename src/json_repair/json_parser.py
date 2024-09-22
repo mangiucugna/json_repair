@@ -89,12 +89,10 @@ class JSONParser:
                 )
                 return ""
             # <string> starts with a quote
-            elif not self.context.is_empty() and (
-                char in ['"', "'", "“"] or char.isalpha()
-            ):
+            elif not self.context.empty and (char in ['"', "'", "“"] or char.isalpha()):
                 return self.parse_string()
             # <number> starts with [0-9] or minus
-            elif not self.context.is_empty() and (
+            elif not self.context.empty and (
                 char.isdigit() or char == "-" or char == "."
             ):
                 return self.parse_number()
@@ -235,8 +233,9 @@ class JSONParser:
         elif char.isalnum():
             # This could be a <boolean> and not a string. Because (T)rue or (F)alse or (N)ull are valid
             # But remember, object keys are only of type string
-            if char.lower() in ["t", "f", "n"] and not self.context.is_current(
-                ContextValues.OBJECT_KEY
+            if (
+                char.lower() in ["t", "f", "n"]
+                and self.context.current != ContextValues.OBJECT_KEY
             ):
                 value = self.parse_boolean_or_null()
                 if value != "":
@@ -256,15 +255,13 @@ class JSONParser:
         if self.get_char_at() == lstring_delimiter:
             # If it's an empty key, this was easy
             if (
-                self.context.is_current(ContextValues.OBJECT_KEY)
+                self.context.current == ContextValues.OBJECT_KEY
                 and self.get_char_at(1) == ":"
             ):
                 self.index += 1
                 return ""
             # Find the next delimiter
-            i = self.skip_to_character(
-                character=rstring_delimiter, idx=1, move_main_index=False
-            )
+            i = self.skip_to_character(character=rstring_delimiter, idx=1)
             next_c = self.get_char_at(i)
             # Now check that the next character is also a delimiter to ensure that we have "".....""
             # In that case we ignore this rstring delimiter
@@ -297,22 +294,20 @@ class JSONParser:
         while char and char != rstring_delimiter:
             if (
                 missing_quotes
-                and self.context.is_current(ContextValues.OBJECT_KEY)
+                and self.context.current == ContextValues.OBJECT_KEY
                 and (char == ":" or char.isspace())
             ):
                 self.log(
                     "While parsing a string missing the left delimiter in object key context, we found a :, stopping here",
                 )
                 break
-            if self.context.is_current(ContextValues.OBJECT_VALUE) and char in [
+            if self.context.current == ContextValues.OBJECT_VALUE and char in [
                 ",",
                 "}",
             ]:
                 rstring_delimiter_missing = True
                 # check if this is a case in which the closing comma is NOT missing instead
-                i = self.skip_to_character(
-                    character=rstring_delimiter, idx=1, move_main_index=False
-                )
+                i = self.skip_to_character(character=rstring_delimiter, idx=1)
                 next_c = self.get_char_at(i)
                 if next_c:
                     i += 1
@@ -346,8 +341,9 @@ class JSONParser:
                         "While parsing a string, we found a doubled quote, ignoring it"
                     )
                     self.index += 1
-                elif missing_quotes and self.context.is_current(
-                    ContextValues.OBJECT_VALUE
+                elif (
+                    missing_quotes
+                    and self.context.current == ContextValues.OBJECT_VALUE
                 ):
                     # In case of missing starting quote I need to check if the delimeter is the end or the beginning of a key
                     i = 1
@@ -388,20 +384,20 @@ class JSONParser:
                         # If we are in an object context, let's check for the right delimiters
                         if (
                             (
-                                self.context.is_any(ContextValues.OBJECT_KEY)
+                                ContextValues.OBJECT_KEY in self.context.context
                                 and next_c in [":", "}"]
                             )
                             or (
-                                self.context.is_any(ContextValues.OBJECT_VALUE)
+                                ContextValues.OBJECT_VALUE in self.context.context
                                 and next_c == "}"
                             )
                             or (
-                                self.context.is_any(ContextValues.ARRAY)
+                                ContextValues.ARRAY in self.context.context
                                 and next_c in ["]", ","]
                             )
                             or (
                                 check_comma_in_object_value
-                                and self.context.is_current(ContextValues.OBJECT_VALUE)
+                                and self.context.current == ContextValues.OBJECT_VALUE
                                 and next_c == ","
                             )
                         ):
@@ -409,13 +405,12 @@ class JSONParser:
                         i += 1
                         next_c = self.get_char_at(i)
                     # If we stopped for a comma in object_value context, let's check if find a "} at the end of the string
-                    if next_c == "," and self.context.is_current(
-                        ContextValues.OBJECT_VALUE
+                    if (
+                        next_c == ","
+                        and self.context.current == ContextValues.OBJECT_VALUE
                     ):
                         i += 1
-                        i = self.skip_to_character(
-                            character=rstring_delimiter, idx=i, move_main_index=False
-                        )
+                        i = self.skip_to_character(character=rstring_delimiter, idx=i)
                         next_c = self.get_char_at(i)
                         # Ok now I found a delimiter, let's skip whitespaces and see if next we find a }
                         i += 1
@@ -430,15 +425,13 @@ class JSONParser:
                             self.index += 1
                             char = self.get_char_at()
                     elif next_c == rstring_delimiter:
-                        if self.context.is_current(ContextValues.OBJECT_VALUE):
+                        if self.context.current == ContextValues.OBJECT_VALUE:
                             # But this might not be it! This could be just a missing comma
                             # We found a delimiter and we need to check if this is a key
                             # so find a rstring_delimiter and a colon after
                             i += 1
                             i = self.skip_to_character(
-                                character=rstring_delimiter,
-                                idx=i,
-                                move_main_index=False,
+                                character=rstring_delimiter, idx=i
                             )
                             i += 1
                             next_c = self.get_char_at(i)
@@ -463,7 +456,7 @@ class JSONParser:
         if (
             char
             and missing_quotes
-            and self.context.is_current(ContextValues.OBJECT_KEY)
+            and self.context.current == ContextValues.OBJECT_KEY
             and char.isspace()
         ):
             self.log(
@@ -489,7 +482,7 @@ class JSONParser:
         number_str = ""
         number_chars = set("0123456789-.eE/,")
         char = self.get_char_at()
-        is_array = self.context.is_current(ContextValues.ARRAY)
+        is_array = self.context.current == ContextValues.ARRAY
         while char and char in number_chars and (char != "," or not is_array):
             number_str += char
             self.index += 1
@@ -562,9 +555,7 @@ class JSONParser:
                 return idx
         return idx
 
-    def skip_to_character(
-        self, character: str, idx: int = 0, move_main_index=True
-    ) -> int:
+    def skip_to_character(self, character: str, idx: int = 0) -> int:
         """
         This function quickly iterates to find a character, syntactic sugar to make the code more concise
         """
@@ -573,10 +564,7 @@ class JSONParser:
         except IndexError:
             return idx
         while char != character:
-            if move_main_index:  # pragma: no cover
-                self.index += 1
-            else:
-                idx += 1
+            idx += 1
             try:
                 char = self.json_str[self.index + idx]
             except IndexError:
