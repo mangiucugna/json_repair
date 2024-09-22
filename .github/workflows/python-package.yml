@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
       # https://github.com/actions/python-versions/blob/main/versions-manifest.json
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13.0-rc.1", "3.14.0-alpha.0"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13.0-rc.2", "3.14.0-alpha.0"]
 
     steps:
     - uses: actions/checkout@v4
