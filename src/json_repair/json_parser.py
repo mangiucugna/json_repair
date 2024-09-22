@@ -34,7 +34,8 @@ class JSONParser:
             self.logger: List[Dict[str, str]] = []
             self.log = self._log
         else:
-            self.log = self.noop
+            # No-op
+            self.log = lambda *args, **kwargs: None
 
     def parse(
         self,
@@ -593,6 +594,3 @@ class JSONParser:
                 "context": context,
             }
         )
-
-    def noop(*args: Any, **kwargs: Any) -> None:
-        pass
