@@ -1,7 +1,6 @@
 from typing import Any, Dict, List, Optional, Union, TextIO, Tuple, Literal
 
 from .string_file_wrapper import StringFileWrapper
-from .logger_config import LoggerConfig, LogLevel
 from .json_context import JsonContext, ContextValues
 
 JSONReturnType = Union[Dict[str, Any], List[Any], str, float, int, bool, None]
@@ -26,9 +25,16 @@ class JSONParser:
         # This is used in the object member parsing to manage the special cases of missing quotes in key or value
         self.context = JsonContext()
         # Use this to log the activity, but only if logging is active
-        self.logger = LoggerConfig(
-            log_level=LogLevel.INFO if logging else LogLevel.NONE
-        )
+
+        # This is a trick but a beatiful one. We call self.log in the code over and over even if it's not needed.
+        # We could add a guard in the code for each call but that would make this code unreadable, so here's this neat trick
+        # Replace self.log with a noop
+        self.logging = logging
+        if logging:
+            self.logger: List[Dict[str, str]] = []
+            self.log = self._log
+        else:
+            self.log = self.noop
 
     def parse(
         self,
@@ -37,7 +43,6 @@ class JSONParser:
         if self.index < len(self.json_str):
             self.log(
                 "The parser returned early, checking if there's more json elements",
-                LogLevel.INFO,
             )
             json = [json]
             last_index = self.index
@@ -52,13 +57,12 @@ class JSONParser:
             if len(json) == 1:
                 self.log(
                     "There were no more elements, returning the element without the array",
-                    LogLevel.INFO,
                 )
                 json = json[0]
-        if self.logger.log_level == LogLevel.NONE:
-            return json
+        if self.logging:
+            return json, self.logger
         else:
-            return json, self.logger.log
+            return json
 
     def parse_json(
         self,
@@ -81,7 +85,6 @@ class JSONParser:
             elif char == "}":
                 self.log(
                     "At the end of an object we found a key with missing value, skipping",
-                    LogLevel.INFO,
                 )
                 return ""
             # <string> starts with a quote
@@ -113,7 +116,6 @@ class JSONParser:
             if (self.get_char_at() or "") == ":":
                 self.log(
                     "While parsing an object we found a : before a key, ignoring",
-                    LogLevel.INFO,
                 )
                 self.index += 1
 
@@ -144,7 +146,6 @@ class JSONParser:
             if (self.get_char_at() or "") != ":":
                 self.log(
                     "While parsing an object we missed a : after a key",
-                    LogLevel.INFO,
                 )
 
             self.index += 1
@@ -182,7 +183,6 @@ class JSONParser:
             if value == "..." and self.get_char_at(-1) == ".":
                 self.log(
                     "While parsing an array, found a stray '...'; ignoring it",
-                    LogLevel.INFO,
                 )
             else:
                 arr.append(value)
@@ -198,7 +198,6 @@ class JSONParser:
         if char and char != "]":
             self.log(
                 "While parsing an array we missed the closing ], adding it back",
-                LogLevel.INFO,
             )
             self.index -= 1
 
@@ -243,11 +242,9 @@ class JSONParser:
                     return value
             self.log(
                 "While parsing a string, we found a literal instead of a quote",
-                LogLevel.INFO,
             )
             self.log(
                 "While parsing a string, we found no starting quote. Will add the quote back",
-                LogLevel.INFO,
             )
             missing_quotes = True
 
@@ -273,7 +270,6 @@ class JSONParser:
             if next_c and (self.get_char_at(i + 1) or "") == rstring_delimiter:
                 self.log(
                     "While parsing a string, we found a valid starting doubled quote, ignoring it",
-                    LogLevel.INFO,
                 )
                 doubled_quotes = True
                 self.index += 1
@@ -284,7 +280,6 @@ class JSONParser:
                 if next_c not in [",", "]", "}"]:
                     self.log(
                         "While parsing a string, we found a doubled quote but it was a mistake, removing one quote",
-                        LogLevel.INFO,
                     )
                     self.index += 1
 
@@ -306,7 +301,6 @@ class JSONParser:
             ):
                 self.log(
                     "While parsing a string missing the left delimiter in object key context, we found a :, stopping here",
-                    LogLevel.INFO,
                 )
                 break
             if self.context.is_current(ContextValues.OBJECT_VALUE) and char in [
@@ -329,7 +323,6 @@ class JSONParser:
                 if rstring_delimiter_missing:
                     self.log(
                         "While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn't determine that a right delimiter was present. Stopping here",
-                        LogLevel.INFO,
                     )
                     break
             string_acc += char
@@ -337,7 +330,7 @@ class JSONParser:
             char = self.get_char_at()
             if char and len(string_acc) > 0 and string_acc[-1] == "\\":
                 # This is a special case, if people use real strings this might happen
-                self.log("Found a stray escape sequence, normalizing it", LogLevel.INFO)
+                self.log("Found a stray escape sequence, normalizing it")
                 string_acc = string_acc[:-1]
                 if char in [rstring_delimiter, "t", "n", "r", "b", "\\"]:
                     escape_seqs = {"t": "\t", "n": "\n", "r": "\r", "b": "\b"}
@@ -349,8 +342,7 @@ class JSONParser:
                 # Special case here, in case of double quotes one after another
                 if doubled_quotes and self.get_char_at(1) == rstring_delimiter:
                     self.log(
-                        "While parsing a string, we found a doubled quote, ignoring it",
-                        LogLevel.INFO,
+                        "While parsing a string, we found a doubled quote, ignoring it"
                     )
                     self.index += 1
                 elif missing_quotes and self.context.is_current(
@@ -377,7 +369,6 @@ class JSONParser:
                             char = self.get_char_at()
                             self.log(
                                 "In a string with missing quotes and object value context, I found a delimeter but it turns out it was the beginning on the next key. Stopping here.",
-                                LogLevel.INFO,
                             )
                             break
                 else:
@@ -433,7 +424,6 @@ class JSONParser:
                             # OK this is valid then
                             self.log(
                                 "While parsing a string, we misplaced a quote that would have closed the string but has a different meaning here since this is the last element of the object, ignoring it",
-                                LogLevel.INFO,
                             )
                             string_acc += str(char)
                             self.index += 1
@@ -464,7 +454,6 @@ class JSONParser:
                             if next_c != ":":
                                 self.log(
                                     "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
-                                    LogLevel.INFO,
                                 )
                                 string_acc += str(char)
                                 self.index += 1
@@ -478,7 +467,6 @@ class JSONParser:
         ):
             self.log(
                 "While parsing a string, handling an extreme corner case in which the LLM added a comment instead of valid string, invalidate the string and return an empty value",
-                LogLevel.INFO,
             )
             self.skip_whitespaces_at()
             if self.get_char_at() not in [":", ","]:
@@ -489,7 +477,6 @@ class JSONParser:
         if char != rstring_delimiter:
             self.log(
                 "While parsing a string, we missed the closing quote, ignoring",
-                LogLevel.INFO,
             )
         else:
             self.index += 1
@@ -595,15 +582,17 @@ class JSONParser:
                 return idx
         return idx
 
-    def log(self, text: str, level: LogLevel) -> None:
-        if level == self.logger.log_level:
-            context = ""
-            start = max(self.index - self.logger.window, 0)
-            end = min(self.index + self.logger.window, len(self.json_str))
-            context = self.json_str[start:end]
-            self.logger.log.append(
-                {
-                    "text": text,
-                    "context": context,
-                }
-            )
+    def _log(self, text: str) -> None:
+        window: int = 10
+        start: int = max(self.index - window, 0)
+        end: int = min(self.index + window, len(self.json_str))
+        context: str = self.json_str[start:end]
+        self.logger.append(
+            {
+                "text": text,
+                "context": context,
+            }
+        )
+
+    def noop(*args: Any, **kwargs: Any) -> None:
+        pass
