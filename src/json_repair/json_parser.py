@@ -432,7 +432,9 @@ class JSONParser:
                             string_acc += str(char)
                             self.index += 1
                             char = self.get_char_at()
-                    elif next_c == rstring_delimiter:
+                    elif (
+                        next_c == rstring_delimiter and self.get_char_at(i - 1) != "\\"
+                    ):
                         if self.context.current == ContextValues.OBJECT_VALUE:
                             # But this might not be it! This could be just a missing comma
                             # We found a delimiter and we need to check if this is a key
@@ -449,11 +451,10 @@ class JSONParser:
                             i += 1
                             next_c = self.get_char_at(i)
                             while next_c and next_c != ":":
-                                if next_c in [
-                                    lstring_delimiter,
-                                    rstring_delimiter,
-                                    ",",
-                                ]:
+                                if next_c == "," or (
+                                    next_c == rstring_delimiter
+                                    and self.get_char_at(i - 1) != "\\"
+                                ):
                                     break
                                 i += 1
                                 next_c = self.get_char_at(i)
