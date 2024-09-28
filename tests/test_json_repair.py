@@ -140,6 +140,7 @@ def test_object_edge_cases():
     assert repair_json('{"key": "Lorem "ipsum" s,"}') == '{"key": "Lorem \\"ipsum\\" s,"}'
     assert repair_json('{"lorem": ipsum, sic, datum.",}') == '{"lorem": "ipsum, sic, datum."}'
     assert repair_json('{"lorem": sic tamet. "ipsum": sic tamet, quick brown fox. "sic": ipsum}') == '{"lorem": "sic tamet.", "ipsum": "sic tamet", "sic": "ipsum"}'
+    assert repair_json('{"lorem_ipsum": "sic tamet, quick brown fox. }') == '{"lorem_ipsum": "sic tamet, quick brown fox."}'
     assert repair_json('{"key":value, " key2":"value2" }') == '{"key": "value", " key2": "value2"}'
     assert repair_json('{"key":value "key2":"value2" }') == '{"key": "value", "key2": "value2"}'
 

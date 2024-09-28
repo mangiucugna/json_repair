@@ -316,6 +316,15 @@ class JSONParser:
                     next_c = self.get_char_at(i)
                     if next_c and next_c in [",", "}"]:
                         rstring_delimiter_missing = False
+                elif char == ",":
+                    # We couldn't find any rstring_delimeter before the end of the string
+                    # check if this is the last string of an object and therefore we can keep going
+                    # make an exception if this is the last char before the closing brace
+                    i = self.skip_to_character(character="}", idx=1)
+                    if i > 1:
+                        # Ok it's not right after the comma
+                        # Let's ignore
+                        rstring_delimiter_missing = False
                 if rstring_delimiter_missing:
                     self.log(
                         "While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn't determine that a right delimiter was present. Stopping here",
