@@ -308,9 +308,6 @@ class JSONParser:
                 rstring_delimiter_missing = True
                 # check if this is a case in which the closing comma is NOT missing instead
                 i = self.skip_to_character(character=rstring_delimiter, idx=1)
-                # If the rstring_delimeter is escaped then it's not what we are looking for
-                while self.get_char_at(i - 1) == "\\":
-                    i = self.skip_to_character(character=rstring_delimiter, idx=i + 1)
                 next_c = self.get_char_at(i)
                 if next_c:
                     i += 1
@@ -414,11 +411,6 @@ class JSONParser:
                     ):
                         i += 1
                         i = self.skip_to_character(character=rstring_delimiter, idx=i)
-                        # If the rstring_delimeter is escaped then it's not what we are looking for
-                        while self.get_char_at(i - 1) == "\\":
-                            i = self.skip_to_character(
-                                character=rstring_delimiter, idx=i + 1
-                            )
                         next_c = self.get_char_at(i)
                         # Ok now I found a delimiter, let's skip whitespaces and see if next we find a }
                         i += 1
@@ -443,11 +435,6 @@ class JSONParser:
                             i = self.skip_to_character(
                                 character=rstring_delimiter, idx=i
                             )
-                            # If the rstring_delimeter is escaped then it's not what we are looking for
-                            while self.get_char_at(i - 1) == "\\":
-                                i = self.skip_to_character(
-                                    character=rstring_delimiter, idx=i + 1
-                                )
                             i += 1
                             next_c = self.get_char_at(i)
                             while next_c and next_c != ":":
@@ -583,6 +570,9 @@ class JSONParser:
                 char = self.json_str[self.index + idx]
             except IndexError:
                 return idx
+        if self.index + idx > 0 and self.json_str[self.index + idx - 1] == "\\":
+            # Ah this is an escaped character, try again
+            return self.skip_to_character(character=character, idx=idx + 1)
         return idx
 
     def _log(self, text: str) -> None:
