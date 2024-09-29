@@ -120,7 +120,7 @@ def test_array_edge_cases():
     
 def test_escaping():
     assert repair_json("'\"'") == '""'
-    assert repair_json("{\"key\": 'string\"\n\t\le'") == '{"key": "string\\"\\n\\tle"}'
+    assert repair_json("{\"key\": 'string\"\n\t\le'") == '{"key": "string\\"\\n\\t\\\\le"}'
     assert repair_json(r'{"real_content": "Some string: Some other string \t Some string <a href=\"https://domain.com\">Some link</a>"') == r'{"real_content": "Some string: Some other string \t Some string <a href=\"https://domain.com\">Some link</a>"}'
     assert repair_json('{"key_1\n": "value"}') == '{"key_1": "value"}'
     assert repair_json('{"key\t_": "value"}') == '{"key\\t_": "value"}'
