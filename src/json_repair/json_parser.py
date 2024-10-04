@@ -291,6 +291,7 @@ class JSONParser:
         # * It iterated over the entire sequence
         # * If we are fixing missing quotes in an object, when it finds the special terminators
         char = self.get_char_at()
+        unmatched_delimiter = False
         while char and char != rstring_delimiter:
             if (
                 missing_quotes
@@ -377,6 +378,11 @@ class JSONParser:
                                 "In a string with missing quotes and object value context, I found a delimeter but it turns out it was the beginning on the next key. Stopping here.",
                             )
                             break
+                elif unmatched_delimiter:
+                    unmatched_delimiter = False
+                    string_acc += str(char)
+                    self.index += 1
+                    char = self.get_char_at()
                 else:
                     # Check if eventually there is a rstring delimiter, otherwise we bail
                     i = 1
@@ -430,6 +436,7 @@ class JSONParser:
                             self.log(
                                 "While parsing a string, we misplaced a quote that would have closed the string but has a different meaning here since this is the last element of the object, ignoring it",
                             )
+                            unmatched_delimiter = not unmatched_delimiter
                             string_acc += str(char)
                             self.index += 1
                             char = self.get_char_at()
@@ -459,6 +466,7 @@ class JSONParser:
                                 self.log(
                                     "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
                                 )
+                                unmatched_delimiter = not unmatched_delimiter
                                 string_acc += str(char)
                                 self.index += 1
                                 char = self.get_char_at()
