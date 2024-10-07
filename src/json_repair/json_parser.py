@@ -83,7 +83,7 @@ class JSONParser:
                 return self.parse_array()
             # there can be an edge case in which a key is empty and at the end of an object
             # like "key": }. We return an empty string here to close the object properly
-            elif char == "}":
+            elif self.context.current == ContextValues.OBJECT_VALUE and char == "}":
                 self.log(
                     "At the end of an object we found a key with missing value, skipping",
                 )
@@ -171,7 +171,8 @@ class JSONParser:
         arr = []
         self.context.set(ContextValues.ARRAY)
         # Stop when you either find the closing parentheses or you have iterated over the entire string
-        while (self.get_char_at() or "]") != "]":
+        char = self.get_char_at()
+        while char and char not in ["]", "}"]:
             self.skip_whitespaces_at()
             value = self.parse_json()
 
@@ -317,7 +318,7 @@ class JSONParser:
                     next_c = self.get_char_at(i)
                     if next_c and next_c in [",", "}"]:
                         rstring_delimiter_missing = False
-                elif char == ",":
+                else:
                     # skip any whitespace first
                     i = self.skip_whitespaces_at(idx=1, move_main_index=False)
                     # We couldn't find any rstring_delimeter before the end of the string
