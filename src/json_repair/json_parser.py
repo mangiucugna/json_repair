@@ -318,11 +318,13 @@ class JSONParser:
                     if next_c and next_c in [",", "}"]:
                         rstring_delimiter_missing = False
                 elif char == ",":
+                    # skip any whitespace first
+                    i = self.skip_whitespaces_at(idx=1, move_main_index=False)
                     # We couldn't find any rstring_delimeter before the end of the string
                     # check if this is the last string of an object and therefore we can keep going
                     # make an exception if this is the last char before the closing brace
-                    i = self.skip_to_character(character="}", idx=1)
-                    if i > 1:
+                    j = self.skip_to_character(character="}", idx=i)
+                    if j - i > 1:
                         # Ok it's not right after the comma
                         # Let's ignore
                         rstring_delimiter_missing = False
