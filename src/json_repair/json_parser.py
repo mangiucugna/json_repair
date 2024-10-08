@@ -1,7 +1,7 @@
-from typing import Any, Dict, List, Optional, Union, TextIO, Tuple, Literal
+from typing import Any, Dict, List, Literal, Optional, TextIO, Tuple, Union
 
+from .json_context import ContextValues, JsonContext
 from .string_file_wrapper import StringFileWrapper
-from .json_context import JsonContext, ContextValues
 
 JSONReturnType = Union[Dict[str, Any], List[Any], str, float, int, bool, None]
 

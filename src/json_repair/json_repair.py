@@ -23,9 +23,10 @@ All supported use cases are in the unit tests
 """
 
 import argparse
-import sys
 import json
-from typing import Dict, List, Optional, Union, TextIO, Tuple
+import sys
+from typing import Dict, List, Optional, TextIO, Tuple, Union
+
 from .json_parser import JSONParser, JSONReturnType
 
 
