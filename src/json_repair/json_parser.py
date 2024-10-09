@@ -329,6 +329,16 @@ class JSONParser:
                         # Ok it's not right after the comma
                         # Let's ignore
                         rstring_delimiter_missing = False
+                    # Check that j was not out of bound
+                    elif self.get_char_at(j):
+                        # Check for an unmatched opening brace in string_acc
+                        for c in reversed(string_acc):
+                            if c == "{":
+                                # Ok then this is part of the string
+                                rstring_delimiter_missing = False
+                                break
+                            elif c == "}":
+                                break
                 if rstring_delimiter_missing:
                     self.log(
                         "While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn't determine that a right delimiter was present. Stopping here",
