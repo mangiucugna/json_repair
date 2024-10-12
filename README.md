@@ -193,7 +193,7 @@ This module will parse the JSON file following the BNF definition:
     <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
     <member> ::= <string> ': ' <json> ; A pair consisting of a name, and a JSON value
 
-If something is wrong (a missing parantheses or quotes for example) it will use a few simple heuristics to fix the JSON string:
+If something is wrong (a missing parentheses or quotes for example) it will use a few simple heuristics to fix the JSON string:
 - Add the missing parentheses if the parser believes that the array or object should be closed
 - Quote strings or add missing single quotes
 - Adjust whitespaces and remove line breaks
