@@ -24,11 +24,9 @@ class JsonContext:
         Returns:
             None
         """
-        # If a value is provided update the context variable and save in stack
-        if value:
-            self.context.append(value)
-            self.current = value
-            self.empty = False
+        self.context.append(value)
+        self.current = value
+        self.empty = False
 
     def reset(self) -> None:
         """

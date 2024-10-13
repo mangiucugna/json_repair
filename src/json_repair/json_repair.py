@@ -109,14 +109,13 @@ def from_file(
     """
     This function is a wrapper around `load()` so you can pass the filename as string
     """
-    fd = open(filename)
-    jsonobj = load(
-        fd=fd,
-        skip_json_loads=skip_json_loads,
-        logging=logging,
-        chunk_length=chunk_length,
-    )
-    fd.close()
+    with open(filename) as fd:
+        jsonobj = load(
+            fd=fd,
+            skip_json_loads=skip_json_loads,
+            logging=logging,
+            chunk_length=chunk_length,
+        )
 
     return jsonobj
 
@@ -167,14 +166,13 @@ def cli(inline_args: Optional[List[str]] = None) -> int:
         result = from_file(args.filename)
 
         if args.inline or args.output:
-            fd = open(args.output or args.filename, mode="w")
-            json.dump(result, fd, indent=args.indent, ensure_ascii=ensure_ascii)
-            fd.close()
+            with open(args.output or args.filename, mode="w") as fd:
+                json.dump(result, fd, indent=args.indent, ensure_ascii=ensure_ascii)
         else:
             print(json.dumps(result, indent=args.indent, ensure_ascii=ensure_ascii))
     except Exception as e:  # pragma: no cover
         print(f"Error: {str(e)}", file=sys.stderr)
-        sys.exit(1)
+        return 1
 
     return 0  # Success
 
