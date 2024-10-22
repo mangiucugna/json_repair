@@ -1,5 +1,5 @@
 [![PyPI](https://img.shields.io/pypi/v/json-repair)](https://pypi.org/project/json-repair/)
-![Python version](https://img.shields.io/badge/python-3.8+-important)
+![Python version](https://img.shields.io/badge/python-3.9+-important)
 [![PyPI downloads](https://img.shields.io/pypi/dm/json-repair)](https://pypi.org/project/json-repair/)
 [![Github Sponsors](https://img.shields.io/github/sponsors/mangiucugna)](https://github.com/sponsors/mangiucugna)
 
