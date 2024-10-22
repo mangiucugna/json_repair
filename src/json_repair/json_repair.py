@@ -41,10 +41,18 @@ def repair_json(
 ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     Given a json formatted string, it will try to decode it and, if it fails, it will try to fix it.
-    It will return the fixed string by default.
-    When `return_objects=True` is passed, it will return the decoded data structure instead.
-    When `skip_json_loads=True` is passed, it will not call the built-in json.loads() function
-    When `logging=True` is passed, it will return a tuple with the repaired json and a log of all repair actions
+
+    Args:
+        json_str (str, optional): The JSON string to repair. Defaults to an empty string.
+        return_objects (bool, optional): If True, return the decoded data structure. Defaults to False.
+        skip_json_loads (bool, optional): If True, skip calling the built-in json.loads() function to verify that the json is valid before attempting to repair. Defaults to False.
+        logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False.
+        json_fd (Optional[TextIO], optional): File descriptor for JSON input. Do not use! Use `from_file` or `load` instead. Defaults to None.
+        ensure_ascii (bool, optional): Set to False to avoid converting non-latin characters to ascii (for example when using chinese characters). Defaults to True. Ignored if `skip_json_loads` is True.
+        chunk_length (int, optional): Size in bytes of the file chunks to read at once. Ignored if `json_fd` is None. Do not use! Use `from_file` or `load` instead. Defaults to 1MB.
+
+    Returns:
+        Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON or a tuple with the repaired JSON and repair log.
     """
     parser = JSONParser(json_str, json_fd, logging, chunk_length)
     if skip_json_loads:
@@ -72,6 +80,14 @@ def loads(
     """
     This function works like `json.loads()` except that it will fix your JSON in the process.
     It is a wrapper around the `repair_json()` function with `return_objects=True`.
+
+    Args:
+        json_str (str): The JSON string to load and repair.
+        skip_json_loads (bool, optional): If True, skip calling the built-in json.loads() function to verify that the json is valid before attempting to repair. Defaults to False.
+        logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False.
+
+    Returns:
+        Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
     """
     return repair_json(
         json_str=json_str,
@@ -90,6 +106,15 @@ def load(
     """
     This function works like `json.load()` except that it will fix your JSON in the process.
     It is a wrapper around the `repair_json()` function with `json_fd=fd` and `return_objects=True`.
+
+    Args:
+        fd (TextIO): File descriptor for JSON input.
+        skip_json_loads (bool, optional): If True, skip calling the built-in json.loads() function to verify that the json is valid before attempting to repair. Defaults to False.
+        logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False.
+        chunk_length (int, optional): Size in bytes of the file chunks to read at once. Defaults to 1MB.
+
+    Returns:
+        Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
     """
     return repair_json(
         json_fd=fd,
@@ -108,6 +133,15 @@ def from_file(
 ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     This function is a wrapper around `load()` so you can pass the filename as string
+
+    Args:
+        filename (str): The name of the file containing JSON data to load and repair.
+        skip_json_loads (bool, optional): If True, skip calling the built-in json.loads() function to verify that the json is valid before attempting to repair. Defaults to False.
+        logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False.
+        chunk_length (int, optional): Size in bytes of the file chunks to read at once. Defaults to 1MB.
+
+    Returns:
+        Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
     """
     with open(filename) as fd:
         jsonobj = load(
@@ -121,6 +155,26 @@ def from_file(
 
 
 def cli(inline_args: Optional[List[str]] = None) -> int:
+    """
+    Command-line interface for repairing and parsing JSON files.
+
+    Args:
+        inline_args (Optional[List[str]]): List of command-line arguments for testing purposes. Defaults to None.
+            - filename (str): The JSON file to repair
+            - -i, --inline (bool): Replace the file inline instead of returning the output to stdout.
+            - -o, --output TARGET (str): If specified, the output will be written to TARGET filename instead of stdout.
+            - --ensure_ascii (bool): Pass ensure_ascii=True to json.dumps(). Will pass False otherwise.
+            - --indent INDENT (int): Number of spaces for indentation (Default 2).
+
+    Returns:
+        int: Exit code of the CLI operation.
+
+    Raises:
+        Exception: Any exception that occurs during file processing.
+
+    Example:
+        >>> cli(['example.json', '--indent', '4'])
+    """
     parser = argparse.ArgumentParser(description="Repair and parse JSON files.")
     parser.add_argument("filename", help="The JSON file to repair")
     parser.add_argument(

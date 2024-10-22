@@ -111,6 +111,26 @@ and another method to read from a file:
 
 Keep in mind that the library will not catch any IO-related exception and those will need to be managed by you
 
+### Non-Latin characters
+
+When working with non-Latin characters (such as Chinese, Japanese, or Korean), you need to pass `ensure_ascii=False` to `repair_json()` in order to preserve the non-Latin characters in the output.
+
+Here's an example using Chinese characters:
+
+    repair_json("{'test_chinese_ascii':'统一码'}")
+
+will return
+
+    {"test_chinese_ascii": "\u7edf\u4e00\u7801"}
+
+Instead passing `ensure_ascii=False`:
+
+    repair_json("{'test_chinese_ascii':'统一码'}", ensure_ascii=False)
+
+will return
+
+    {"test_chinese_ascii": "统一码"}
+
 ### Performance considerations
 If you find this library too slow because is using `json.loads()` you can skip that by passing `skip_json_loads=True` to `repair_json`. Like:
 
