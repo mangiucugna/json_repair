@@ -10,3 +10,4 @@ __pycache__
 build/
 dist/
 src/json_repair.egg-info/
+htmlcov/
