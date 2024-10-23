@@ -2,7 +2,7 @@
 ![Python version](https://img.shields.io/badge/python-3.9+-important)
 [![PyPI downloads](https://img.shields.io/pypi/dm/json-repair)](https://pypi.org/project/json-repair/)
 [![Github Sponsors](https://img.shields.io/github/sponsors/mangiucugna)](https://github.com/sponsors/mangiucugna)
-[![GitHub Repo stars](https://img.shields.io/github/stars/mangiucugna/json_repair)](https://github.com/mangiucugna/json_repair/stargazers)
+[![GitHub Repo stars](https://img.shields.io/github/stars/mangiucugna/json_repair?style=flat)](https://github.com/mangiucugna/json_repair/stargazers)
 
 
 This simple package can be used to fix an invalid json string. To know all cases in which this package will work, check out the unit test.
