@@ -18,6 +18,8 @@ If you find this library useful, you can help me by donating toward my monthly b
 # Demo
 If you are unsure if this library will fix your specific problem, or simply want your json validated online, you can visit the demo site on GitHub pages: https://mangiucugna.github.io/json_repair/
 
+Or hear an [audio deepdive generate by Google's NotebookLM](https://notebooklm.google.com/notebook/05312bb3-f6f3-4e49-a99b-bd51db64520b/audio) for an introduction to the module
+
 ---
 
 # Motivation
