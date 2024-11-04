@@ -9,6 +9,8 @@ This simple package can be used to fix an invalid json string. To know all cases
 
 Inspired by https://github.com/josdejong/jsonrepair
 
+![banner](banner.png)
+
 ---
 # Offer me a beer
 If you find this library useful, you can help me by donating toward my monthly beer budget here: https://github.com/sponsors/mangiucugna
