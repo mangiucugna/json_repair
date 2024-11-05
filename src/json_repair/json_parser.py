@@ -314,10 +314,19 @@ class JSONParser:
                 if next_c:
                     i += 1
                     # found a delimiter, now we need to check that is followed strictly by a comma or brace
+                    # or the string ended
                     i = self.skip_whitespaces_at(idx=i, move_main_index=False)
                     next_c = self.get_char_at(i)
-                    if next_c and next_c in [",", "}"]:
+                    if not next_c or next_c in [",", "}"]:
                         rstring_delimiter_missing = False
+                    else:
+                        # OK but this could still be some garbage at the end of the string
+                        # So we need to check if we find a new lstring_delimiter afterwards
+                        # If we do, this is a missing delimiter
+                        i = self.skip_to_character(character=lstring_delimiter, idx=i)
+                        next_c = self.get_char_at(i)
+                        if not next_c:
+                            rstring_delimiter_missing = False
                 else:
                     # skip any whitespace first
                     i = self.skip_whitespaces_at(idx=1, move_main_index=False)
