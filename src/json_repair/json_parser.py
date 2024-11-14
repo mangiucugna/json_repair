@@ -328,26 +328,35 @@ class JSONParser:
                         if not next_c:
                             rstring_delimiter_missing = False
                 else:
-                    # skip any whitespace first
-                    i = self.skip_whitespaces_at(idx=1, move_main_index=False)
-                    # We couldn't find any rstring_delimeter before the end of the string
-                    # check if this is the last string of an object and therefore we can keep going
-                    # make an exception if this is the last char before the closing brace
-                    j = self.skip_to_character(character="}", idx=i)
-                    if j - i > 1:
-                        # Ok it's not right after the comma
-                        # Let's ignore
-                        rstring_delimiter_missing = False
-                    # Check that j was not out of bound
-                    elif self.get_char_at(j):
-                        # Check for an unmatched opening brace in string_acc
-                        for c in reversed(string_acc):
-                            if c == "{":
-                                # Ok then this is part of the string
-                                rstring_delimiter_missing = False
-                                break
-                            elif c == "}":
-                                break
+                    # There could be a case in which even the next key:value is missing delimeters
+                    # because it might be a systemic issue with the output
+                    # So let's check if we can find a : in the string instead
+                    i = self.skip_to_character(character=":", idx=1)
+                    next_c = self.get_char_at(i)
+                    if next_c:
+                        # OK then this is a systemic issue with the output
+                        break
+                    else:
+                        # skip any whitespace first
+                        i = self.skip_whitespaces_at(idx=1, move_main_index=False)
+                        # We couldn't find any rstring_delimeter before the end of the string
+                        # check if this is the last string of an object and therefore we can keep going
+                        # make an exception if this is the last char before the closing brace
+                        j = self.skip_to_character(character="}", idx=i)
+                        if j - i > 1:
+                            # Ok it's not right after the comma
+                            # Let's ignore
+                            rstring_delimiter_missing = False
+                        # Check that j was not out of bound
+                        elif self.get_char_at(j):
+                            # Check for an unmatched opening brace in string_acc
+                            for c in reversed(string_acc):
+                                if c == "{":
+                                    # Ok then this is part of the string
+                                    rstring_delimiter_missing = False
+                                    break
+                                elif c == "}":
+                                    break
                 if rstring_delimiter_missing:
                     self.log(
                         "While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn't determine that a right delimiter was present. Stopping here",
