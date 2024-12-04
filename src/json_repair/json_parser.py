@@ -362,6 +362,13 @@ class JSONParser:
                         "While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn't determine that a right delimiter was present. Stopping here",
                     )
                     break
+            if char == "]" and ContextValues.ARRAY in self.context.context:
+                # We found the end of an array and we are in array context
+                # So let's check if we find a rstring_delimiter forward otherwise end early
+                i = self.skip_to_character(rstring_delimiter)
+                if not self.get_char_at(i):
+                    # No delimiter found
+                    break
             string_acc += char
             self.index += 1
             char = self.get_char_at()
