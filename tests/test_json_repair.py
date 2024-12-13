@@ -108,6 +108,7 @@ def test_missing_and_mixed_quotes():
     assert repair_json('{"key": value "key2" : "value2" ') == '{"key": "value", "key2": "value2"}'
     assert repair_json('{"key": "lorem ipsum ... "sic " tamet. ...}') ==  '{"key": "lorem ipsum ... \\"sic \\" tamet. ..."}'
     assert repair_json('{"key": value , }') == '{"key": "value"}'
+    assert repair_json('{"comment": "lorem, "ipsum" sic "tamet". To improve"}') == '{"comment": "lorem, \\"ipsum\\" sic \\"tamet\\". To improve"}'
 
 def test_array_edge_cases():
     assert repair_json("[1, 2, 3,") == "[1, 2, 3]"
@@ -135,7 +136,7 @@ def test_object_edge_cases():
     assert repair_json('{"value_1": true, COMMENT "value_2": "data"}') == '{"value_1": true, "value_2": "data"}'
     assert repair_json('{"value_1": true, SHOULD_NOT_EXIST "value_2": "data" AAAA }') == '{"value_1": true, "value_2": "data"}'
     assert repair_json('{"" : true, "key2": "value2"}') == '{"": true, "key2": "value2"}'
-    assert repair_json('{""answer"":[{""traits"":''Female aged 60+'',""answer1"":""5""}]}') == '{"answer": [{"traits": "Female aged 60+", "answer1": "5"}]}'
+    assert repair_json("""{""answer"":[{""traits"":''Female aged 60+'',""answer1"":""5""}]}""") == '{"answer": [{"traits": "Female aged 60+", "answer1": "5"}]}'
     assert repair_json('{ "words": abcdef", "numbers": 12345", "words2": ghijkl" }') == '{"words": "abcdef", "numbers": 12345, "words2": "ghijkl"}'
     assert repair_json('''{"number": 1,"reason": "According...""ans": "YES"}''') == '{"number": 1, "reason": "According...", "ans": "YES"}'
     assert repair_json('''{ "a" : "{ b": {} }" }''') == '{"a": "{ b"}'

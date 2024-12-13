@@ -322,11 +322,24 @@ class JSONParser:
                     else:
                         # OK but this could still be some garbage at the end of the string
                         # So we need to check if we find a new lstring_delimiter afterwards
-                        # If we do, this is a missing delimiter
+                        # If we do, maybe this is a missing delimiter
                         i = self.skip_to_character(character=lstring_delimiter, idx=i)
+                        if doubled_quotes:
+                            i = self.skip_to_character(
+                                character=lstring_delimiter, idx=i
+                            )
                         next_c = self.get_char_at(i)
                         if not next_c:
                             rstring_delimiter_missing = False
+                        else:
+                            # But again, this could just be something a bit stupid like "lorem, "ipsum" sic"
+                            # Check if we find a : afterwards (skipping space)
+                            i = self.skip_whitespaces_at(
+                                idx=i + 1, move_main_index=False
+                            )
+                            next_c = self.get_char_at(i)
+                            if next_c and next_c != ":":
+                                rstring_delimiter_missing = False
                 else:
                     # There could be a case in which even the next key:value is missing delimeters
                     # because it might be a systemic issue with the output
