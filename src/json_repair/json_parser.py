@@ -124,6 +124,9 @@ class JSONParser:
 
             self.skip_whitespaces_at()
 
+            # Save this index in case we need find a duplicate key
+            rollback_index = self.index
+
             # <member> starts with a <string>
             key = ""
             while self.get_char_at():
@@ -132,7 +135,14 @@ class JSONParser:
                 if key != "" or (key == "" and self.get_char_at() == ":"):
                     # If the string is empty but there is a object divider, we are done here
                     break
+            if ContextValues.ARRAY in self.context.context and key in obj:
+                self.log(
+                    "While parsing an object we found a duplicate key, closing the object here and rolling back the index",
+                )
+                self.index = rollback_index - 1
+                break
 
+            # Skip filler whitespaces
             self.skip_whitespaces_at()
 
             # We reached the end here

@@ -152,6 +152,7 @@ def test_object_edge_cases():
     assert repair_json('{text:words{words in brackets}m}') == '{"text": "words{words in brackets}m"}'
     assert repair_json('{"key": "value, value2"```') == '{"key": "value, value2"}'
     assert repair_json('{key:value,key2:value2}') == '{"key": "value", "key2": "value2"}'
+    assert repair_json('[{"lorem": {"ipsum": "sic"}, "lorem": {"ipsum": "sic"}]') == '[{"lorem": {"ipsum": "sic"}}, "lorem", {"ipsum": "sic"}]'
 
 def test_number_edge_cases():
     assert repair_json(' - { "test_key": ["test_value", "test_value2"] }') == '{"test_key": ["test_value", "test_value2"]}'
