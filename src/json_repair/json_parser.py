@@ -508,9 +508,8 @@ class JSONParser:
                             # But this might not be it! This could be just a missing comma
                             # We found a delimiter and we need to check if this is a key
                             # so find a rstring_delimiter and a colon after
-                            i += 1
                             i = self.skip_to_character(
-                                character=rstring_delimiter, idx=i
+                                character=rstring_delimiter, idx=i + 1
                             )
                             i += 1
                             next_c = self.get_char_at(i)
@@ -531,6 +530,27 @@ class JSONParser:
                                 string_acc += str(char)
                                 self.index += 1
                                 char = self.get_char_at()
+                        elif self.context.current == ContextValues.ARRAY:
+                            # In array context this could be something like "lorem "ipsum" sic"
+                            # So let's check if we find a rstring_delimiter forward otherwise end early
+                            i = self.skip_to_character(rstring_delimiter, idx=i + 1)
+                            next_c = self.get_char_at(i)
+                            if next_c and next_c == rstring_delimiter:
+                                # Ok now if I find a comma or a closing ], that can be have also an optional rstring_delimiter before them
+                                # We can consider this a misplaced quote
+                                i += 1
+                                i = self.skip_whitespaces_at(
+                                    idx=i, move_main_index=False
+                                )
+                                next_c = self.get_char_at(i)
+                                if next_c and next_c in [",", "]"]:
+                                    self.log(
+                                        "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
+                                    )
+                                    unmatched_delimiter = not unmatched_delimiter
+                                    string_acc += str(char)
+                                    self.index += 1
+                                    char = self.get_char_at()
 
         if (
             char

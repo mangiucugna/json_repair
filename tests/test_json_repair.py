@@ -121,6 +121,7 @@ def test_array_edge_cases():
     assert repair_json('{"employees":["John", "Anna", "Peter') == '{"employees": ["John", "Anna", "Peter"]}'
     assert repair_json('{"key1": {"key2": [1, 2, 3') == '{"key1": {"key2": [1, 2, 3]}}'
     assert repair_json('{"key": ["value]}') == '{"key": ["value"]}'
+    assert repair_json('["lorem "ipsum" sic"]') == '["lorem \\"ipsum\\" sic"]'
     
 def test_escaping():
     assert repair_json("'\"'") == '""'
