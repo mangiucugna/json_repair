@@ -146,14 +146,14 @@ def test_object_edge_cases():
     assert repair_json('{"lorem": ipsum, sic, datum.",}') == '{"lorem": "ipsum, sic, datum."}'
     assert repair_json('{"lorem": sic tamet. "ipsum": sic tamet, quick brown fox. "sic": ipsum}') == '{"lorem": "sic tamet.", "ipsum": "sic tamet", "sic": "ipsum"}'
     assert repair_json('{"lorem_ipsum": "sic tamet, quick brown fox. }') == '{"lorem_ipsum": "sic tamet, quick brown fox."}'
-    assert repair_json('{"key":value, " key2":"value2" }') == '{"key": "value", " key2": "value2"}'
+    assert repair_json('{"key":value, " key2":"value2" }') == '{"key": "value", "key2": "value2"}'
     assert repair_json('{"key":value "key2":"value2" }') == '{"key": "value", "key2": "value2"}'
     assert repair_json("{'text': 'words{words in brackets}more words'}") == '{"text": "words{words in brackets}more words"}'
     assert repair_json('{text:words{words in brackets}}') == '{"text": "words{words in brackets}"}'
     assert repair_json('{text:words{words in brackets}m}') == '{"text": "words{words in brackets}m"}'
     assert repair_json('{"key": "value, value2"```') == '{"key": "value, value2"}'
     assert repair_json('{key:value,key2:value2}') == '{"key": "value", "key2": "value2"}'
-    assert repair_json('[{"lorem": {"ipsum": "sic"}, "lorem": {"ipsum": "sic"}]') == '[{"lorem": {"ipsum": "sic"}}, "lorem", {"ipsum": "sic"}]'
+    assert repair_json('[{"lorem": {"ipsum": "sic"}, """" "lorem": {"ipsum": "sic"}]') == '[{"lorem": {"ipsum": "sic"}}, {"lorem": {"ipsum": "sic"}}]'
 
 def test_number_edge_cases():
     assert repair_json(' - { "test_key": ["test_value", "test_value2"] }') == '{"test_key": ["test_value", "test_value2"]}'

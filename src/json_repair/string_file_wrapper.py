@@ -96,3 +96,24 @@ class StringFileWrapper:
             self.length = self.fd.tell()
             self.fd.seek(current_position)
         return self.length
+
+    def __setitem__(self, index: Union[int, slice], value: str) -> None:
+        """
+        Set a character or a slice of characters in the file.
+
+        Args:
+            index (slice): The slice of characters to set.
+            value (str): The value to set at the specified index or slice.
+        """
+        if isinstance(index, slice):
+            start = index.start or 0
+        else:
+            start = index or 0
+
+        if start < 0:
+            start += len(self)
+
+        current_position = self.fd.tell()
+        self.fd.seek(start)
+        self.fd.write(value)
+        self.fd.seek(current_position)

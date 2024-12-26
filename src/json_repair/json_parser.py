@@ -7,6 +7,9 @@ JSONReturnType = Union[Dict[str, Any], List[Any], str, float, int, bool, None]
 
 
 class JSONParser:
+    # Constants
+    STRING_DELIMITERS = ['"', "'", "“", "”"]
+
     def __init__(
         self,
         json_str: Union[str, StringFileWrapper],
@@ -89,7 +92,9 @@ class JSONParser:
                 )
                 return ""
             # <string> starts with a quote
-            elif not self.context.empty and (char in ['"', "'", "“"] or char.isalpha()):
+            elif not self.context.empty and (
+                char in self.STRING_DELIMITERS or char.isalpha()
+            ):
                 return self.parse_string()
             # <number> starts with [0-9] or minus
             elif not self.context.empty and (
@@ -130,6 +135,8 @@ class JSONParser:
             # <member> starts with a <string>
             key = ""
             while self.get_char_at():
+                # The rollback index needs to be updated here in case the key is empty
+                rollback_index = self.index
                 key = str(self.parse_string())
 
                 if key != "" or (key == "" and self.get_char_at() == ":"):
@@ -140,6 +147,12 @@ class JSONParser:
                     "While parsing an object we found a duplicate key, closing the object here and rolling back the index",
                 )
                 self.index = rollback_index - 1
+                # add an opening curly brace to make this work
+                self.json_str = (
+                    self.json_str[: self.index + 1]
+                    + "{"
+                    + self.json_str[self.index + 1 :]
+                )
                 break
 
             # Skip filler whitespaces
@@ -227,7 +240,7 @@ class JSONParser:
 
         char = self.get_char_at()
         # A valid string can only start with a valid quote or, in our case, with a literal
-        while char and char not in ['"', "'", "“"] and not char.isalnum():
+        while char and char not in self.STRING_DELIMITERS and not char.isalnum():
             self.index += 1
             char = self.get_char_at()
 
@@ -262,35 +275,61 @@ class JSONParser:
         if not missing_quotes:
             self.index += 1
 
+        self.skip_whitespaces_at()
         # There is sometimes a weird case of doubled quotes, we manage this also later in the while loop
-        if self.get_char_at() == lstring_delimiter:
-            # If it's an empty key, this was easy
-            if (
-                self.context.current == ContextValues.OBJECT_KEY
-                and self.get_char_at(1) == ":"
-            ):
-                self.index += 1
-                return ""
-            # Find the next delimiter
-            i = self.skip_to_character(character=rstring_delimiter, idx=1)
-            next_c = self.get_char_at(i)
-            # Now check that the next character is also a delimiter to ensure that we have "".....""
-            # In that case we ignore this rstring delimiter
-            if next_c and (self.get_char_at(i + 1) or "") == rstring_delimiter:
-                self.log(
-                    "While parsing a string, we found a valid starting doubled quote, ignoring it",
-                )
-                doubled_quotes = True
-                self.index += 1
-            else:
-                # Ok this is not a doubled quote, check if this is an empty string or not
-                i = self.skip_whitespaces_at(idx=1, move_main_index=False)
-                next_c = self.get_char_at(i)
-                if next_c not in [",", "]", "}"]:
-                    self.log(
-                        "While parsing a string, we found a doubled quote but it was a mistake, removing one quote",
-                    )
+        if self.get_char_at() in self.STRING_DELIMITERS:
+            # If the next character is the same type of quote, then we manage it as double quotes
+            if self.get_char_at() == lstring_delimiter:
+                # If it's an empty key, this was easy
+                if (
+                    self.context.current == ContextValues.OBJECT_KEY
+                    and self.get_char_at(1) == ":"
+                ):
                     self.index += 1
+                    return ""
+                if self.get_char_at(1) == lstring_delimiter:
+                    # There's something fishy about this, we found doubled quotes and then again quotes
+                    self.log(
+                        "While parsing a string, we found a doubled quote and then a quote again, ignoring it",
+                    )
+                    return ""
+                # Find the next delimiter
+                i = self.skip_to_character(character=rstring_delimiter, idx=1)
+                next_c = self.get_char_at(i)
+                # Now check that the next character is also a delimiter to ensure that we have "".....""
+                # In that case we ignore this rstring delimiter
+                if next_c and (self.get_char_at(i + 1) or "") == rstring_delimiter:
+                    self.log(
+                        "While parsing a string, we found a valid starting doubled quote",
+                    )
+                    doubled_quotes = True
+                    self.index += 1
+                else:
+                    # Ok this is not a doubled quote, check if this is an empty string or not
+                    i = self.skip_whitespaces_at(idx=1, move_main_index=False)
+                    next_c = self.get_char_at(i)
+                    if next_c in self.STRING_DELIMITERS + ["{", "["]:
+                        # something fishy is going on here
+                        self.log(
+                            "While parsing a string, we found a doubled quote but also another quote afterwards, ignoring it",
+                        )
+                        self.index += 1
+                        return ""
+                    elif next_c not in [",", "]", "}"]:
+                        self.log(
+                            "While parsing a string, we found a doubled quote but it was a mistake, removing one quote",
+                        )
+                        self.index += 1
+            else:
+                # Otherwise we need to do another check before continuing
+                i = self.skip_to_character(character=rstring_delimiter, idx=1)
+                next_c = self.get_char_at(i)
+                if not next_c:
+                    # mmmm that delimiter never appears again, this is a mistake
+                    self.log(
+                        "While parsing a string, we found a quote but it was a mistake, ignoring it",
+                    )
+                    return ""
 
         # Initialize our return value
         string_acc = ""
