@@ -443,6 +443,38 @@ class JSONParser:
                     string_acc += escape_seqs.get(char, char) or char
                     self.index += 1
                     char = self.get_char_at()
+            # If we are in object key context and we find a colon, it could be a missing right quote
+            if (
+                char == ":"
+                and not missing_quotes
+                and self.context.current == ContextValues.OBJECT_KEY
+            ):
+                # Ok now we need to check if this is followed by a value like "..."
+                i = self.skip_to_character(character=lstring_delimiter, idx=1)
+                next_c = self.get_char_at(i)
+                if next_c:
+                    i += 1
+                    # found the first delimiter
+                    i = self.skip_to_character(character=rstring_delimiter, idx=i)
+                    next_c = self.get_char_at(i)
+                    if next_c:
+                        # found a second delimiter
+                        i += 1
+                        # Skip spaces
+                        i = self.skip_whitespaces_at(idx=i, move_main_index=False)
+                        next_c = self.get_char_at(i)
+                        if next_c and next_c in [",", "}"]:
+                            # Ok then this is a missing right quote
+                            self.log(
+                                "While parsing a string missing the right delimiter in object key context, we found a :, stopping here",
+                            )
+                            break
+                else:
+                    # The string ended without finding a lstring_delimiter, I will assume this is a missing right quote
+                    self.log(
+                        "While parsing a string missing the right delimiter in object key context, we found a :, stopping here",
+                    )
+                    break
             # ChatGPT sometimes forget to quote stuff in html tags or markdown, so we do this whole thing here
             if char == rstring_delimiter:
                 # Special case here, in case of double quotes one after another
