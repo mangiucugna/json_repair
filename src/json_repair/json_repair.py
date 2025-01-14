@@ -25,10 +25,32 @@ All supported use cases are in the unit tests
 import argparse
 import json
 import sys
-from typing import Dict, List, Optional, TextIO, Tuple, Union
+from typing import Dict, List, Optional, TextIO, Tuple, Union, overload
 
 from .json_parser import JSONParser, JSONReturnType
 
+
+@overload
+def repair_json(
+    json_str: str = "",
+    return_objects: bool = False,
+    skip_json_loads: bool = False,
+    logging: False = False,
+    json_fd: Optional[TextIO] = None,
+    ensure_ascii: bool = True,
+    chunk_length: int = 0,
+) -> JSONReturnType: ...
+
+@overload
+def repair_json(
+    json_str: str = "",
+    return_objects: bool = False,
+    skip_json_loads: bool = False,
+    logging: True = False,
+    json_fd: Optional[TextIO] = None,
+    ensure_ascii: bool = True,
+    chunk_length: int = 0,
+) -> Tuple[JSONReturnType, List[Dict[str, str]]]: ...
 
 def repair_json(
     json_str: str = "",
@@ -71,6 +93,19 @@ def repair_json(
         return parsed_json
     return json.dumps(parsed_json, ensure_ascii=ensure_ascii)
 
+@overload
+def loads(
+    json_str: str,
+    skip_json_loads: bool = False,
+    logging: False = False,
+) -> JSONReturnType: ...
+
+@overload
+def loads(
+    json_str: str,
+    skip_json_loads: bool = False,
+    logging: True = False,
+) -> Tuple[JSONReturnType, List[Dict[str, str]]]: ...
 
 def loads(
     json_str: str,
@@ -96,6 +131,21 @@ def loads(
         logging=logging,
     )
 
+@overload
+def load(
+    fd: TextIO,
+    skip_json_loads: bool = False,
+    logging: False = False,
+    chunk_length: int = 0,
+) -> JSONReturnType: ...
+
+@overload
+def load(
+    fd: TextIO,
+    skip_json_loads: bool = False,
+    logging: True = False,
+    chunk_length: int = 0,
+) -> Tuple[JSONReturnType, List[Dict[str, str]]]: ...
 
 def load(
     fd: TextIO,
@@ -123,6 +173,22 @@ def load(
         skip_json_loads=skip_json_loads,
         logging=logging,
     )
+
+@overload
+def from_file(
+    filename: str,
+    skip_json_loads: bool = False,
+    logging: False = False,
+    chunk_length: int = 0,
+) -> JSONReturnType: ...
+
+@overload
+def from_file(
+    filename: str,
+    skip_json_loads: bool = False,
+    logging: True = False,
+    chunk_length: int = 0,
+) -> Tuple[JSONReturnType, List[Dict[str, str]]]: ...
 
 
 def from_file(
