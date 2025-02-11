@@ -223,6 +223,8 @@ class JSONParser:
                 "While parsing an array we missed the closing ], adding it back",
             )
             self.index -= 1
+            # Add the missing closing bracket
+            self.json_str = self.json_str[:self.index + 1] + "]" + self.json_str[self.index + 1:]
 
         self.index += 1
         self.context.reset()
