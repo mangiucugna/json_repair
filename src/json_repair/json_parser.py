@@ -589,7 +589,7 @@ class JSONParser:
                             i += 1
                             next_c = self.get_char_at(i)
                             while next_c and next_c != ":":
-                                if next_c == "," or (
+                                if next_c in [",", "]", "}"] or (
                                     next_c == rstring_delimiter
                                     and self.get_char_at(i - 1) != "\\"
                                 ):

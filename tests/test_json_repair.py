@@ -109,6 +109,7 @@ def test_missing_and_mixed_quotes():
     assert repair_json('{"key": "lorem ipsum ... "sic " tamet. ...}') ==  '{"key": "lorem ipsum ... \\"sic \\" tamet. ..."}'
     assert repair_json('{"key": value , }') == '{"key": "value"}'
     assert repair_json('{"comment": "lorem, "ipsum" sic "tamet". To improve"}') == '{"comment": "lorem, \\"ipsum\\" sic \\"tamet\\". To improve"}'
+    assert repair_json('{"key": "v\"alu\"e"} key:') == '{"key": "v\\"alu\\"e"}'
 
 def test_array_edge_cases():
     assert repair_json("[1, 2, 3,") == "[1, 2, 3]"
