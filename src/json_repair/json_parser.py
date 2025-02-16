@@ -438,7 +438,7 @@ class JSONParser:
             string_acc += char
             self.index += 1
             char = self.get_char_at()
-            if char and len(string_acc) > 0 and string_acc[-1] == "\\":
+            if char and string_acc[-1] == "\\":
                 # This is a special case, if people use real strings this might happen
                 self.log("Found a stray escape sequence, normalizing it")
                 if char in [rstring_delimiter, "t", "n", "r", "b", "\\"]:
@@ -646,10 +646,15 @@ class JSONParser:
             self.log(
                 "While parsing a string, we missed the closing quote, ignoring",
             )
+            string_acc = string_acc.rstrip()
         else:
             self.index += 1
 
-        return string_acc.rstrip()
+        if missing_quotes or (string_acc and string_acc[-1] == "\n"):
+            # Clean the whitespaces for some corner cases
+            string_acc = string_acc.rstrip()
+
+        return string_acc
 
     def parse_number(self) -> Union[float, int, str, JSONReturnType]:
         # <number> is a valid real number expressed in one of a number of given formats
@@ -661,7 +666,7 @@ class JSONParser:
             number_str += char
             self.index += 1
             char = self.get_char_at()
-        if len(number_str) > 1 and number_str[-1] in "-eE/,":
+        if number_str and number_str[-1] in "-eE/,":
             # The number ends with a non valid character for a number/currency, rolling back one
             number_str = number_str[:-1]
             self.index -= 1

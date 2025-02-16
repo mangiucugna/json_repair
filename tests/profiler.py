@@ -1,8 +1,12 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from cProfile import Profile
 import pstats
 from pstats import SortKey, Stats
 import time
-from json_repair import repair_json
+from src.json_repair.json_repair import repair_json
 
 
 # Hack: Monkey patch pstats to change the formatting method and increase precision
