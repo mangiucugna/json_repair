@@ -101,6 +101,8 @@ class JSONParser:
                 char.isdigit() or char == "-" or char == "."
             ):
                 return self.parse_number()
+            elif char in ["#", "/"]:
+                return self.parse_comment()
             # If everything else fails, we just ignore and move on
             else:
                 self.index += 1
@@ -138,8 +140,9 @@ class JSONParser:
                 # The rollback index needs to be updated here in case the key is empty
                 rollback_index = self.index
                 key = str(self.parse_string())
-
-                if key != "" or (key == "" and self.get_char_at() == ":"):
+                if key == "":
+                    self.skip_whitespaces_at()
+                if key != "" or (key == "" and self.get_char_at() in [":", "}"]):
                     # If the string is empty but there is a object divider, we are done here
                     break
             if ContextValues.ARRAY in self.context.context and key in obj:
@@ -199,11 +202,10 @@ class JSONParser:
             self.skip_whitespaces_at()
             value = self.parse_json()
 
-            # It is possible that parse_json() returns nothing valid, so we stop
+            # It is possible that parse_json() returns nothing valid, so we increase by 1
             if value == "":
-                break
-
-            if value == "..." and self.get_char_at(-1) == ".":
+                self.index += 1
+            elif value == "..." and self.get_char_at(-1) == ".":
                 self.log(
                     "While parsing an array, found a stray '...'; ignoring it",
                 )
@@ -243,6 +245,8 @@ class JSONParser:
         lstring_delimiter = rstring_delimiter = '"'
 
         char = self.get_char_at()
+        if char in ["#", "/"]:
+            return self.parse_comment()
         # A valid string can only start with a valid quote or, in our case, with a literal
         while char and char not in self.STRING_DELIMITERS and not char.isalnum():
             self.index += 1
@@ -752,6 +756,76 @@ class JSONParser:
             # Ah this is an escaped character, try again
             return self.skip_to_character(character=character, idx=idx + 1)
         return idx
+
+    def parse_comment(self) -> str:
+        """
+        Parse code-like comments:
+
+        - "# comment": A line comment that continues until a newline.
+        - "// comment": A line comment that continues until a newline.
+        - "/* comment */": A block comment that continues until the closing delimiter "*/".
+
+        The comment is skipped over and an empty string is returned so that comments do not interfere
+        with the actual JSON elements.
+        """
+        char = self.get_char_at()
+        termination_characters = ["\n", "\r"]
+        if ContextValues.ARRAY in self.context.context:
+            termination_characters.append("]")
+        if ContextValues.OBJECT_VALUE in self.context.context:
+            termination_characters.append("}")
+        if ContextValues.OBJECT_KEY in self.context.context:
+            termination_characters.append(":")
+        # Line comment starting with #
+        if char == "#":
+            comment = ""
+            while char and char not in termination_characters:
+                comment += char
+                self.index += 1
+                char = self.get_char_at()
+            self.log(f"Found line comment: {comment}")
+            return ""
+
+        # Comments starting with '/'
+        elif char == "/":
+            next_char = self.get_char_at(1)
+            # Handle line comment starting with //
+            if next_char == "/":
+                comment = "//"
+                self.index += 2  # Skip both slashes.
+                char = self.get_char_at()
+                while char and char not in termination_characters:
+                    comment += char
+                    self.index += 1
+                    char = self.get_char_at()
+                self.log(f"Found line comment: {comment}")
+                return ""
+            # Handle block comment starting with /*
+            elif next_char == "*":
+                comment = "/*"
+                self.index += 2  # Skip '/*'
+                while True:
+                    char = self.get_char_at()
+                    if not char:
+                        self.log(
+                            "Reached end-of-string while parsing block comment; unclosed block comment."
+                        )
+                        break
+                    comment += char
+                    self.index += 1
+                    if comment.endswith("*/"):
+                        break
+                self.log(f"Found block comment: {comment}")
+                return ""
+            else:
+                # Not a recognized comment pattern, skip the slash.
+                self.index += 1
+                return ""
+
+        else:
+            # Should not be reached: if for some reason the current character does not start a comment, skip it.
+            self.index += 1
+            return ""
 
     def _log(self, text: str) -> None:
         window: int = 10

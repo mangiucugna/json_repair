@@ -12,12 +12,12 @@ repos:
   hooks:
     - id: autoflake
 - repo: https://github.com/pycqa/flake8
-  rev: 7.1.1
+  rev: 7.1.2
   hooks:
     - id: flake8
       args: ["--extend-ignore=E203,E501", "--per-file-ignores=__init__.py:F401"]
 - repo: https://github.com/pycqa/bandit
-  rev: 1.8.2
+  rev: 1.8.3
   hooks:
     - id: bandit
       args: [ --exclude, tests ]

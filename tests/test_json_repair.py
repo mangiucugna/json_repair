@@ -124,6 +124,7 @@ def test_array_edge_cases():
     assert repair_json('{"key": ["value]}') == '{"key": ["value"]}'
     assert repair_json('["lorem "ipsum" sic"]') == '["lorem \\"ipsum\\" sic"]'
     assert repair_json('{"key1": ["value1", "value2"}, "key2": ["value3", "value4"]}') == '{"key1": ["value1", "value2"], "key2": ["value3", "value4"]}'
+    assert repair_json('[ "value", /* comment */ "value2" ]') == '["value", "value2"]'
 
 def test_escaping():
     assert repair_json("'\"'") == '""'
@@ -158,6 +159,9 @@ def test_object_edge_cases():
     assert repair_json('{"key:"value"}') == '{"key": "value"}'
     assert repair_json('{"key:value}') == '{"key": "value"}'
     assert repair_json('[{"lorem": {"ipsum": "sic"}, """" "lorem": {"ipsum": "sic"}]') == '[{"lorem": {"ipsum": "sic"}}, {"lorem": {"ipsum": "sic"}}]'
+    assert repair_json('{ "key": { "key2": "value2" // comment }, "key3": "value3" }') == '{"key": {"key2": "value2"}, "key3": "value3"}'
+    assert repair_json('{ "key": { "key2": "value2" # comment }, "key3": "value3" }') == '{"key": {"key2": "value2"}, "key3": "value3"}'
+    assert repair_json('{ "key": { "key2": "value2" /* comment */ }, "key3": "value3" }') == '{"key": {"key2": "value2"}, "key3": "value3"}'
 
 def test_number_edge_cases():
     assert repair_json(' - { "test_key": ["test_value", "test_value2"] }') == '{"test_key": ["test_value", "test_value2"]}'
@@ -313,18 +317,3 @@ def test_cli(capsys):
         # Clean up - delete the temporary file
         os.remove(temp_path)
         os.remove(tempout_path)
-
-"""
-def test_cli_inline(sample_json_file):
-    with patch('sys.argv', ['json_repair', sample_json_file, '-i']):
-        cli()
-    with open(sample_json_file, 'r') as f:
-        assert json.load(f) == {"key": "value"}
-
-def test_cli_output_file(sample_json_file, tmp_path):
-    output_file = tmp_path / "output.json"
-    with patch('sys.argv', ['json_repair', sample_json_file, '-o', str(output_file)]):
-        cli()
-    with open(output_file, 'r') as f:
-        assert json.load(f) == {"key": "value"}
-"""
