@@ -135,7 +135,7 @@ def from_file(
     This function is a wrapper around `load()` so you can pass the filename as string
 
     Args:
-        filename (str): The name of the file containing JSON data to load and repair.
+        filename (str): The name of the file containing JSON data to load and repair. If set to "-", stdin is used.
         skip_json_loads (bool, optional): If True, skip calling the built-in json.loads() function to verify that the json is valid before attempting to repair. Defaults to False.
         logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False.
         chunk_length (int, optional): Size in bytes of the file chunks to read at once. Defaults to 1MB.
@@ -143,13 +143,17 @@ def from_file(
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
     """
-    with open(filename) as fd:
-        jsonobj = load(
-            fd=fd,
-            skip_json_loads=skip_json_loads,
-            logging=logging,
-            chunk_length=chunk_length,
-        )
+    if filename == "-":
+        fd = sys.stdin
+    else:
+        fd = open(filename)
+
+    jsonobj = load(
+        fd=fd,
+        skip_json_loads=skip_json_loads,
+        logging=logging,
+        chunk_length=chunk_length,
+    )
 
     return jsonobj
 
@@ -160,7 +164,7 @@ def cli(inline_args: Optional[List[str]] = None) -> int:
 
     Args:
         inline_args (Optional[List[str]]): List of command-line arguments for testing purposes. Defaults to None.
-            - filename (str): The JSON file to repair
+            - filename (str): The JSON file to repair, or '-' to use stdin.
             - -i, --inline (bool): Replace the file inline instead of returning the output to stdout.
             - -o, --output TARGET (str): If specified, the output will be written to TARGET filename instead of stdout.
             - --ensure_ascii (bool): Pass ensure_ascii=True to json.dumps(). Will pass False otherwise.
@@ -176,7 +180,7 @@ def cli(inline_args: Optional[List[str]] = None) -> int:
         >>> cli(['example.json', '--indent', '4'])
     """
     parser = argparse.ArgumentParser(description="Repair and parse JSON files.")
-    parser.add_argument("filename", help="The JSON file to repair")
+    parser.add_argument("filename", help="The JSON file to repair. Set to '-' to use stdin")
     parser.add_argument(
         "-i",
         "--inline",
@@ -210,6 +214,10 @@ def cli(inline_args: Optional[List[str]] = None) -> int:
 
     if args.inline and args.output:  # pragma: no cover
         print("Error: You cannot pass both --inline and --output", file=sys.stderr)
+        sys.exit(1)
+
+    if args.inline and args.filename == "-":  # pragma: no cover
+        print("Error: You cannot use --inline with stdin", file=sys.stderr)
         sys.exit(1)
 
     ensure_ascii = False

@@ -3,6 +3,8 @@ from unittest.mock import patch
 import os.path
 import pathlib
 import tempfile
+import sys
+import io
 
 def test_basic_types_valid():
     assert repair_json("True", return_objects=True) == ""
@@ -266,6 +268,8 @@ def test_repair_json_from_file():
             tmp.write("{key:value}")
         assert from_file(filename=temp_path, logging=True) == ({'key': 'value'}, [{'text': 'While parsing a string, we found a literal instead of a quote', 'context': '{key:value}'}, {'text': 'While parsing a string, we found no starting quote. Will add the quote back', 'context': '{key:value}'}, {'context': '{key:value}', 'text': 'While parsing a string missing the left delimiter in object key context, we found a :, stopping here',}, {'text': 'While parsing a string, we missed the closing quote, ignoring', 'context': '{key:value}'}, {'text': 'While parsing a string, we found a literal instead of a quote', 'context': '{key:value}'}, {'text': 'While parsing a string, we found no starting quote. Will add the quote back', 'context': '{key:value}'}, {'context': '{key:value}', 'text': 'While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn\'t determine that a right delimiter was present. Stopping here'}, {'text': 'While parsing a string, we missed the closing quote, ignoring', 'context': '{key:value}'}])
         assert from_file(filename=temp_path, logging=True, chunk_length=2) == ({'key': 'value'}, [{'text': 'While parsing a string, we found a literal instead of a quote', 'context': '{key:value}'}, {'text': 'While parsing a string, we found no starting quote. Will add the quote back', 'context': '{key:value}'}, {'context': '{key:value}', 'text': 'While parsing a string missing the left delimiter in object key context, we found a :, stopping here',}, {'text': 'While parsing a string, we missed the closing quote, ignoring', 'context': '{key:value}'}, {'text': 'While parsing a string, we found a literal instead of a quote', 'context': '{key:value}'}, {'text': 'While parsing a string, we found no starting quote. Will add the quote back', 'context': '{key:value}'}, {'context': '{key:value}', 'text': 'While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn\'t determine that a right delimiter was present. Stopping here'}, {'text': 'While parsing a string, we missed the closing quote, ignoring', 'context': '{key:value}'}])
+        sys.stdin = io.StringIO('{}')
+        assert from_file(filename='-') == {}
     finally:
         # Clean up - delete the temporary file
         os.remove(temp_path)
