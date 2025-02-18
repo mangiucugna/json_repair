@@ -42,7 +42,7 @@ m = """
       "sunt",
       "ipsum"
     ],
-    "friends": [
+    "friends": [ // comment
       {
         "id": 0,
         "name": "Cara Shepherd"
@@ -107,7 +107,7 @@ m = """
   {
     "_id": "655b6625870da431bcf5e0c2",
     "index": 2,
-    "guid": "b17f6e3f-c898-4334-abbf-05cf222f143b",
+    "guid": "b17f6e3f-c898-4334-abbf-05cf222f143b,
     "isActive": false,
     "balance": "$1,493.77",
     "picture": "http://placehold.it/32x32",

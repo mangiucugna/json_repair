@@ -160,7 +160,7 @@ def cli(inline_args: Optional[List[str]] = None) -> int:
 
     Args:
         inline_args (Optional[List[str]]): List of command-line arguments for testing purposes. Defaults to None.
-            - filename (str): The JSON file to repair
+            - filename (str): The JSON file to repair. If omitted, the JSON is read from stdin.
             - -i, --inline (bool): Replace the file inline instead of returning the output to stdout.
             - -o, --output TARGET (str): If specified, the output will be written to TARGET filename instead of stdout.
             - --ensure_ascii (bool): Pass ensure_ascii=True to json.dumps(). Will pass False otherwise.
@@ -174,9 +174,15 @@ def cli(inline_args: Optional[List[str]] = None) -> int:
 
     Example:
         >>> cli(['example.json', '--indent', '4'])
+        >>> cat json.txt | json_repair
     """
     parser = argparse.ArgumentParser(description="Repair and parse JSON files.")
-    parser.add_argument("filename", help="The JSON file to repair")
+    # Make the filename argument optional; if omitted, we will read from stdin.
+    parser.add_argument(
+        "filename",
+        nargs="?",
+        help="The JSON file to repair (if omitted, reads from stdin)",
+    )
     parser.add_argument(
         "-i",
         "--inline",
@@ -204,9 +210,12 @@ def cli(inline_args: Optional[List[str]] = None) -> int:
     if inline_args is None:  # pragma: no cover
         args = parser.parse_args()
     else:
-        args = parser.parse_args(
-            inline_args
-        )  # This is needed so this function is testable
+        args = parser.parse_args(inline_args)
+
+    # Inline mode requires a filename, so error out if none was provided.
+    if args.inline and not args.filename:  # pragma: no cover
+        print("Error: Inline mode requires a filename", file=sys.stderr)
+        sys.exit(1)
 
     if args.inline and args.output:  # pragma: no cover
         print("Error: You cannot pass both --inline and --output", file=sys.stderr)
@@ -217,8 +226,12 @@ def cli(inline_args: Optional[List[str]] = None) -> int:
         ensure_ascii = True
 
     try:
-        result = from_file(args.filename)
-
+        # Use from_file if a filename is provided; otherwise read from stdin.
+        if args.filename:
+            result = from_file(args.filename)
+        else:
+            data = sys.stdin.read()
+            result = loads(data)
         if args.inline or args.output:
             with open(args.output or args.filename, mode="w") as fd:
                 json.dump(result, fd, indent=args.indent, ensure_ascii=ensure_ascii)

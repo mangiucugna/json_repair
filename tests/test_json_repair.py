@@ -3,6 +3,7 @@ from unittest.mock import patch
 import os.path
 import pathlib
 import tempfile
+import io
 
 def test_basic_types_valid():
     assert repair_json("True", return_objects=True) == ""
@@ -317,3 +318,13 @@ def test_cli(capsys):
         # Clean up - delete the temporary file
         os.remove(temp_path)
         os.remove(tempout_path)
+    
+    # Prepare a JSON string that needs to be repaired.
+    test_input = "{key:value"
+    # Expected output when running cli with --indent 0.
+    expected_output = '{\n"key": "value"\n}\n'
+    # Patch sys.stdin so that cli() reads from it instead of a file.
+    with patch('sys.stdin', new=io.StringIO(test_input)):
+        cli(inline_args=['--indent', 0])
+    captured = capsys.readouterr()
+    assert captured.out == expected_output
