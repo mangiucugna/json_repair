@@ -9,6 +9,7 @@ JSONReturnType = Union[Dict[str, Any], List[Any], str, float, int, bool, None]
 class JSONParser:
     # Constants
     STRING_DELIMITERS = ['"', "'", "“", "”"]
+    NUMBER_CHARS = set("0123456789-.eE/,")
 
     def __init__(
         self,
@@ -129,8 +130,6 @@ class JSONParser:
             # Context is used in the string parser to manage the lack of quotes
             self.context.set(ContextValues.OBJECT_KEY)
 
-            self.skip_whitespaces_at()
-
             # Save this index in case we need find a duplicate key
             rollback_index = self.index
 
@@ -219,18 +218,13 @@ class JSONParser:
                 char = self.get_char_at()
 
         # Especially at the end of an LLM generated json you might miss the last "]"
-        char = self.get_char_at()
         if char and char != "]":
             self.log(
-                "While parsing an array we missed the closing ], adding it back",
-            )
-            self.index -= 1
-            # Add the missing closing bracket
-            self.json_str = (
-                self.json_str[: self.index + 1] + "]" + self.json_str[self.index + 1 :]
+                "While parsing an array we missed the closing ], ignoring it",
             )
 
         self.index += 1
+
         self.context.reset()
         return arr
 
@@ -274,9 +268,6 @@ class JSONParser:
                     return value
             self.log(
                 "While parsing a string, we found a literal instead of a quote",
-            )
-            self.log(
-                "While parsing a string, we found no starting quote. Will add the quote back",
             )
             missing_quotes = True
 
@@ -663,10 +654,9 @@ class JSONParser:
     def parse_number(self) -> Union[float, int, str, JSONReturnType]:
         # <number> is a valid real number expressed in one of a number of given formats
         number_str = ""
-        number_chars = set("0123456789-.eE/,")
         char = self.get_char_at()
         is_array = self.context.current == ContextValues.ARRAY
-        while char and char in number_chars and (char != "," or not is_array):
+        while char and char in self.NUMBER_CHARS and (not is_array or char != ","):
             number_str += char
             self.index += 1
             char = self.get_char_at()
