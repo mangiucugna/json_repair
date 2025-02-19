@@ -158,12 +158,12 @@ pipx install json-repair
 to know all options available:
 ```
 $ json_repair -h
-usage: json_repair [-h] [-i] [-o TARGET] [--ensure_ascii] [--indent INDENT] filename
+usage: json_repair [-h] [-i] [-o TARGET] [--ensure_ascii] [--indent INDENT] [filename]
 
 Repair and parse JSON files.
 
 positional arguments:
-  filename              The JSON file to repair
+  filename              The JSON file to repair (if omitted, reads from stdin)
 
 options:
   -h, --help            show this help message and exit
