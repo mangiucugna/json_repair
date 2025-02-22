@@ -188,13 +188,13 @@ In this example, any version that starts with `0.` will be acceptable, allowing 
 # How to cite
 If you are using this library in your academic work (as I know many folks are) please find the BibTex here:
 
-    @software{Baccianella_JSON_Repair_-_2024,
+    @software{Baccianella_JSON_Repair_-_2025,
         author = {Baccianella, Stefano},
-        month = aug,
+        month = feb,
         title = {{JSON Repair - A python module to repair invalid JSON, commonly used to parse the output of LLMs}},
         url = {https://github.com/mangiucugna/json_repair},
-        version = {0.28.3},
-        year = {2024}
+        version = {0.39.0},
+        year = {2025}
     }
 
 Thank you for citing my work and please send me a link to the paper if you can!
