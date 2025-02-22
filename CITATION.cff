@@ -5,7 +5,7 @@ authors:
   given-names: "Stefano"
   orcid: "https://orcid.org/0009-0005-7654-4471"
 title: "JSON Repair - A python module to repair invalid JSON, commonly used to parse the output of LLMs"
-version: 0.30.0
+version: 0.39.0
 doi: 
-date-released: 2024-10-08
+date-released: 2025-02-18
 url: "https://github.com/mangiucugna/json_repair"
