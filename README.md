@@ -193,7 +193,7 @@ If you are using this library in your academic work (as I know many folks are) p
         month = feb,
         title = {{JSON Repair - A python module to repair invalid JSON, commonly used to parse the output of LLMs}},
         url = {https://github.com/mangiucugna/json_repair},
-        version = {0.39.0},
+        version = {0.39.1},
         year = {2025}
     }
 
