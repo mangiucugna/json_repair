@@ -698,51 +698,6 @@ class JSONParser:
         self.index = starting_index
         return ""
 
-    def get_char_at(self, count: int = 0) -> Union[str, Literal[False]]:
-        # Why not use something simpler? Because try/except in python is a faster alternative to an "if" statement that is often True
-        try:
-            return self.json_str[self.index + count]
-        except IndexError:
-            return False
-
-    def skip_whitespaces_at(self, idx: int = 0, move_main_index=True) -> int:
-        """
-        This function quickly iterates on whitespaces, syntactic sugar to make the code more concise
-        """
-        try:
-            char = self.json_str[self.index + idx]
-        except IndexError:
-            return idx
-        while char.isspace():
-            if move_main_index:
-                self.index += 1
-            else:
-                idx += 1
-            try:
-                char = self.json_str[self.index + idx]
-            except IndexError:
-                return idx
-        return idx
-
-    def skip_to_character(self, character: str, idx: int = 0) -> int:
-        """
-        This function quickly iterates to find a character, syntactic sugar to make the code more concise
-        """
-        try:
-            char = self.json_str[self.index + idx]
-        except IndexError:
-            return idx
-        while char != character:
-            idx += 1
-            try:
-                char = self.json_str[self.index + idx]
-            except IndexError:
-                return idx
-        if self.index + idx > 0 and self.json_str[self.index + idx - 1] == "\\":
-            # Ah this is an escaped character, try again
-            return self.skip_to_character(character=character, idx=idx + 1)
-        return idx
-
     def parse_comment(self) -> str:
         """
         Parse code-like comments:
@@ -812,6 +767,51 @@ class JSONParser:
             # Should not be reached: if for some reason the current character does not start a comment, skip it.
             self.index += 1
             return ""
+
+    def get_char_at(self, count: int = 0) -> Union[str, Literal[False]]:
+        # Why not use something simpler? Because try/except in python is a faster alternative to an "if" statement that is often True
+        try:
+            return self.json_str[self.index + count]
+        except IndexError:
+            return False
+
+    def skip_whitespaces_at(self, idx: int = 0, move_main_index=True) -> int:
+        """
+        This function quickly iterates on whitespaces, syntactic sugar to make the code more concise
+        """
+        try:
+            char = self.json_str[self.index + idx]
+        except IndexError:
+            return idx
+        while char.isspace():
+            if move_main_index:
+                self.index += 1
+            else:
+                idx += 1
+            try:
+                char = self.json_str[self.index + idx]
+            except IndexError:
+                return idx
+        return idx
+
+    def skip_to_character(self, character: str, idx: int = 0) -> int:
+        """
+        This function quickly iterates to find a character, syntactic sugar to make the code more concise
+        """
+        try:
+            char = self.json_str[self.index + idx]
+        except IndexError:
+            return idx
+        while char != character:
+            idx += 1
+            try:
+                char = self.json_str[self.index + idx]
+            except IndexError:
+                return idx
+        if self.index + idx > 0 and self.json_str[self.index + idx - 1] == "\\":
+            # Ah this is an escaped character, try again
+            return self.skip_to_character(character=character, idx=idx + 1)
+        return idx
 
     def _log(self, text: str) -> None:
         window: int = 10
