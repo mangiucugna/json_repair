@@ -274,7 +274,6 @@ class JSONParser:
         if not missing_quotes:
             self.index += 1
 
-        self.skip_whitespaces_at()
         # There is sometimes a weird case of doubled quotes, we manage this also later in the while loop
         if self.get_char_at() in self.STRING_DELIMITERS:
             # If the next character is the same type of quote, then we manage it as double quotes
@@ -574,6 +573,13 @@ class JSONParser:
                     elif (
                         next_c == rstring_delimiter and self.get_char_at(i - 1) != "\\"
                     ):
+                        # Check if self.index:self.index+i is only whitespaces, break if that's the case
+                        if all(
+                            str(self.get_char_at(j)).isspace()
+                            for j in range(1, i)
+                            if self.get_char_at(j)
+                        ):
+                            break
                         if self.context.current == ContextValues.OBJECT_VALUE:
                             # But this might not be it! This could be just a missing comma
                             # We found a delimiter and we need to check if this is a key
@@ -601,26 +607,16 @@ class JSONParser:
                                 self.index += 1
                                 char = self.get_char_at()
                         elif self.context.current == ContextValues.ARRAY:
-                            # In array context this could be something like "lorem "ipsum" sic"
-                            # So let's check if we find a rstring_delimiter forward otherwise end early
-                            i = self.skip_to_character(rstring_delimiter, idx=i + 1)
-                            next_c = self.get_char_at(i)
-                            if next_c and next_c == rstring_delimiter:
-                                # Ok now if I find a comma or a closing ], that can be have also an optional rstring_delimiter before them
-                                # We can consider this a misplaced quote
-                                i += 1
-                                i = self.skip_whitespaces_at(
-                                    idx=i, move_main_index=False
-                                )
-                                next_c = self.get_char_at(i)
-                                if next_c and next_c in [",", "]"]:
-                                    self.log(
-                                        "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
-                                    )
-                                    unmatched_delimiter = not unmatched_delimiter
-                                    string_acc += str(char)
-                                    self.index += 1
-                                    char = self.get_char_at()
+                            # If we got up to here it means that this is a situation like this:
+                            # ["bla bla bla "puppy" bla bla bla "kitty" bla bla"]
+                            # So we need to ignore this quote
+                            self.log(
+                                "While parsing a string in Array context, we detected a quoted section that would have closed the string but has a different meaning here, ignoring it",
+                            )
+                            unmatched_delimiter = not unmatched_delimiter
+                            string_acc += str(char)
+                            self.index += 1
+                            char = self.get_char_at()
 
         if (
             char

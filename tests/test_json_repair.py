@@ -126,6 +126,8 @@ def test_array_edge_cases():
     assert repair_json('["lorem "ipsum" sic"]') == '["lorem \\"ipsum\\" sic"]'
     assert repair_json('{"key1": ["value1", "value2"}, "key2": ["value3", "value4"]}') == '{"key1": ["value1", "value2"], "key2": ["value3", "value4"]}'
     assert repair_json('[ "value", /* comment */ "value2" ]') == '["value", "value2"]'
+    assert repair_json('{"key": ["value" "value1" "value2"]}') == '{"key": ["value", "value1", "value2"]}'
+    assert repair_json('{"key": ["lorem "ipsum" dolor "sit" amet, "consectetur" ", "lorem "ipsum" dolor", "lorem"]}') == '{"key": ["lorem \\"ipsum\\" dolor \\"sit\\" amet, \\"consectetur\\" ", "lorem \\"ipsum\\" dolor", "lorem"]}'
 
 def test_escaping():
     assert repair_json("'\"'") == '""'
@@ -150,7 +152,7 @@ def test_object_edge_cases():
     assert repair_json('{"lorem": ipsum, sic, datum.",}') == '{"lorem": "ipsum, sic, datum."}'
     assert repair_json('{"lorem": sic tamet. "ipsum": sic tamet, quick brown fox. "sic": ipsum}') == '{"lorem": "sic tamet.", "ipsum": "sic tamet", "sic": "ipsum"}'
     assert repair_json('{"lorem_ipsum": "sic tamet, quick brown fox. }') == '{"lorem_ipsum": "sic tamet, quick brown fox."}'
-    assert repair_json('{"key":value, " key2":"value2" }') == '{"key": "value", "key2": "value2"}'
+    assert repair_json('{"key":value, " key2":"value2" }') == '{"key": "value", " key2": "value2"}'
     assert repair_json('{"key":value "key2":"value2" }') == '{"key": "value", "key2": "value2"}'
     assert repair_json("{'text': 'words{words in brackets}more words'}") == '{"text": "words{words in brackets}more words"}'
     assert repair_json('{text:words{words in brackets}}') == '{"text": "words{words in brackets}"}'
