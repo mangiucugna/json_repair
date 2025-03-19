@@ -128,6 +128,7 @@ def test_array_edge_cases():
     assert repair_json('[ "value", /* comment */ "value2" ]') == '["value", "value2"]'
     assert repair_json('{"key": ["value" "value1" "value2"]}') == '{"key": ["value", "value1", "value2"]}'
     assert repair_json('{"key": ["lorem "ipsum" dolor "sit" amet, "consectetur" ", "lorem "ipsum" dolor", "lorem"]}') == '{"key": ["lorem \\"ipsum\\" dolor \\"sit\\" amet, \\"consectetur\\" ", "lorem \\"ipsum\\" dolor", "lorem"]}'
+    assert repair_json('{"k"e"y": "value"}') == '{"k\\"e\\"y": "value"}'
 
 def test_escaping():
     assert repair_json("'\"'") == '""'

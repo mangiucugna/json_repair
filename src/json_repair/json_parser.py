@@ -617,7 +617,14 @@ class JSONParser:
                             string_acc += str(char)
                             self.index += 1
                             char = self.get_char_at()
-
+                        elif self.context.current == ContextValues.OBJECT_KEY:
+                            # In this case we just ignore this and move on
+                            self.log(
+                                "While parsing a string in Object Key context, we detected a quoted section that would have closed the string but has a different meaning here, ignoring it",
+                            )
+                            string_acc += str(char)
+                            self.index += 1
+                            char = self.get_char_at()
         if (
             char
             and missing_quotes
