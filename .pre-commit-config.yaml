@@ -7,37 +7,28 @@ repos:
   - id: trailing-whitespace
   - id: mixed-line-ending
   - id: end-of-file-fixer
-- repo: https://github.com/PyCQA/autoflake
-  rev: v2.3.1
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  # Ruff version.
+  rev: v0.11.2
   hooks:
-    - id: autoflake
-- repo: https://github.com/pycqa/flake8
-  rev: 7.1.2
+    # Run the linter.
+    - id: ruff
+      args: [ --fix ]
+    # Run the formatter.
+    - id: ruff-format
+- repo: https://github.com/psf/black
+  rev: 25.1.0
   hooks:
-    - id: flake8
-      args: ["--extend-ignore=E203,E501", "--per-file-ignores=__init__.py:F401"]
+    - id: black
 - repo: https://github.com/pycqa/bandit
   rev: 1.8.3
   hooks:
     - id: bandit
       args: [ --exclude, tests ]
-- repo: https://github.com/psf/black
-  rev: 25.1.0
-  hooks:
-    - id: black
 - repo: https://github.com/pre-commit/mirrors-mypy/
   rev: "v1.15.0"
   hooks:
     - id: mypy
-- repo: https://github.com/asottile/pyupgrade
-  rev: v3.19.1
-  hooks:
-    - id: pyupgrade
-- repo: https://github.com/pycqa/isort
-  rev: 6.0.1
-  hooks:
-    - id: isort
-      name: isort (python)
 - repo: local
   hooks:
   - id: run-tests
