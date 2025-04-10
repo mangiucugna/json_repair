@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Literal, Optional, TextIO, Tuple, Union
 
 from .json_context import ContextValues, JsonContext
 from .string_file_wrapper import StringFileWrapper
+from .object_comparer import ObjectComparer
 
 JSONReturnType = Union[Dict[str, Any], List[Any], str, float, int, bool, None]
 
@@ -54,6 +55,9 @@ class JSONParser:
             while self.index < len(self.json_str):
                 j = self.parse_json()
                 if j != "":
+                    if ObjectComparer.is_same_object(json[-1], j):
+                        # replace the last entry with the new one since the new one seems an update
+                        json.pop()
                     json.append(j)
                 if self.index == last_index:
                     self.index += 1
