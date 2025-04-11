@@ -32,7 +32,7 @@ where = ["src"]
 [project.scripts]
 json_repair = "json_repair.__main__:cli"
 [tool.ruff.lint]
-# Read more here https://beta.ruff.rs/docs/rules/
+# Read more here https://docs.astral.sh/ruff/rules/
 # By default, Ruff enables Flake8's E and F rules
 # Pyflakes - F, pycodestyle - E, W
 # flake8-builtins - A

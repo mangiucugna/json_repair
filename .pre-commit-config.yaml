@@ -15,10 +15,6 @@ repos:
       args: [ --fix ]
     # Run the formatter.
     - id: ruff-format
-- repo: https://github.com/psf/black
-  rev: 25.1.0
-  hooks:
-    - id: black
 - repo: https://github.com/pycqa/bandit
   rev: 1.8.3
   hooks:
