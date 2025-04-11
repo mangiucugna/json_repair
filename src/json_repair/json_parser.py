@@ -1,8 +1,8 @@
 from typing import Any, Dict, List, Literal, Optional, TextIO, Tuple, Union
 
 from .json_context import ContextValues, JsonContext
-from .string_file_wrapper import StringFileWrapper
 from .object_comparer import ObjectComparer
+from .string_file_wrapper import StringFileWrapper
 
 JSONReturnType = Union[Dict[str, Any], List[Any], str, float, int, bool, None]
 
