@@ -14,9 +14,6 @@ class ObjectComparer:
         """
         if type(obj1) is not type(obj2):
             # Fail immediately if the types don't match
-            print(
-                f"Type mismatch at {path}: {type(obj1).__name__} vs {type(obj2).__name__}"
-            )
             return False
 
         if isinstance(obj1, dict) and isinstance(obj2, dict):
@@ -27,10 +24,8 @@ class ObjectComparer:
             extra_keys2 = keys2 - keys1
 
             if extra_keys1:
-                print(f"Extra keys in first object at {path}: {extra_keys1}")
                 return False
             if extra_keys2:
-                print(f"Extra keys in second object at {path}: {extra_keys2}")
                 return False
 
             # Recursively compare the common keys
@@ -44,7 +39,6 @@ class ObjectComparer:
             # Compare lists
             min_length = min(len(obj1), len(obj2))
             if len(obj1) != len(obj2):
-                print(f"Length mismatch at {path}: {len(obj1)} vs {len(obj2)}")
                 return False
 
             for i in range(min_length):
@@ -54,10 +48,8 @@ class ObjectComparer:
                     return False
 
             if len(obj1) > len(obj2):
-                print(f"Extra items in first list at {path}: {obj1[min_length:]}")
                 return False
             elif len(obj2) > len(obj1):
-                print(f"Extra items in second list at {path}: {obj2[min_length:]}")
                 return False
 
         return True
