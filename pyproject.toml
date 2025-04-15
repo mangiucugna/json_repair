@@ -40,3 +40,6 @@ json_repair = "json_repair.__main__:cli"
 # isort - I
 select = ['E', 'F', 'W', 'A', 'PLC', 'PLE', 'PLW', 'I']
 ignore = ["E501"]
+[tool.ruff.lint.per-file-ignores]
+# Explicit re-exports is fine in __init__.py, still a code smell elsewhere.
+"__init__.py" = ["PLC0414"]
