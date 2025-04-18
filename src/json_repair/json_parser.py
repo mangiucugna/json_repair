@@ -660,6 +660,8 @@ class JSONParser:
 
     def parse_number(self) -> Union[float, int, str, JSONReturnType]:
         # <number> is a valid real number expressed in one of a number of given formats
+        # Record start position to rollback if we detect trailing text indicating a string
+        start_index = self.index
         number_str = ""
         char = self.get_char_at()
         is_array = self.context.current == ContextValues.ARRAY
@@ -667,10 +669,15 @@ class JSONParser:
             number_str += char
             self.index += 1
             char = self.get_char_at()
-        if number_str and number_str[-1] in "-eE/,":
+        if number_str and number_str[-1] in "-eE/,:":
             # The number ends with a non valid character for a number/currency, rolling back one
             number_str = number_str[:-1]
             self.index -= 1
+        # If next character is a letter, treat as an unquoted string
+        if char and char.isalpha():
+            # Rollback to start and parse the full token as a string
+            self.index = start_index
+            return self.parse_string()
         try:
             if "," in number_str:
                 return str(number_str)
