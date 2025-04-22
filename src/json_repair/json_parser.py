@@ -10,7 +10,6 @@ JSONReturnType = Union[Dict[str, Any], List[Any], str, float, int, bool, None]
 class JSONParser:
     # Constants
     STRING_DELIMITERS = ['"', "'", "“", "”"]
-    NUMBER_CHARS = set("0123456789-.eE/,")
 
     def __init__(
         self,
@@ -663,7 +662,8 @@ class JSONParser:
         number_str = ""
         char = self.get_char_at()
         is_array = self.context.current == ContextValues.ARRAY
-        while char and char in self.NUMBER_CHARS and (not is_array or char != ","):
+        NUMBER_CHARS = set("0123456789-.eE/,")
+        while char and char in NUMBER_CHARS and (not is_array or char != ","):
             number_str += char
             self.index += 1
             char = self.get_char_at()
@@ -671,6 +671,10 @@ class JSONParser:
             # The number ends with a non valid character for a number/currency, rolling back one
             number_str = number_str[:-1]
             self.index -= 1
+        elif (self.get_char_at() or "").isalpha():
+            # this was a string instead, sorry
+            self.index -= len(number_str)
+            return self.parse_string()
         try:
             if "," in number_str:
                 return str(number_str)

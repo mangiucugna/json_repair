@@ -179,6 +179,11 @@ def test_number_edge_cases():
     assert repair_json('{"key": 10-20}') == '{"key": "10-20"}'
     assert repair_json('{"key": 1.1.1}') == '{"key": "1.1.1"}'
     assert repair_json('[- ') == '[]'
+    assert repair_json('{"key": 1. }') == '{"key": 1.0}'
+    assert repair_json('{"key": 1e10 }') == '{"key": 10000000000.0}'
+    assert repair_json('{"key": 1e }') == '{"key": 1}'
+    assert repair_json('{"key": 1notanumber }') == '{"key": "1notanumber"}'
+    assert repair_json('[1, 2notanumber]') == '[1, "2notanumber"]'
 
 def test_markdown():
     assert repair_json('{ "content": "[LINK]("https://google.com")" }') == '{"content": "[LINK](\\"https://google.com\\")"}'
