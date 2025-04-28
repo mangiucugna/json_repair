@@ -166,6 +166,8 @@ def test_object_edge_cases():
     assert repair_json('{ "key": { "key2": "value2" // comment }, "key3": "value3" }') == '{"key": {"key2": "value2"}, "key3": "value3"}'
     assert repair_json('{ "key": { "key2": "value2" # comment }, "key3": "value3" }') == '{"key": {"key2": "value2"}, "key3": "value3"}'
     assert repair_json('{ "key": { "key2": "value2" /* comment */ }, "key3": "value3" }') == '{"key": {"key2": "value2"}, "key3": "value3"}'
+    assert repair_json('{ "key": ["arrayvalue"], ["arrayvalue1"], "key3": "value3" }') == '{"key": ["arrayvalue", "arrayvalue1"], "key3": "value3"}'
+    assert repair_json('{ "key": ["arrayvalue"], "key3": "value3", ["arrayvalue1"] }') == '{"key": ["arrayvalue"], "key3": "value3", "arrayvalue1": ""}'
 
 def test_number_edge_cases():
     assert repair_json(' - { "test_key": ["test_value", "test_value2"] }') == '{"test_key": ["test_value", "test_value2"]}'

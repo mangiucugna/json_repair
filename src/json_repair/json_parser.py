@@ -113,7 +113,7 @@ class JSONParser:
 
     def parse_object(self) -> Dict[str, JSONReturnType]:
         # <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
-        obj = {}
+        obj: Dict[str, JSONReturnType] = {}
         # Stop when you either find the closing parentheses or you have iterated over the entire string
         while (self.get_char_at() or "}") != "}":
             # This is what we expect to find:
@@ -141,6 +141,27 @@ class JSONParser:
             while self.get_char_at():
                 # The rollback index needs to be updated here in case the key is empty
                 rollback_index = self.index
+                if self.get_char_at() == "[" and key == "":
+                    # Is this an array?
+                    # Need to check if the previous parsed value contained in obj is an array and in that case parse and merge the two
+                    prev_key = list(obj.keys())[-1] if obj else None
+                    if prev_key and isinstance(obj[prev_key], list):
+                        # If the previous key's value is an array, parse the new array and merge
+                        self.index += 1
+                        new_array = self.parse_array()
+                        if isinstance(new_array, list):
+                            # Merge and flatten the arrays
+                            prev_value = obj[prev_key]
+                            if isinstance(prev_value, list):
+                                prev_value.extend(
+                                    new_array[0]
+                                    if len(new_array) == 1
+                                    and isinstance(new_array[0], list)
+                                    else new_array
+                                )
+                            continue
+                        else:
+                            self.index = rollback_index
                 key = str(self.parse_string())
                 if key == "":
                     self.skip_whitespaces_at()
@@ -216,7 +237,7 @@ class JSONParser:
 
             # skip over whitespace after a value but before closing ]
             char = self.get_char_at()
-            while char and (char.isspace() or char == ","):
+            while char and char != "]" and (char.isspace() or char == ","):
                 self.index += 1
                 char = self.get_char_at()
 
