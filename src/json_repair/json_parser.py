@@ -168,6 +168,10 @@ class JSONParser:
                                     and isinstance(new_array[0], list)
                                     else new_array
                                 )
+                            self.skip_whitespaces_at()
+                            if self.get_char_at() == ",":
+                                self.index += 1
+                            self.skip_whitespaces_at()
                             continue
                         else:
                             self.index = rollback_index
