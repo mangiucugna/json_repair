@@ -77,6 +77,7 @@ def loads(
     json_str: str,
     skip_json_loads: bool = False,
     logging: bool = False,
+    stream_stable: bool = False,
 ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     This function works like `json.loads()` except that it will fix your JSON in the process.
@@ -95,6 +96,7 @@ def loads(
         return_objects=True,
         skip_json_loads=skip_json_loads,
         logging=logging,
+        stream_stable=stream_stable,
     )
 
 

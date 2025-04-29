@@ -383,11 +383,15 @@ class JSONParser:
                     "While parsing a string missing the left delimiter in object key context, we found a :, stopping here",
                 )
                 break
-            radical = missing_quotes or not self.stream_stable
-            if radical and self.context.current == ContextValues.OBJECT_VALUE and char in [
-                ",",
-                "}",
-            ]:
+            if (
+                (missing_quotes or not self.stream_stable)
+                and self.context.current == ContextValues.OBJECT_VALUE
+                and char
+                in [
+                    ",",
+                    "}",
+                ]
+            ):
                 rstring_delimiter_missing = True
                 # check if this is a case in which the closing comma is NOT missing instead
                 i = self.skip_to_character(character=rstring_delimiter, idx=1)
@@ -456,7 +460,11 @@ class JSONParser:
                         "While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn't determine that a right delimiter was present. Stopping here",
                     )
                     break
-            if radical and char == "]" and ContextValues.ARRAY in self.context.context:
+            if (
+                (missing_quotes or not self.stream_stable)
+                and char == "]"
+                and ContextValues.ARRAY in self.context.context
+            ):
                 # We found the end of an array and we are in array context
                 # So let's check if we find a rstring_delimiter forward otherwise end early
                 i = self.skip_to_character(rstring_delimiter)
@@ -687,7 +695,9 @@ class JSONParser:
         else:
             self.index += 1
 
-        if not self.stream_stable and (missing_quotes or (string_acc and string_acc[-1] == "\n")):
+        if not self.stream_stable and (
+            missing_quotes or (string_acc and string_acc[-1] == "\n")
+        ):
             # Clean the whitespaces for some corner cases
             string_acc = string_acc.rstrip()
 
