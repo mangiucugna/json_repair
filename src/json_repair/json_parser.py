@@ -17,6 +17,7 @@ class JSONParser:
         json_fd: Optional[TextIO],
         logging: Optional[bool],
         json_fd_chunk_length: int = 0,
+        stream_stable: bool = False,
     ) -> None:
         # The string to parse
         self.json_str: Union[str, StringFileWrapper] = json_str
@@ -40,6 +41,14 @@ class JSONParser:
         else:
             # No-op
             self.log = lambda *args, **kwargs: None
+        # When the json to be repaired is the accumulation of streaming json at a certain moment.
+        # e.g. json obtained from llm response.
+        # If this parameter to True will keep the repair results stable. For example:
+        #   case 1:  '{"key": "val\\' => '{"key": "val"}'
+        #   case 2:  '{"key": "val\\n' => '{"key": "val\\n"}'
+        #   case 3:  '{"key": "val\\n123,`key2:value2' => '{"key": "val\\n123,`key2:value2"}'
+        #   case 4:  '{"key": "val\\n123,`key2:value2`"}' => '{"key": "val\\n123,`key2:value2`"}'
+        self.stream_stable = stream_stable
 
     def parse(
         self,
@@ -374,7 +383,8 @@ class JSONParser:
                     "While parsing a string missing the left delimiter in object key context, we found a :, stopping here",
                 )
                 break
-            if self.context.current == ContextValues.OBJECT_VALUE and char in [
+            radical = missing_quotes or not self.stream_stable
+            if radical and self.context.current == ContextValues.OBJECT_VALUE and char in [
                 ",",
                 "}",
             ]:
@@ -446,7 +456,7 @@ class JSONParser:
                         "While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn't determine that a right delimiter was present. Stopping here",
                     )
                     break
-            if char == "]" and ContextValues.ARRAY in self.context.context:
+            if radical and char == "]" and ContextValues.ARRAY in self.context.context:
                 # We found the end of an array and we are in array context
                 # So let's check if we find a rstring_delimiter forward otherwise end early
                 i = self.skip_to_character(rstring_delimiter)
@@ -456,6 +466,9 @@ class JSONParser:
             string_acc += char
             self.index += 1
             char = self.get_char_at()
+            # Unclosed string ends with a \ character. This character is ignored if stream_stable = True.
+            if self.stream_stable and not char and string_acc[-1] == "\\":
+                string_acc = string_acc[:-1]
             if char and string_acc[-1] == "\\":
                 # This is a special case, if people use real strings this might happen
                 self.log("Found a stray escape sequence, normalizing it")
@@ -665,14 +678,16 @@ class JSONParser:
         # A fallout of the previous special case in the while loop,
         # we need to update the index only if we had a closing quote
         if char != rstring_delimiter:
-            self.log(
-                "While parsing a string, we missed the closing quote, ignoring",
-            )
-            string_acc = string_acc.rstrip()
+            # if stream_stable = True, unclosed strings do not trim trailing whitespace characters
+            if not self.stream_stable:
+                self.log(
+                    "While parsing a string, we missed the closing quote, ignoring",
+                )
+                string_acc = string_acc.rstrip()
         else:
             self.index += 1
 
-        if missing_quotes or (string_acc and string_acc[-1] == "\n"):
+        if not self.stream_stable and (missing_quotes or (string_acc and string_acc[-1] == "\n")):
             # Clean the whitespaces for some corner cases
             string_acc = string_acc.rstrip()
 

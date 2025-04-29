@@ -299,6 +299,20 @@ def test_ensure_ascii():
     assert repair_json("{'test_中国人_ascii':'统一码'}", ensure_ascii=False) == '{"test_中国人_ascii": "统一码"}'
 
 
+def test_stream_stable():
+    # default: stream_stable = False
+    # When the json to be repaired is the accumulation of streaming json at a certain moment.
+    # The default repair result is unstable.
+    assert repair_json('{"key": "val\\', stream_stable=False) == '{"key": "val\\\\"}'
+    assert repair_json('{"key": "val\\n', stream_stable=False) == '{"key": "val"}'
+    assert repair_json('{"key": "val\\n123,`key2:value2', stream_stable=False) == '{"key": "val\\n123", "key2": "value2"}'
+    assert repair_json('{"key": "val\\n123,`key2:value2`"}', stream_stable=True) == '{"key": "val\\n123,`key2:value2`"}'
+    # stream_stable = True
+    assert repair_json('{"key": "val\\', stream_stable=True) == '{"key": "val"}'
+    assert repair_json('{"key": "val\\n', stream_stable=True) == '{"key": "val\\n"}'
+    assert repair_json('{"key": "val\\n123,`key2:value2', stream_stable=True) == '{"key": "val\\n123,`key2:value2"}'
+    assert repair_json('{"key": "val\\n123,`key2:value2`"}', stream_stable=True) == '{"key": "val\\n123,`key2:value2`"}'
+
 
 def test_cli(capsys):
     # Create a temporary file
