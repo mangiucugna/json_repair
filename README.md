@@ -149,6 +149,14 @@ Some rules of thumb to use:
 - `skip_json_loads` is faster only if you 100% know that the string is not a valid JSON
 - If you are having issues with escaping pass the string as **raw** string like: `r"string with escaping\""`
 
+### Use json_repair with streaming
+
+Sometimes you are streaming some data and want to repair the JSON coming from it. Normally this won't work but you can pass `stream_stable` to `repair_json()` or `loads()` to make it work:
+
+```
+stream_output = repair_json(stream_input, stream_stable=True)
+```
+
 ### Use json_repair from CLI
 
 Install the library for command-line with:
