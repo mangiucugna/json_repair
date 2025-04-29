@@ -38,6 +38,7 @@ def repair_json(
     json_fd: Optional[TextIO] = None,
     ensure_ascii: bool = True,
     chunk_length: int = 0,
+    stream_stable: bool = False,
 ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     Given a json formatted string, it will try to decode it and, if it fails, it will try to fix it.
@@ -50,11 +51,11 @@ def repair_json(
         json_fd (Optional[TextIO], optional): File descriptor for JSON input. Do not use! Use `from_file` or `load` instead. Defaults to None.
         ensure_ascii (bool, optional): Set to False to avoid converting non-latin characters to ascii (for example when using chinese characters). Defaults to True. Ignored if `skip_json_loads` is True.
         chunk_length (int, optional): Size in bytes of the file chunks to read at once. Ignored if `json_fd` is None. Do not use! Use `from_file` or `load` instead. Defaults to 1MB.
-
+        stream_stable (bool, optional): When the json to be repaired is the accumulation of streaming json at a certain moment.If this parameter to True will keep the repair results stable.
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON or a tuple with the repaired JSON and repair log.
     """
-    parser = JSONParser(json_str, json_fd, logging, chunk_length)
+    parser = JSONParser(json_str, json_fd, logging, chunk_length, stream_stable)
     if skip_json_loads:
         parsed_json = parser.parse()
     else:
@@ -76,6 +77,7 @@ def loads(
     json_str: str,
     skip_json_loads: bool = False,
     logging: bool = False,
+    stream_stable: bool = False,
 ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
     """
     This function works like `json.loads()` except that it will fix your JSON in the process.
@@ -94,6 +96,7 @@ def loads(
         return_objects=True,
         skip_json_loads=skip_json_loads,
         logging=logging,
+        stream_stable=stream_stable,
     )
 
 
