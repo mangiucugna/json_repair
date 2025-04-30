@@ -267,7 +267,7 @@ def cli(inline_args: Optional[List[str]] = None) -> int:
         else:
             print(json.dumps(result, indent=args.indent, ensure_ascii=ensure_ascii))
     except Exception as e:  # pragma: no cover
-        print(f"Error: {str(e)}", file=sys.stderr)
+        print(f"Error: {e!s}", file=sys.stderr)
         return 1
 
     return 0  # Success

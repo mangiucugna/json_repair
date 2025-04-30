@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Literal, Optional, TextIO, Tuple, Union
+from typing import Any, ClassVar, Dict, List, Literal, Optional, TextIO, Tuple, Union
 
 from .json_context import ContextValues, JsonContext
 from .object_comparer import ObjectComparer
@@ -9,7 +9,7 @@ JSONReturnType = Union[Dict[str, Any], List[Any], str, float, int, bool, None]
 
 class JSONParser:
     # Constants
-    STRING_DELIMITERS = ['"', "'", "“", "”"]
+    STRING_DELIMITERS: ClassVar[list[str]] = ['"', "'", "“", "”"]
 
     def __init__(
         self,
@@ -343,7 +343,7 @@ class JSONParser:
                     # Ok this is not a doubled quote, check if this is an empty string or not
                     i = self.skip_whitespaces_at(idx=1, move_main_index=False)
                     next_c = self.get_char_at(i)
-                    if next_c in self.STRING_DELIMITERS + ["{", "["]:
+                    if next_c in [*self.STRING_DELIMITERS, "{", "["]:
                         # something fishy is going on here
                         self.log(
                             "While parsing a string, we found a doubled quote but also another quote afterwards, ignoring it",

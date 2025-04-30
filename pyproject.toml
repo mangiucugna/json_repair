@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 [project]
 name = "json_repair"
-version = "0.44.0"
+version = "0.44.1"
 license = {file = "LICENSE"}
 authors = [
   { name="Stefano Baccianella", email="4247706+mangiucugna@users.noreply.github.com" },
@@ -31,6 +31,12 @@ pythonpath = [
 where = ["src"]
 [project.scripts]
 json_repair = "json_repair.__main__:cli"
+[tool.ruff]
+# Same as Black.
+indent-width = 4
+
+# Assume Python 3.13
+target-version = "py313"
 [tool.ruff.lint]
 # Read more here https://docs.astral.sh/ruff/rules/
 # By default, Ruff enables Flake8's E and F rules
@@ -38,8 +44,27 @@ json_repair = "json_repair.__main__:cli"
 # flake8-builtins - A
 # Pylint - PLC, PLE, PLW
 # isort - I
-select = ['E', 'F', 'W', 'A', 'PLC', 'PLE', 'PLW', 'I']
+# flake8-bandit - S
+# flake8-tidy-imports - TID
+select = ['E', 'F', 'W', 'A', 'PLC', 'PLE', 'PLW', 'I', 'S', 'TID', 'RUF']
 ignore = ["E501"]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
 [tool.ruff.lint.per-file-ignores]
 # Explicit re-exports is fine in __init__.py, still a code smell elsewhere.
 "__init__.py" = ["PLC0414"]
