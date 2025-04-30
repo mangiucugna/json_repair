@@ -25,9 +25,35 @@ All supported use cases are in the unit tests
 import argparse
 import json
 import sys
-from typing import Dict, List, Optional, TextIO, Tuple, Union
+from typing import Dict, List, Literal, Optional, TextIO, Tuple, Union, overload
 
 from .json_parser import JSONParser, JSONReturnType
+
+
+@overload
+def repair_json(
+    json_str: str = "",
+    return_objects: Literal[False] = False,
+    skip_json_loads: bool = False,
+    logging: bool = False,
+    json_fd: Optional[TextIO] = None,
+    ensure_ascii: bool = True,
+    chunk_length: int = 0,
+    stream_stable: bool = False,
+) -> str: ...
+
+
+@overload
+def repair_json(
+    json_str: str = "",
+    return_objects: Literal[True] = True,
+    skip_json_loads: bool = False,
+    logging: bool = False,
+    json_fd: Optional[TextIO] = None,
+    ensure_ascii: bool = True,
+    chunk_length: int = 0,
+    stream_stable: bool = False,
+) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: ...
 
 
 def repair_json(
@@ -78,7 +104,7 @@ def loads(
     skip_json_loads: bool = False,
     logging: bool = False,
     stream_stable: bool = False,
-) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
+) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]], str]:
     """
     This function works like `json.loads()` except that it will fix your JSON in the process.
     It is a wrapper around the `repair_json()` function with `return_objects=True`.
@@ -89,7 +115,7 @@ def loads(
         logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False.
 
     Returns:
-        Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
+        Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]], str]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
     """
     return repair_json(
         json_str=json_str,
