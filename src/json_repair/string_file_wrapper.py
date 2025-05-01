@@ -1,5 +1,5 @@
 import os
-from typing import TextIO, Union
+from typing import TextIO
 
 
 class StringFileWrapper:
@@ -48,7 +48,7 @@ class StringFileWrapper:
                     self.buffers.pop(oldest_key)
         return self.buffers[index]
 
-    def __getitem__(self, index: Union[int, slice]) -> str:
+    def __getitem__(self, index: int | slice) -> str:
         """
         Retrieve a character or a slice of characters from the file.
 
@@ -97,7 +97,7 @@ class StringFileWrapper:
             self.fd.seek(current_position)
         return self.length
 
-    def __setitem__(self, index: Union[int, slice], value: str) -> None:
+    def __setitem__(self, index: int | slice, value: str) -> None:
         """
         Set a character or a slice of characters in the file.
 

@@ -1,10 +1,10 @@
-from typing import Any, ClassVar, Literal, TextIO, Union
+from typing import Any, ClassVar, Literal, TextIO
 
 from .json_context import ContextValues, JsonContext
 from .object_comparer import ObjectComparer
 from .string_file_wrapper import StringFileWrapper
 
-JSONReturnType = Union[dict[str, Any], list[Any], str, float, int, bool, None]
+JSONReturnType = dict[str, Any] | list[Any] | str | float | int | bool | None
 
 
 class JSONParser:
