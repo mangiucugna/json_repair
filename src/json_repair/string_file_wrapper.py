@@ -97,7 +97,7 @@ class StringFileWrapper:
             self.fd.seek(current_position)
         return self.length
 
-    def __setitem__(self, index: int | slice, value: str) -> None:
+    def __setitem__(self, index: Union[int, slice], value: str) -> None:
         """
         Set a character or a slice of characters in the file.
 
