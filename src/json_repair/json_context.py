@@ -1,5 +1,4 @@
 from enum import Enum, auto
-from typing import List, Optional
 
 
 class ContextValues(Enum):
@@ -10,8 +9,8 @@ class ContextValues(Enum):
 
 class JsonContext:
     def __init__(self) -> None:
-        self.context: List[ContextValues] = []
-        self.current: Optional[ContextValues] = None
+        self.context: list[ContextValues] = []
+        self.current: ContextValues | None = None
         self.empty: bool = True
 
     def set(self, value: ContextValues) -> None:

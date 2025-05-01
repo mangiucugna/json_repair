@@ -1,10 +1,10 @@
-from typing import Any, ClassVar, Dict, List, Literal, Optional, TextIO, Tuple, Union
+from typing import Any, ClassVar, Literal, TextIO, Union
 
 from .json_context import ContextValues, JsonContext
 from .object_comparer import ObjectComparer
 from .string_file_wrapper import StringFileWrapper
 
-JSONReturnType = Union[Dict[str, Any], List[Any], str, float, int, bool, None]
+JSONReturnType = Union[dict[str, Any], list[Any], str, float, int, bool, None]
 
 
 class JSONParser:
@@ -13,14 +13,14 @@ class JSONParser:
 
     def __init__(
         self,
-        json_str: Union[str, StringFileWrapper],
-        json_fd: Optional[TextIO],
-        logging: Optional[bool],
+        json_str: str | StringFileWrapper,
+        json_fd: TextIO | None,
+        logging: bool | None,
         json_fd_chunk_length: int = 0,
         stream_stable: bool = False,
     ) -> None:
         # The string to parse
-        self.json_str: Union[str, StringFileWrapper] = json_str
+        self.json_str: str | StringFileWrapper = json_str
         # Alternatively, the file description with a json file in it
         if json_fd:
             # This is a trick we do to treat the file wrapper as an array
@@ -36,7 +36,7 @@ class JSONParser:
         # Replace self.log with a noop
         self.logging = logging
         if logging:
-            self.logger: List[Dict[str, str]] = []
+            self.logger: list[dict[str, str]] = []
             self.log = self._log
         else:
             # No-op
@@ -52,7 +52,7 @@ class JSONParser:
 
     def parse(
         self,
-    ) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
+    ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
         json = self.parse_json()
         if self.index < len(self.json_str):
             self.log(
@@ -120,9 +120,9 @@ class JSONParser:
             else:
                 self.index += 1
 
-    def parse_object(self) -> Dict[str, JSONReturnType]:
+    def parse_object(self) -> dict[str, JSONReturnType]:
         # <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
-        obj: Dict[str, JSONReturnType] = {}
+        obj: dict[str, JSONReturnType] = {}
         # Stop when you either find the closing parentheses or you have iterated over the entire string
         while (self.get_char_at() or "}") != "}":
             # This is what we expect to find:
@@ -228,7 +228,7 @@ class JSONParser:
         self.index += 1
         return obj
 
-    def parse_array(self) -> List[JSONReturnType]:
+    def parse_array(self) -> list[JSONReturnType]:
         # <array> ::= '[' [ <json> *(', ' <json>) ] ']' ; A sequence of JSON values separated by commas
         arr = []
         self.context.set(ContextValues.ARRAY)
@@ -265,7 +265,7 @@ class JSONParser:
         self.context.reset()
         return arr
 
-    def parse_string(self) -> Union[str, bool, None]:
+    def parse_string(self) -> str | bool | None:
         # <string> is a string of valid characters enclosed in quotes
         # i.e. { name: "John" }
         # Somehow all weird cases in an invalid JSON happen to be resolved in this function, so be careful here
@@ -343,7 +343,7 @@ class JSONParser:
                     # Ok this is not a doubled quote, check if this is an empty string or not
                     i = self.skip_whitespaces_at(idx=1, move_main_index=False)
                     next_c = self.get_char_at(i)
-                    if next_c in [*self.STRING_DELIMITERS, "{", "["]:
+                    if next_c in self.STRING_DELIMITERS + ["{", "["]:
                         # something fishy is going on here
                         self.log(
                             "While parsing a string, we found a doubled quote but also another quote afterwards, ignoring it",
@@ -707,7 +707,7 @@ class JSONParser:
 
         return string_acc
 
-    def parse_number(self) -> Union[float, int, str, JSONReturnType]:
+    def parse_number(self) -> float | int | str | JSONReturnType:
         # <number> is a valid real number expressed in one of a number of given formats
         number_str = ""
         char = self.get_char_at()
@@ -738,11 +738,11 @@ class JSONParser:
         except ValueError:
             return number_str
 
-    def parse_boolean_or_null(self) -> Union[bool, str, None]:
+    def parse_boolean_or_null(self) -> bool | str | None:
         # <boolean> is one of the literal strings 'true', 'false', or 'null' (unquoted)
         starting_index = self.index
         char = (self.get_char_at() or "").lower()
-        value: Optional[Tuple[str, Optional[bool]]]
+        value: tuple[str, bool | None] | None
         if char == "t":
             value = ("true", True)
         elif char == "f":
@@ -833,7 +833,7 @@ class JSONParser:
             self.index += 1
             return ""
 
-    def get_char_at(self, count: int = 0) -> Union[str, Literal[False]]:
+    def get_char_at(self, count: int = 0) -> str | Literal[False]:
         # Why not use something simpler? Because try/except in python is a faster alternative to an "if" statement that is often True
         try:
             return self.json_str[self.index + count]

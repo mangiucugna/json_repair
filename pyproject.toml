@@ -40,14 +40,30 @@ target-version = "py313"
 [tool.ruff.lint]
 # Read more here https://docs.astral.sh/ruff/rules/
 # By default, Ruff enables Flake8's E and F rules
-# Pyflakes - F, pycodestyle - E, W
-# flake8-builtins - A
+# FastAPI - FAST
+# Flake8-bandit - S
+# Flake8-bugbear – catches real-world Python footguns - B
+# Flake8-builtins - A
+# Flake8-tidy-imports - TID
+# Isort - I
+# Mccabe – code complexity warnings - C90
+# Pycodestyle - E, W
+# Pyflakes - F
 # Pylint - PLC, PLE, PLW
-# isort - I
-# flake8-bandit - S
-# flake8-tidy-imports - TID
-select = ['E', 'F', 'W', 'A', 'PLC', 'PLE', 'PLW', 'I', 'S', 'TID', 'RUF']
-ignore = ["E501"]
+# Ruff specific - RUF
+# Simplifications (e.g., if x == True → if x) - SIM
+# Pyupgrade – safe modernization (e.g., str() → f"") - UP
+
+select = ['A', 'B', 'C90', 'E', 'F', 'FAST', 'I', 'PLC', 'PLE', 'PLW', 'S', 'SIM', 'TID', 'W']
+# Only enable these RUF rules
+extend-select = [
+  "RUF001",  # ambiguous Unicode
+  "RUF012",  # mutable default arguments
+  "RUF013",  # unnecessary super()
+  "RUF016",  # unnecessary else after return (optional)
+  "RUF018",  # unnecessary else after raise (optional)
+]
+ignore = ["E501", "C901"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]

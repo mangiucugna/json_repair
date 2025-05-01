@@ -47,9 +47,7 @@ class ObjectComparer:
                 ):
                     return False
 
-            if len(obj1) > len(obj2):
-                return False
-            elif len(obj2) > len(obj1):
+            if len(obj1) > len(obj2) or len(obj2) > len(obj1):
                 return False
 
         return True

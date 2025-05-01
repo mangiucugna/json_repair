@@ -25,7 +25,7 @@ All supported use cases are in the unit tests
 import argparse
 import json
 import sys
-from typing import Dict, List, Literal, Optional, TextIO, Tuple, Union, overload
+from typing import Literal, TextIO, overload
 
 from .json_parser import JSONParser, JSONReturnType
 
@@ -36,7 +36,7 @@ def repair_json(
     return_objects: Literal[False] = False,
     skip_json_loads: bool = False,
     logging: bool = False,
-    json_fd: Optional[TextIO] = None,
+    json_fd: TextIO | None = None,
     ensure_ascii: bool = True,
     chunk_length: int = 0,
     stream_stable: bool = False,
@@ -49,11 +49,11 @@ def repair_json(
     return_objects: Literal[True] = True,
     skip_json_loads: bool = False,
     logging: bool = False,
-    json_fd: Optional[TextIO] = None,
+    json_fd: TextIO | None = None,
     ensure_ascii: bool = True,
     chunk_length: int = 0,
     stream_stable: bool = False,
-) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: ...
+) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]: ...
 
 
 def repair_json(
@@ -61,11 +61,11 @@ def repair_json(
     return_objects: bool = False,
     skip_json_loads: bool = False,
     logging: bool = False,
-    json_fd: Optional[TextIO] = None,
+    json_fd: TextIO | None = None,
     ensure_ascii: bool = True,
     chunk_length: int = 0,
     stream_stable: bool = False,
-) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
+) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
     """
     Given a json formatted string, it will try to decode it and, if it fails, it will try to fix it.
 
@@ -86,10 +86,7 @@ def repair_json(
         parsed_json = parser.parse()
     else:
         try:
-            if json_fd:
-                parsed_json = json.load(json_fd)
-            else:
-                parsed_json = json.loads(json_str)
+            parsed_json = json.load(json_fd) if json_fd else json.loads(json_str)
         except json.JSONDecodeError:
             parsed_json = parser.parse()
     # It's useful to return the actual object instead of the json string,
@@ -104,7 +101,7 @@ def loads(
     skip_json_loads: bool = False,
     logging: bool = False,
     stream_stable: bool = False,
-) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]], str]:
+) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]] | str:
     """
     This function works like `json.loads()` except that it will fix your JSON in the process.
     It is a wrapper around the `repair_json()` function with `return_objects=True`.
@@ -131,7 +128,7 @@ def load(
     skip_json_loads: bool = False,
     logging: bool = False,
     chunk_length: int = 0,
-) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
+) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
     """
     This function works like `json.load()` except that it will fix your JSON in the process.
     It is a wrapper around the `repair_json()` function with `json_fd=fd` and `return_objects=True`.
@@ -159,7 +156,7 @@ def from_file(
     skip_json_loads: bool = False,
     logging: bool = False,
     chunk_length: int = 0,
-) -> Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]:
+) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
     """
     This function is a wrapper around `load()` so you can pass the filename as string
 
@@ -183,7 +180,7 @@ def from_file(
     return jsonobj
 
 
-def cli(inline_args: Optional[List[str]] = None) -> int:
+def cli(inline_args: list[str] | None = None) -> int:
     """
     Command-line interface for repairing and parsing JSON files.
 
@@ -267,7 +264,7 @@ def cli(inline_args: Optional[List[str]] = None) -> int:
         else:
             print(json.dumps(result, indent=args.indent, ensure_ascii=ensure_ascii))
     except Exception as e:  # pragma: no cover
-        print(f"Error: {e!s}", file=sys.stderr)
+        print(f"Error: {str(e)}", file=sys.stderr)
         return 1
 
     return 0  # Success
