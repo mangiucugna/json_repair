@@ -1,16 +1,17 @@
-import sys
 import os
+import sys
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from cProfile import Profile
 import pstats
-from pstats import SortKey, Stats
 import time
+from cProfile import Profile
+from pstats import SortKey, Stats
+
 from src.json_repair.json_repair import repair_json
 
-
 # Hack: Monkey patch pstats to change the formatting method and increase precision
-pstats.f8 = lambda x: "%14.9f" % x
+pstats.f8 = lambda x: f"{x:14.9f}"
 
 m = """
 [

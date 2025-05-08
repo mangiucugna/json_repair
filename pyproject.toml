@@ -40,7 +40,6 @@ target-version = "py313"
 [tool.ruff.lint]
 # Read more here https://docs.astral.sh/ruff/rules/
 # By default, Ruff enables Flake8's E and F rules
-# FastAPI - FAST
 # Flake8-bandit - S
 # Flake8-bugbear – catches real-world Python footguns - B
 # Flake8-builtins - A
@@ -54,7 +53,7 @@ target-version = "py313"
 # Simplifications (e.g., if x == True → if x) - SIM
 # Pyupgrade – safe modernization (e.g., str() → f"") - UP
 
-select = ['A', 'B', 'C90', 'E', 'F', 'FAST', 'I', 'PLC', 'PLE', 'PLW', 'S', 'SIM', 'TID', 'UP', 'W']
+select = ['A', 'B', 'C90', 'E', 'F', 'I', 'PLC', 'PLE', 'PLW', 'S', 'SIM', 'TID', 'UP', 'W']
 # Only enable these RUF rules
 extend-select = [
   "RUF001",  # ambiguous Unicode
