@@ -25,6 +25,25 @@ classifiers = [
 pythonpath = [
   "."
 ]
+[tool.coverage.run]
+omit = [
+    "*/.cursor/extensions/*",
+    "*/pythonFiles/lib/python/*",
+    "*/site-packages/*",
+]
+[tool.coverage.report]
+exclude_also = [
+    'def __repr__',
+    'if self.debug:',
+    'if settings.DEBUG',
+    'raise AssertionError',
+    'raise NotImplementedError',
+    'if 0:',
+    'if __name__ == .__main__.:',
+    'if TYPE_CHECKING:',
+    'class .*\bProtocol\):',
+    '@(abc\.)?abstractmethod',
+]
 [tool.setuptools.package-data]
 "pkgname" = ["py.typed"]
 [tool.setuptools.packages.find]

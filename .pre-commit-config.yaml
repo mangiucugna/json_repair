@@ -14,19 +14,19 @@ repos:
   hooks:
   - id: mypy
     name: mypy
-    entry: bash -c 'mypy --python-executable .venv/bin/python src/'
+    entry: mypy --python-executable .venv/bin/python src/
     language: system
     pass_filenames: false
     types: [python]
   - id: run-tests
     name: run tests
-    entry: .venv/bin/pytest
+    entry: .venv/bin/coverage run -m pytest
     language: system
     pass_filenames: false
     types: [python]
   - id: check-coverage
     name: Check Coverage
-    entry: .venv/bin/python tests/test_coverage.py
+    entry: .venv/bin/coverage report -m --fail-under=100
     language: python
     pass_filenames: false
     types: [python]

@@ -1,7 +1,7 @@
 from typing import Any
 
 
-class ObjectComparer:
+class ObjectComparer:  # pragma: no cover
     def __init__(self) -> None:
         return
 

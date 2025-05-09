@@ -3,4 +3,3 @@ coverage
 pre-commit
 pytest
 pytest-benchmark
-pytest-cov
