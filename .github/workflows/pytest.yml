@@ -1,0 +1,30 @@
+name: Pytest and Coverage
+
+on:
+  pull_request:
+  push: 
+    branches:
+      - master
+
+jobs:
+  pytest:
+    name: Pytest and Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'  # or match your `.python-version`
+
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          activate-environment: true
+      
+      - name: Run pytest
+        run: PYTHONPATH=. uv run --frozen coverage run -m pytest
+      
+      - name: Run coverage
+        run: PYTHONPATH=. uv run --frozen coverage report -m --fail-under=100

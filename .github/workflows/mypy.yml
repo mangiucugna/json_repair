@@ -1,0 +1,23 @@
+name: Mypy Type Check
+
+on:
+  pull_request:
+
+jobs:
+  type-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          activate-environment: true
+
+      - name: Create and populate virtualenv
+        run: |
+          uv pip install mypy
+
+      - name: Run mypy
+        run: uv run mypy --python-executable .venv/bin/python3.13 app/
