@@ -21,33 +21,17 @@ class JSONParser:
     ) -> None:
         # The string to parse
         self.json_str: str | StringFileWrapper = json_str
-        # Alternatively, the file description with a json file in it
         if json_fd:
-            # This is a trick we do to treat the file wrapper as an array
             self.json_str = StringFileWrapper(json_fd, json_fd_chunk_length)
-        # Index is our iterator that will keep track of which character we are looking at right now
         self.index: int = 0
-        # This is used in the object member parsing to manage the special cases of missing quotes in key or value
         self.context = JsonContext()
-        # Use this to log the activity, but only if logging is active
 
-        # This is a trick but a beatiful one. We call self.log in the code over and over even if it's not needed.
-        # We could add a guard in the code for each call but that would make this code unreadable, so here's this neat trick
-        # Replace self.log with a noop
         self.logging = logging
         if logging:
             self.logger: list[dict[str, str]] = []
             self.log = self._log
         else:
-            # No-op
             self.log = lambda *args, **kwargs: None
-        # When the json to be repaired is the accumulation of streaming json at a certain moment.
-        # e.g. json obtained from llm response.
-        # If this parameter to True will keep the repair results stable. For example:
-        #   case 1:  '{"key": "val\\' => '{"key": "val"}'
-        #   case 2:  '{"key": "val\\n' => '{"key": "val\\n"}'
-        #   case 3:  '{"key": "val\\n123,`key2:value2' => '{"key": "val\\n123,`key2:value2"}'
-        #   case 4:  '{"key": "val\\n123,`key2:value2`"}' => '{"key": "val\\n123,`key2:value2`"}'
         self.stream_stable = stream_stable
 
     def parse(
@@ -742,58 +726,75 @@ class JSONParser:
         with the actual JSON elements.
         """
         char = self.get_char_at()
-        termination_characters = ["\n", "\r"]
-        if ContextValues.ARRAY in self.context.context:
-            termination_characters.append("]")
-        if ContextValues.OBJECT_VALUE in self.context.context:
-            termination_characters.append("}")
-        if ContextValues.OBJECT_KEY in self.context.context:
-            termination_characters.append(":")
+        # Consolidate this construction so it's not reevaluated in hot path
+        # Fewer list appends, direct tuple, one check each.
+        ctx = self.context.context
+        # Intern these so in tight loop it doesn't need to do repeated lookups
+        term_chars = ["\n", "\r"]
+        if ContextValues.ARRAY in ctx:
+            term_chars.append("]")
+        if ContextValues.OBJECT_VALUE in ctx:
+            term_chars.append("}")
+        if ContextValues.OBJECT_KEY in ctx:
+            term_chars.append(":")
+
         # Line comment starting with #
         if char == "#":
-            comment = ""
-            while char and char not in termination_characters:
-                comment += char
-                self.index += 1
-                char = self.get_char_at()
+            start = self.index
+            i = start
+            json_str = self.json_str
+            json_len = len(json_str)
+            while i < json_len:
+                c = json_str[i]
+                if c in term_chars:
+                    break
+                i += 1
+            comment = json_str[start:i]
+            self.index = i  # Move index forward
             self.log(f"Found line comment: {comment}")
             return ""
 
         # Comments starting with '/'
         elif char == "/":
             next_char = self.get_char_at(1)
-            # Handle line comment starting with //
-            if next_char == "/":
-                comment = "//"
-                self.index += 2  # Skip both slashes.
-                char = self.get_char_at()
-                while char and char not in termination_characters:
-                    comment += char
-                    self.index += 1
-                    char = self.get_char_at()
+            if next_char == "/":  # Handle line comment starting with //
+                start = self.index
+                i = start + 2  # skip both slashes
+                json_str = self.json_str
+                json_len = len(json_str)
+                while i < json_len:
+                    c = json_str[i]
+                    if c in term_chars:
+                        break
+                    i += 1
+                comment = json_str[start:i]
+                self.index = i
                 self.log(f"Found line comment: {comment}")
                 return ""
-            # Handle block comment starting with /*
-            elif next_char == "*":
-                comment = "/*"
-                self.index += 2  # Skip '/*'
-                while True:
-                    char = self.get_char_at()
-                    if not char:
-                        self.log(
-                            "Reached end-of-string while parsing block comment; unclosed block comment."
-                        )
+            elif next_char == "*":  # Handle block comment starting with /*
+                start = self.index
+                i = start + 2  # skip '/*'
+                json_str = self.json_str
+                json_len = len(json_str)
+                # Need to parse until closing '*/' or end of string
+                comment_end = -1
+                while i < json_len - 1:  # room for '*/'
+                    if json_str[i] == "*" and json_str[i+1] == "/":
+                        comment_end = i + 2
                         break
-                    comment += char
-                    self.index += 1
-                    if comment.endswith("*/"):
-                        break
-                self.log(f"Found block comment: {comment}")
+                    i += 1
+                if comment_end != -1:
+                    comment = json_str[start:comment_end]
+                    self.index = comment_end
+                    self.log(f"Found block comment: {comment}")
+                else:
+                    comment = json_str[start:json_len]
+                    self.index = json_len
+                    self.log("Reached end-of-string while parsing block comment; unclosed block comment.")
                 return ""
         return ""  # pragma: no cover
 
     def get_char_at(self, count: int = 0) -> str | Literal[False]:
-        # Why not use something simpler? Because try/except in python is a faster alternative to an "if" statement that is often True
         try:
             return self.json_str[self.index + count]
         except IndexError:
