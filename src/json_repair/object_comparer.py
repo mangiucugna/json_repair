@@ -3,7 +3,7 @@ from typing import Any
 
 class ObjectComparer:  # pragma: no cover
     def __init__(self) -> None:
-        return
+        pass  # No operation performed in the constructor
 
     @staticmethod
     def is_same_object(obj1: Any, obj2: Any, path: str = "") -> bool:
