@@ -709,7 +709,7 @@ class JSONParser:
         # <boolean> is one of the literal strings 'true', 'false', or 'null' (unquoted)
         starting_index = self.index
         char = (self.get_char_at() or "").lower()
-        value: tuple[str, bool | None] | None
+        value: tuple[str, bool | None] | None = None
         if char == "t":
             value = ("true", True)
         elif char == "f":
