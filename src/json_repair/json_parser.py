@@ -352,7 +352,7 @@ class JSONParser:
                     self.index += 1
 
         # Initialize our return value
-        string_acc = ""
+        string_parts: list[str] = []
 
         # Here things get a bit hairy because a string missing the final quote can also be a key or a value in an object
         # In that case we need to use the ":|,|}" characters as terminators of the string
@@ -433,7 +433,7 @@ class JSONParser:
                         # Check that j was not out of bound
                         elif self.get_char_at(j):
                             # Check for an unmatched opening brace in string_acc
-                            for c in reversed(string_acc):
+                            for c in reversed(string_parts):
                                 if c == "{":
                                     # Ok then this is part of the string
                                     rstring_delimiter_missing = False
@@ -454,19 +454,24 @@ class JSONParser:
                 if not self.get_char_at(i):
                     # No delimiter found
                     break
-            string_acc += char
+            string_parts.append(char)
             self.index += 1
             char = self.get_char_at()
             # Unclosed string ends with a \ character. This character is ignored if stream_stable = True.
-            if self.stream_stable and not char and string_acc[-1] == "\\":
-                string_acc = string_acc[:-1]
-            if char and string_acc[-1] == "\\":
+            if (
+                self.stream_stable
+                and not char
+                and string_parts
+                and string_parts[-1] == "\\"
+            ):
+                string_parts.pop()
+            if char and string_parts and string_parts[-1] == "\\":
                 # This is a special case, if people use real strings this might happen
                 self.log("Found a stray escape sequence, normalizing it")
                 if char in [rstring_delimiter, "t", "n", "r", "b", "\\"]:
-                    string_acc = string_acc[:-1]
+                    string_parts.pop()
                     escape_seqs = {"t": "\t", "n": "\n", "r": "\r", "b": "\b"}
-                    string_acc += escape_seqs.get(char, char) or char
+                    string_parts.append(escape_seqs.get(char, char) or char)
                     self.index += 1
                     char = self.get_char_at()
             # If we are in object key context and we find a colon, it could be a missing right quote
@@ -538,7 +543,7 @@ class JSONParser:
                             break
                 elif unmatched_delimiter:
                     unmatched_delimiter = False
-                    string_acc += str(char)
+                    string_parts.append(str(char))
                     self.index += 1
                     char = self.get_char_at()
                 else:
@@ -622,7 +627,7 @@ class JSONParser:
                                     "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
                                 )
                                 unmatched_delimiter = not unmatched_delimiter
-                                string_acc += str(char)
+                                string_parts.append(str(char))
                                 self.index += 1
                                 char = self.get_char_at()
                         elif self.context.current == ContextValues.ARRAY:
@@ -633,7 +638,7 @@ class JSONParser:
                                 "While parsing a string in Array context, we detected a quoted section that would have closed the string but has a different meaning here, ignoring it",
                             )
                             unmatched_delimiter = not unmatched_delimiter
-                            string_acc += str(char)
+                            string_parts.append(str(char))
                             self.index += 1
                             char = self.get_char_at()
                         elif self.context.current == ContextValues.OBJECT_KEY:
@@ -641,7 +646,7 @@ class JSONParser:
                             self.log(
                                 "While parsing a string in Object Key context, we detected a quoted section that would have closed the string but has a different meaning here, ignoring it",
                             )
-                            string_acc += str(char)
+                            string_parts.append(str(char))
                             self.index += 1
                             char = self.get_char_at()
         if (
@@ -659,23 +664,25 @@ class JSONParser:
 
         # A fallout of the previous special case in the while loop,
         # we need to update the index only if we had a closing quote
+        result = "".join(string_parts)
+
         if char != rstring_delimiter:
             # if stream_stable = True, unclosed strings do not trim trailing whitespace characters
             if not self.stream_stable:
                 self.log(
                     "While parsing a string, we missed the closing quote, ignoring",
                 )
-                string_acc = string_acc.rstrip()
+                result = result.rstrip()
         else:
             self.index += 1
 
         if not self.stream_stable and (
-            missing_quotes or (string_acc and string_acc[-1] == "\n")
+            missing_quotes or (result and result[-1] == "\n")
         ):
             # Clean the whitespaces for some corner cases
-            string_acc = string_acc.rstrip()
+            result = result.rstrip()
 
-        return string_acc
+        return result
 
     def parse_number(self) -> float | int | str | JSONReturnType:
         # <number> is a valid real number expressed in one of a number of given formats
@@ -751,12 +758,12 @@ class JSONParser:
             termination_characters.append(":")
         # Line comment starting with #
         if char == "#":
-            comment = ""
+            comment_parts: list[str] = []
             while char and char not in termination_characters:
-                comment += char
+                comment_parts.append(char)
                 self.index += 1
                 char = self.get_char_at()
-            self.log(f"Found line comment: {comment}")
+            self.log(f"Found line comment: {''.join(comment_parts)}")
             return ""
 
         # Comments starting with '/'
@@ -764,18 +771,18 @@ class JSONParser:
             next_char = self.get_char_at(1)
             # Handle line comment starting with //
             if next_char == "/":
-                comment = "//"
+                comment_parts = ["/", "/"]
                 self.index += 2  # Skip both slashes.
                 char = self.get_char_at()
                 while char and char not in termination_characters:
-                    comment += char
+                    comment_parts.append(char)
                     self.index += 1
                     char = self.get_char_at()
-                self.log(f"Found line comment: {comment}")
+                self.log(f"Found line comment: {''.join(comment_parts)}")
                 return ""
             # Handle block comment starting with /*
             elif next_char == "*":
-                comment = "/*"
+                comment_parts = ["/", "*"]
                 self.index += 2  # Skip '/*'
                 while True:
                     char = self.get_char_at()
@@ -784,11 +791,15 @@ class JSONParser:
                             "Reached end-of-string while parsing block comment; unclosed block comment."
                         )
                         break
-                    comment += char
+                    comment_parts.append(char)
                     self.index += 1
-                    if comment.endswith("*/"):
+                    if (
+                        len(comment_parts) >= 2
+                        and comment_parts[-2] == "*"
+                        and comment_parts[-1] == "/"
+                    ):
                         break
-                self.log(f"Found block comment: {comment}")
+                self.log(f"Found block comment: {''.join(comment_parts)}")
                 return ""
         return ""  # pragma: no cover
 
