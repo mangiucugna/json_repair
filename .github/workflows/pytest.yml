@@ -25,7 +25,7 @@ jobs:
       
       - name: Create and populate virtualenv
         run: |
-          uv pip install pytest coverage benchmark
+          uv pip install -r requirements.txt
 
       - name: Run pytest
         run: PYTHONPATH=. uv run coverage run -m pytest
