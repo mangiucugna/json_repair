@@ -26,7 +26,6 @@ jobs:
       - name: Create and populate virtualenv
         run: |
           uv pip install -r requirements.txt
-          uv sync
 
       - name: Run pytest
         run: PYTHONPATH=. uv run --frozen coverage run -m pytest
