@@ -10,6 +10,7 @@ JSONReturnType = dict[str, Any] | list[Any] | str | float | int | bool | None
 class JSONParser:
     # Constants
     STRING_DELIMITERS: ClassVar[list[str]] = ['"', "'", "“", "”"]
+    NUMBER_CHARS: ClassVar[set[str]] = set("0123456789-.eE/,")
 
     def __init__(
         self,
@@ -682,8 +683,7 @@ class JSONParser:
         number_str = ""
         char = self.get_char_at()
         is_array = self.context.current == ContextValues.ARRAY
-        NUMBER_CHARS = set("0123456789-.eE/,")
-        while char and char in NUMBER_CHARS and (not is_array or char != ","):
+        while char and char in self.NUMBER_CHARS and (not is_array or char != ","):
             number_str += char
             self.index += 1
             char = self.get_char_at()
