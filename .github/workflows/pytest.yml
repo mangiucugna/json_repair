@@ -23,6 +23,10 @@ jobs:
         with:
           activate-environment: true
       
+      - name: Create and populate virtualenv
+        run: |
+          uv pip install pytest coverage
+
       - name: Run pytest
         run: PYTHONPATH=. uv run --frozen coverage run -m pytest
       
