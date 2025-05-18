@@ -31,7 +31,7 @@ class JSONParser:
         self.context = JsonContext()
         # Use this to log the activity, but only if logging is active
 
-        # This is a trick but a beatiful one. We call self.log in the code over and over even if it's not needed.
+        # This is a trick but a beautiful one. We call self.log in the code over and over even if it's not needed.
         # We could add a guard in the code for each call but that would make this code unreadable, so here's this neat trick
         # Replace self.log with a noop
         self.logging = logging
