@@ -20,4 +20,4 @@ jobs:
           uv pip install mypy
 
       - name: Run mypy
-        run: uv run mypy --python-executable .venv/bin/python app/
+        run: uv run mypy --python-executable .venv/bin/python src/
