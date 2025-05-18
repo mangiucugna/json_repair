@@ -4,6 +4,8 @@ import pathlib
 import tempfile
 from unittest.mock import patch
 
+import pytest
+
 from src.json_repair.json_repair import cli, from_file, loads, repair_json
 
 
@@ -1062,3 +1064,22 @@ def test_cli(capsys):
         cli(inline_args=["--indent", 0])
     captured = capsys.readouterr()
     assert captured.out == expected_output
+
+
+def test_cli_inline_requires_filename(capsys):
+    """cli() should exit with an error when --inline is passed without a filename."""
+    with pytest.raises(SystemExit) as exc:
+        cli(inline_args=["--inline"])
+    captured = capsys.readouterr()
+    assert captured.err.strip() == "Error: Inline mode requires a filename"
+    assert exc.value.code != 0
+
+
+def test_cli_inline_and_output_error(tmp_path, capsys):
+    """cli() should exit with an error when --inline and --output are used together."""
+    outfile = tmp_path / "out.json"
+    with pytest.raises(SystemExit) as exc:
+        cli(inline_args=["dummy.json", "--inline", "--output", str(outfile)])
+    captured = capsys.readouterr()
+    assert captured.err.strip() == "Error: You cannot pass both --inline and --output"
+    assert exc.value.code != 0
