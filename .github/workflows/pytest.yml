@@ -28,7 +28,7 @@ jobs:
           uv pip install pytest coverage
 
       - name: Run pytest
-        run: PYTHONPATH=. uv run --frozen coverage run -m pytest
+        run: PYTHONPATH=. uv run coverage run -m pytest
       
       - name: Run coverage
-        run: PYTHONPATH=. uv run --frozen coverage report -m --fail-under=100
+        run: PYTHONPATH=. uv run coverage report -m --fail-under=100
