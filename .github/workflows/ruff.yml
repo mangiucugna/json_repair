@@ -1,5 +1,8 @@
 name: Ruff Lint and Format
 
+permissions:
+  contents: read
+
 on:
   pull_request:
 
