@@ -68,20 +68,20 @@ def test_brackets_edge_cases():
     assert repair_json("[{]") == "[{}]"
     assert repair_json("   {  }   ") == "{}"
     assert repair_json("[") == "[]"
-    assert repair_json("]") == '""'
+    assert repair_json("]") == ""
     assert repair_json("{") == "{}"
-    assert repair_json("}") == '""'
+    assert repair_json("}") == ""
     assert repair_json('{"') == "{}"
     assert repair_json('["') == "[]"
     assert repair_json("{foo: [}") == '{"foo": []}'
 
 
 def test_general_edge_cases():
-    assert repair_json('"') == '""'
-    assert repair_json("\n") == '""'
-    assert repair_json(" ") == '""'
+    assert repair_json('"') == ""
+    assert repair_json("\n") == ""
+    assert repair_json(" ") == ""
     assert repair_json("[[1\n\n]") == "[[1]]"
-    assert repair_json("string") == '""'
+    assert repair_json("string") == ""
     assert repair_json("stringbeforeobject {}") == "{}"
 
 
@@ -195,7 +195,7 @@ def test_array_edge_cases():
 
 
 def test_escaping():
-    assert repair_json("'\"'") == '""'
+    assert repair_json("'\"'") == ""
     assert (
         repair_json('{"key": \'string"\n\t\\le\'') == '{"key": "string\\"\\n\\t\\\\le"}'
     )

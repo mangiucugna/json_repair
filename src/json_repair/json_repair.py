@@ -93,6 +93,9 @@ def repair_json(
     # it allows this lib to be a replacement of the json library
     if return_objects or logging:
         return parsed_json
+    # Avoid returning only a pair of quotes if it's an empty string
+    elif parsed_json == "":
+        return ""
     return json.dumps(parsed_json, ensure_ascii=ensure_ascii)
 
 
