@@ -64,6 +64,7 @@ then you can use use it in your code like this
     good_json_string = repair_json(bad_json_string)
     # If the string was super broken this will return an empty string
 
+
 You can use this library to completely replace `json.loads()`:
 
     import json_repair

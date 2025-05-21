@@ -83,6 +83,7 @@ def test_general_edge_cases():
     assert repair_json("[[1\n\n]") == "[[1]]"
     assert repair_json("string") == ""
     assert repair_json("stringbeforeobject {}") == "{}"
+    assert repair_json("/") == ""
 
 
 def test_mixed_data_types():

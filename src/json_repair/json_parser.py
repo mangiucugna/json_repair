@@ -790,6 +790,11 @@ class JSONParser:
                         break
                 self.log(f"Found block comment: {comment}")
                 return ""
+            else:
+                # Skip standalone '/' characters that are not part of a comment
+                # to avoid getting stuck in an infinite loop
+                self.index += 1
+                return ""
         return ""  # pragma: no cover
 
     def get_char_at(self, count: int = 0) -> str | Literal[False]:
