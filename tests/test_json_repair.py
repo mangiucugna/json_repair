@@ -193,6 +193,7 @@ def test_array_edge_cases():
         == '{"key": ["lorem \\"ipsum\\" dolor \\"sit\\" amet, \\"consectetur\\" ", "lorem \\"ipsum\\" dolor", "lorem"]}'
     )
     assert repair_json('{"k"e"y": "value"}') == '{"k\\"e\\"y": "value"}'
+    assert repair_json('["key":"value"}]') == '[{"key": "value"}]'
 
 
 def test_escaping():

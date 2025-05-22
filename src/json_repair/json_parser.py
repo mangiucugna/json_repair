@@ -231,7 +231,20 @@ class JSONParser:
         char = self.get_char_at()
         while char and char not in ["]", "}"]:
             self.skip_whitespaces_at()
-            value = self.parse_json()
+            value: JSONReturnType = ""
+            if char in self.STRING_DELIMITERS:
+                # Sometimes it can happen that LLMs forget to start an object and then you think it's a string in an array
+                # So we are going to check if this string is followed by a : or not
+                # And either parse the string or parse the object
+                i = 1
+                i = self.skip_to_character(char, i)
+                i = self.skip_whitespaces_at(idx=i + 1, move_main_index=False)
+                if self.get_char_at(i) == ":":
+                    value = self.parse_object()
+                else:
+                    value = self.parse_string()
+            else:
+                value = self.parse_json()
 
             # It is possible that parse_json() returns nothing valid, so we increase by 1
             if value == "":
