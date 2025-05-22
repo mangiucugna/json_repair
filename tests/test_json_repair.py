@@ -390,6 +390,32 @@ def test_multiple_jsons():
     )
 
 
+def test_unclosed_array_before_object_field():
+    original = (
+        '{"query":{"dimensions":["a"],"filters":{"connector":"and","filterGroups":'
+        '[{"connector":"and","filters":[]},'
+        '"range":{"starting_time":"2025-05-21T10:19:04.219Z",'
+        '"ending_time":"2025-05-21T10:19:04.219Z"}'
+        ']}}'
+    )
+    expected = {
+        "query": {
+            "dimensions": ["a"],
+            "filters": {
+                "connector": "and",
+                "filterGroups": [
+                    {"connector": "and", "filters": []}
+                ],
+            },
+            "range": {
+                "starting_time": "2025-05-21T10:19:04.219Z",
+                "ending_time": "2025-05-21T10:19:04.219Z",
+            },
+        }
+    }
+    assert repair_json(original, return_objects=True) == expected
+
+
 def test_repair_json_with_objects():
     # Test with valid JSON strings
     assert repair_json("[]", return_objects=True) == []

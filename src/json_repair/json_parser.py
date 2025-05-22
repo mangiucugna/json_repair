@@ -231,6 +231,16 @@ class JSONParser:
         char = self.get_char_at()
         while char and char not in ["]", "}"]:
             self.skip_whitespaces_at()
+            char = self.get_char_at()
+            if char in self.STRING_DELIMITERS:
+                closing = self.skip_to_character(character=char, idx=1)
+                next_c = self.get_char_at(closing + 1)
+                if next_c == ":":
+                    self.json_str = (
+                        self.json_str[: self.index] + "]}" + self.json_str[self.index :]
+                    )
+                    char = "]"
+                    break
             value = self.parse_json()
 
             # It is possible that parse_json() returns nothing valid, so we increase by 1
