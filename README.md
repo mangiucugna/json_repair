@@ -250,6 +250,7 @@ You will need owner access to this repository
 - Typescript: https://github.com/josdejong/jsonrepair
 - Go: https://github.com/RealAlexandreAI/json-repair
 - Ruby: https://github.com/sashazykov/json-repair-rb
+- Rust: https://github.com/oramasearch/llm_json
 ---
 ## Star History
 
