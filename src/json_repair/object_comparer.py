@@ -6,7 +6,7 @@ class ObjectComparer:  # pragma: no cover
         pass  # No operation performed in the constructor
 
     @staticmethod
-    def is_same_object(obj1: Any, obj2: Any, path: str = "") -> bool:
+    def is_same_object(obj1: Any, obj2: Any) -> bool:
         """
         Recursively compares two objects and ensures that:
         - Their types match

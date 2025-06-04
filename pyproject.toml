@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 [project]
 name = "json_repair"
-version = "0.46.0"
+version = "0.46.1"
 license = {file = "LICENSE"}
 authors = [
   { name="Stefano Baccianella", email="4247706+mangiucugna@users.noreply.github.com" },
@@ -72,7 +72,7 @@ target-version = "py313"
 # Simplifications (e.g., if x == True → if x) - SIM
 # Pyupgrade – safe modernization (e.g., str() → f"") - UP
 
-select = ['A', 'B', 'C90', 'E', 'F', 'I', 'PLC', 'PLE', 'PLW', 'S', 'SIM', 'TID', 'UP', 'W']
+select = ['A', 'ARG', 'B', 'C4', 'C90', 'COM', 'E', 'F', 'I', 'PLC', 'PLE', 'PLW', 'Q', 'S', 'SIM', 'TID','UP', 'W']
 # Only enable these RUF rules
 extend-select = [
   "RUF001",  # ambiguous Unicode
@@ -81,7 +81,7 @@ extend-select = [
   "RUF016",  # unnecessary else after return (optional)
   "RUF018",  # unnecessary else after raise (optional)
 ]
-ignore = ["E501", "C901", "S101"]
+ignore = ["S101", "E501", "C901", "COM812"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]

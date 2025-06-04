@@ -41,7 +41,7 @@ class JSONParser:
             self.log = self._log
         else:
             # No-op
-            self.log = lambda *args, **kwargs: None
+            self.log = lambda *args, **kwargs: None  # noqa: ARG005
         # When the json to be repaired is the accumulation of streaming json at a certain moment.
         # e.g. json obtained from llm response.
         # If this parameter to True will keep the repair results stable. For example:
@@ -67,6 +67,9 @@ class JSONParser:
                         # replace the last entry with the new one since the new one seems an update
                         json.pop()
                     json.append(j)
+                else:
+                    # this was a bust, move the index
+                    self.index += 1
             # If nothing extra was found, don't return an array
             if len(json) == 1:
                 self.log(

@@ -1,10 +1,10 @@
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: v0.11.10
+  rev: v0.11.12
   hooks:
     # Run the linter.
-    - id: ruff
+    - id: ruff-check
       args: [--fix]
       types: [python]
     # Run the formatter.
@@ -30,8 +30,8 @@ repos:
     language: python
     pass_filenames: false
     types: [python]
-- repo: https://github.com/semgrep/semgrep
-  rev: "v1.121.0"
+- repo: https://github.com/semgrep/pre-commit
+  rev: "v1.122.0"
   hooks:
     - id: semgrep
       args:
