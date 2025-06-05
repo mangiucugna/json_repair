@@ -4,7 +4,7 @@ from typing import TextIO
 
 class StringFileWrapper:
     # This is a trick to simplify the code, transform the filedescriptor handling into a string handling
-    def __init__(self, fd: TextIO, CHUNK_LENGTH: int) -> None:
+    def __init__(self, fd: TextIO, chunk_length: int) -> None:
         """
         Initialize the StringFileWrapper with a file descriptor and chunk length.
 
@@ -23,10 +23,10 @@ class StringFileWrapper:
         # Buffers are 1MB strings that are read from the file
         # and kept in memory to keep reads low
         self.buffers: dict[int, str] = {}
-        # CHUNK_LENGTH is in bytes
-        if not CHUNK_LENGTH or CHUNK_LENGTH < 2:
-            CHUNK_LENGTH = 1_000_000
-        self.buffer_length = CHUNK_LENGTH
+        # chunk_length is in bytes
+        if not chunk_length or chunk_length < 2:
+            chunk_length = 1_000_000
+        self.buffer_length = chunk_length
 
     def get_buffer(self, index: int) -> str:
         """
@@ -65,19 +65,11 @@ class StringFileWrapper:
             buffer_index = index.start // self.buffer_length
             buffer_end = index.stop // self.buffer_length
             if buffer_index == buffer_end:
-                return self.get_buffer(buffer_index)[
-                    index.start % self.buffer_length : index.stop % self.buffer_length
-                ]
+                return self.get_buffer(buffer_index)[index.start % self.buffer_length : index.stop % self.buffer_length]
             else:
-                start_slice = self.get_buffer(buffer_index)[
-                    index.start % self.buffer_length :
-                ]
-                end_slice = self.get_buffer(buffer_end)[
-                    : index.stop % self.buffer_length
-                ]
-                middle_slices = [
-                    self.get_buffer(i) for i in range(buffer_index + 1, buffer_end)
-                ]
+                start_slice = self.get_buffer(buffer_index)[index.start % self.buffer_length :]
+                end_slice = self.get_buffer(buffer_end)[: index.stop % self.buffer_length]
+                middle_slices = [self.get_buffer(i) for i in range(buffer_index + 1, buffer_end)]
                 return start_slice + "".join(middle_slices) + end_slice
         else:
             buffer_index = index // self.buffer_length

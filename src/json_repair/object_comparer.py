@@ -30,10 +30,7 @@ class ObjectComparer:  # pragma: no cover
         elif isinstance(obj1, list):
             if len(obj1) != len(obj2):
                 return False
-            for i in range(len(obj1)):
-                if not ObjectComparer.is_same_object(obj1[i], obj2[i]):
-                    return False
-            return True
+            return all(ObjectComparer.is_same_object(obj1[i], obj2[i]) for i in range(len(obj1)))
 
         # For atoms: types already match, so just return True
         return True

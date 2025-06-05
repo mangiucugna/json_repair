@@ -53,26 +53,32 @@ json_repair = "json_repair.__main__:cli"
 [tool.ruff]
 # Same as Black.
 indent-width = 4
-
+line-length = 120
 # Assume Python 3.13
 target-version = "py313"
 [tool.ruff.lint]
 # Read more here https://docs.astral.sh/ruff/rules/
 # By default, Ruff enables Flake8's E and F rules
+# FastAPI - FAST
 # Flake8-bandit - S
 # Flake8-bugbear – catches real-world Python footguns - B
 # Flake8-builtins - A
+# Flake8-comprehensions  - C4
+# Flake8-commas - COM
+# Flake8-quotes - Q
 # Flake8-tidy-imports - TID
+# Flake8-unused-arguments - ARG
 # Isort - I
 # Mccabe – code complexity warnings - C90
+# PEP 8 Naming convention - N
 # Pycodestyle - E, W
 # Pyflakes - F
-# Pylint - PLC, PLE, PLW
+# Pylint - PLC, PLE, PLR, PLW
+# PyTest - PT
+# Pyupgrade – safe modernization (e.g., str() → f"") - UP
 # Ruff specific - RUF
 # Simplifications (e.g., if x == True → if x) - SIM
-# Pyupgrade – safe modernization (e.g., str() → f"") - UP
-
-select = ['A', 'ARG', 'B', 'C4', 'C90', 'COM', 'E', 'F', 'I', 'PLC', 'PLE', 'PLW', 'Q', 'S', 'SIM', 'TID','UP', 'W']
+select = ['A', 'ARG', 'B', 'C4', 'COM', 'C90', 'E', 'F', 'I', 'N', 'PLC', 'PLE', 'PLW', 'PT', 'Q', 'S', 'SIM', 'TID', 'UP', 'W']
 # Only enable these RUF rules
 extend-select = [
   "RUF001",  # ambiguous Unicode
@@ -81,8 +87,12 @@ extend-select = [
   "RUF016",  # unnecessary else after return (optional)
   "RUF018",  # unnecessary else after raise (optional)
 ]
-ignore = ["S101", "E501", "C901", "COM812"]
-
+ignore = [
+  "S101",   # assert: Use of assert detected. We like assert
+  "COM812", # Ruff: The following rule may cause conflicts when used with the formatter
+  "E501",   # Line too long
+  "C901",   # `function` is too complex
+]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
 unfixable = []

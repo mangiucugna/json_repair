@@ -236,10 +236,7 @@ def cli(inline_args: list[str] | None = None) -> int:
         help="Number of spaces for indentation (Default 2)",
     )
 
-    if inline_args is None:  # pragma: no cover
-        args = parser.parse_args()
-    else:
-        args = parser.parse_args(inline_args)
+    args = parser.parse_args() if inline_args is None else parser.parse_args(inline_args)
 
     # Inline mode requires a filename, so error out if none was provided.
     if args.inline and not args.filename:  # pragma: no cover

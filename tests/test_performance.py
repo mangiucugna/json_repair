@@ -22,9 +22,7 @@ def test_true_true_correct(benchmark):
     max_time = 3 / 10**3  # 3 millisecond
 
     # Assert that the average time is below the threshold
-    assert mean_time < max_time, (
-        f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
-    )
+    assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
 
 
 def test_true_true_incorrect(benchmark):
@@ -37,9 +35,7 @@ def test_true_true_incorrect(benchmark):
     max_time = 3 / 10**3  # 3 millisecond
 
     # Assert that the average time is below the threshold
-    assert mean_time < max_time, (
-        f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
-    )
+    assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
 
 
 def test_true_false_correct(benchmark):
@@ -51,9 +47,7 @@ def test_true_false_correct(benchmark):
     max_time = 30 * (1 / 10**6)  # 30 microsecond
 
     # Assert that the average time is below the threshold
-    assert mean_time < max_time, (
-        f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
-    )
+    assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
 
 
 def test_true_false_incorrect(benchmark):
@@ -65,9 +59,7 @@ def test_true_false_incorrect(benchmark):
     max_time = 3 / 10**3  # 3 millisecond
 
     # Assert that the average time is below the threshold
-    assert mean_time < max_time, (
-        f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
-    )
+    assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
 
 
 def test_false_true_correct(benchmark):
@@ -79,9 +71,7 @@ def test_false_true_correct(benchmark):
     max_time = 3 / 10**3  # 3 millisecond
 
     # Assert that the average time is below the threshold
-    assert mean_time < max_time, (
-        f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
-    )
+    assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
 
 
 def test_false_true_incorrect(benchmark):
@@ -93,9 +83,7 @@ def test_false_true_incorrect(benchmark):
     max_time = 3 / 10**3  # 3 millisecond
 
     # Assert that the average time is below the threshold
-    assert mean_time < max_time, (
-        f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
-    )
+    assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
 
 
 def test_false_false_correct(benchmark):
@@ -107,9 +95,7 @@ def test_false_false_correct(benchmark):
     max_time = 60 / 10**6  # 60 microsecond
 
     # Assert that the average time is below the threshold
-    assert mean_time < max_time, (
-        f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
-    )
+    assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
 
 
 def test_false_false_incorrect(benchmark):
@@ -121,6 +107,4 @@ def test_false_false_incorrect(benchmark):
     max_time = 3 / 10**3  # 3 millisecond
 
     # Assert that the average time is below the threshold
-    assert mean_time < max_time, (
-        f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
-    )
+    assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
