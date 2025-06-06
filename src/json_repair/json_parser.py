@@ -459,6 +459,17 @@ class JSONParser:
                     string_acc += escape_seqs.get(char, char) or char
                     self.index += 1
                     char = self.get_char_at()
+                elif char in ["u", "x"]:
+                    # If we find a unicode escape sequence, normalize it
+                    num_chars = 4 if char == "u" else 2
+                    next_chars = self.json_str[self.index + 1 : self.index + 1 + num_chars]
+                    if len(next_chars) == num_chars and all(c in "0123456789abcdefABCDEF" for c in next_chars):
+                        self.log("Found a unicode escape sequence, normalizing it")
+                        string_acc = string_acc[:-1]
+                        string_acc += chr(int(next_chars, 16))
+                        self.index += 1 + num_chars
+                        char = self.get_char_at()
+                        continue
             # If we are in object key context and we find a colon, it could be a missing right quote
             if char == ":" and not missing_quotes and self.context.current == ContextValues.OBJECT_KEY:
                 # Ok now we need to check if this is followed by a value like "..."
