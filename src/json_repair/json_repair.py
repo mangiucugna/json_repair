@@ -37,9 +37,9 @@ def repair_json(
     skip_json_loads: bool = False,
     logging: bool = False,
     json_fd: TextIO | None = None,
-    ensure_ascii: bool = True,
     chunk_length: int = 0,
     stream_stable: bool = False,
+    **json_dumps_args,
 ) -> str: ...
 
 
@@ -50,9 +50,9 @@ def repair_json(
     skip_json_loads: bool = False,
     logging: bool = False,
     json_fd: TextIO | None = None,
-    ensure_ascii: bool = True,
     chunk_length: int = 0,
     stream_stable: bool = False,
+    **json_dumps_args,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]: ...
 
 
@@ -62,9 +62,9 @@ def repair_json(
     skip_json_loads: bool = False,
     logging: bool = False,
     json_fd: TextIO | None = None,
-    ensure_ascii: bool = True,
     chunk_length: int = 0,
     stream_stable: bool = False,
+    **json_dumps_args,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
     """
     Given a json formatted string, it will try to decode it and, if it fails, it will try to fix it.
@@ -96,7 +96,7 @@ def repair_json(
     # Avoid returning only a pair of quotes if it's an empty string
     elif parsed_json == "":
         return ""
-    return json.dumps(parsed_json, ensure_ascii=ensure_ascii)
+    return json.dumps(parsed_json, **json_dumps_args)
 
 
 def loads(

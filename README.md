@@ -136,6 +136,10 @@ will return
 
     {"test_chinese_ascii": "统一码"}
 
+### JSON dumps parameters
+
+More in general, `repair_json` will accept all parameters that `json.dumps` accepts and just pass them through (for example indent)
+
 ### Performance considerations
 If you find this library too slow because is using `json.loads()` you can skip that by passing `skip_json_loads=True` to `repair_json`. Like:
 
