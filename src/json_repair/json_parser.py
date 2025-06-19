@@ -365,13 +365,14 @@ class JSONParser:
                 )
                 break
             if (
-                (missing_quotes or not self.stream_stable)
+                not self.stream_stable
                 and self.context.current == ContextValues.OBJECT_VALUE
                 and char
                 in [
                     ",",
                     "}",
                 ]
+                and string_acc[-1] != rstring_delimiter
             ):
                 rstring_delimiter_missing = True
                 # check if this is a case in which the closing comma is NOT missing instead
@@ -434,9 +435,10 @@ class JSONParser:
                     )
                     break
             if (
-                (missing_quotes or not self.stream_stable)
+                not self.stream_stable
                 and char == "]"
                 and ContextValues.ARRAY in self.context.context
+                and string_acc[-1] != rstring_delimiter
             ):
                 # We found the end of an array and we are in array context
                 # So let's check if we find a rstring_delimiter forward otherwise end early
@@ -456,9 +458,17 @@ class JSONParser:
                 if char in [rstring_delimiter, "t", "n", "r", "b", "\\"]:
                     string_acc = string_acc[:-1]
                     escape_seqs = {"t": "\t", "n": "\n", "r": "\r", "b": "\b"}
-                    string_acc += escape_seqs.get(char, char) or char
+                    string_acc += escape_seqs.get(char, char)
                     self.index += 1
                     char = self.get_char_at()
+                    while char and string_acc[-1] == "\\" and char in [rstring_delimiter, "\\"]:
+                        # this is a bit of a special case, if I don't do this it will close the loop or create a train of \\
+                        # I don't love it though
+                        string_acc = string_acc[:-1]
+                        string_acc += char
+                        self.index += 1
+                        char = self.get_char_at()
+                    continue
                 elif char in ["u", "x"]:
                     # If we find a unicode escape sequence, normalize it
                     num_chars = 4 if char == "u" else 2
@@ -499,7 +509,7 @@ class JSONParser:
                     )
                     break
             # ChatGPT sometimes forget to quote stuff in html tags or markdown, so we do this whole thing here
-            if char == rstring_delimiter:
+            if char == rstring_delimiter and string_acc[-1] != "\\":
                 # Special case here, in case of double quotes one after another
                 if doubled_quotes and self.get_char_at(1) == rstring_delimiter:
                     self.log("While parsing a string, we found a doubled quote, ignoring it")
