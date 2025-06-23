@@ -97,13 +97,6 @@ class JSONParser:
             elif char == "[":
                 self.index += 1
                 return self.parse_array()
-            # there can be an edge case in which a key is empty and at the end of an object
-            # like "key": }. We return an empty string here to close the object properly
-            elif self.context.current == ContextValues.OBJECT_VALUE and char == "}":
-                self.log(
-                    "At the end of an object we found a key with missing value, skipping",
-                )
-                return ""
             # <string> starts with a quote
             elif not self.context.empty and (char in self.STRING_DELIMITERS or char.isalpha()):
                 return self.parse_string()
@@ -202,7 +195,15 @@ class JSONParser:
             self.context.reset()
             self.context.set(ContextValues.OBJECT_VALUE)
             # The value can be any valid json
-            value = self.parse_json()
+            self.skip_whitespaces_at()
+            # Corner case, a lone comma
+            value: JSONReturnType = ""
+            if (self.get_char_at() or "") in [",", "}"]:
+                self.log(
+                    "While parsing an object value we found a stray , ignoring it",
+                )
+            else:
+                value = self.parse_json()
 
             # Reset context since our job is done
             self.context.reset()
