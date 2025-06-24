@@ -241,7 +241,10 @@ def test_object_edge_cases():
         repair_json('{ "key": ["arrayvalue"], "key3": "value3", ["arrayvalue1"] }')
         == '{"key": ["arrayvalue"], "key3": "value3", "arrayvalue1": ""}'
     )
-    assert repair_json('{"key": "{\\\\"key\\\\\\":\\"value\\\\\\"}"}') == '{"key": "{\\"key\\":\\"value\\"}"}'
+    assert (
+        repair_json('{"key": "{\\\\"key\\\\\\":[\\"value\\\\\\"],\\"key2\\":"value2"}"}')
+        == '{"key": "{\\"key\\":[\\"value\\"],\\"key2\\":\\"value2\\"}"}'
+    )
     assert repair_json('{"key": , "key2": "value2"}') == '{"key": "", "key2": "value2"}'
 
 

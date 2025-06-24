@@ -377,6 +377,10 @@ class JSONParser:
             ):
                 rstring_delimiter_missing = True
                 # check if this is a case in which the closing comma is NOT missing instead
+                self.skip_whitespaces_at()
+                if self.get_char_at(1) == "\\":
+                    # Ok this is a quoted string, skip
+                    rstring_delimiter_missing = False
                 i = self.skip_to_character(character=rstring_delimiter, idx=1)
                 next_c = self.get_char_at(i)
                 if next_c:
