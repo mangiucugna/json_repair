@@ -311,10 +311,12 @@ class JSONParser:
         # There is sometimes a weird case of doubled quotes, we manage this also later in the while loop
         if self.get_char_at() in self.STRING_DELIMITERS and self.get_char_at() == lstring_delimiter:
             # If it's an empty key, this was easy
-            if self.context.current == ContextValues.OBJECT_KEY and self.get_char_at(1) == ":":
+            if (self.context.current == ContextValues.OBJECT_KEY and self.get_char_at(1) == ":") or (
+                self.context.current == ContextValues.OBJECT_VALUE and self.get_char_at(1) in [",", "}"]
+            ):
                 self.index += 1
                 return ""
-            if self.get_char_at(1) == lstring_delimiter:
+            elif self.get_char_at(1) == lstring_delimiter:
                 # There's something fishy about this, we found doubled quotes and then again quotes
                 self.log(
                     "While parsing a string, we found a doubled quote and then a quote again, ignoring it",
@@ -373,7 +375,7 @@ class JSONParser:
                     ",",
                     "}",
                 ]
-                and string_acc[-1] != rstring_delimiter
+                and (not string_acc or string_acc[-1] != rstring_delimiter)
             ):
                 rstring_delimiter_missing = True
                 # check if this is a case in which the closing comma is NOT missing instead
