@@ -1,4 +1,7 @@
-from .json_context import ContextValues, JSONReturnType
+from .constants import JSONReturnType
+from .json_context import ContextValues
+
+NUMBER_CHARS: set[str] = set("0123456789-.eE/,")
 
 
 def parse_number(self) -> float | int | str | JSONReturnType:
@@ -6,7 +9,7 @@ def parse_number(self) -> float | int | str | JSONReturnType:
     number_str = ""
     char = self.get_char_at()
     is_array = self.context.current == ContextValues.ARRAY
-    while char and char in self.NUMBER_CHARS and (not is_array or char != ","):
+    while char and char in NUMBER_CHARS and (not is_array or char != ","):
         number_str += char
         self.index += 1
         char = self.get_char_at()

@@ -1,3 +1,4 @@
+from .constants import STRING_DELIMITERS
 from .json_context import ContextValues
 
 
@@ -15,7 +16,7 @@ def parse_string(self) -> str | bool | None:
     if char in ["#", "/"]:
         return self.parse_comment()
     # A valid string can only start with a valid quote or, in our case, with a literal
-    while char and char not in self.STRING_DELIMITERS and not char.isalnum():
+    while char and char not in STRING_DELIMITERS and not char.isalnum():
         self.index += 1
         char = self.get_char_at()
 
@@ -45,7 +46,7 @@ def parse_string(self) -> str | bool | None:
         self.index += 1
 
     # There is sometimes a weird case of doubled quotes, we manage this also later in the while loop
-    if self.get_char_at() in self.STRING_DELIMITERS and self.get_char_at() == lstring_delimiter:
+    if self.get_char_at() in STRING_DELIMITERS and self.get_char_at() == lstring_delimiter:
         # If it's an empty key, this was easy
         if (self.context.current == ContextValues.OBJECT_KEY and self.get_char_at(1) == ":") or (
             self.context.current == ContextValues.OBJECT_VALUE and self.get_char_at(1) in [",", "}"]
@@ -73,7 +74,7 @@ def parse_string(self) -> str | bool | None:
             # Ok this is not a doubled quote, check if this is an empty string or not
             i = self.skip_whitespaces_at(idx=1, move_main_index=False)
             next_c = self.get_char_at(i)
-            if next_c in self.STRING_DELIMITERS + ["{", "["]:
+            if next_c in STRING_DELIMITERS + ["{", "["]:
                 # something fishy is going on here
                 self.log(
                     "While parsing a string, we found a doubled quote but also another quote afterwards, ignoring it",

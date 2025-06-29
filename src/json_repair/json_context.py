@@ -1,7 +1,4 @@
 from enum import Enum, auto
-from typing import Any
-
-JSONReturnType = dict[str, Any] | list[Any] | str | float | int | bool | None
 
 
 class ContextValues(Enum):

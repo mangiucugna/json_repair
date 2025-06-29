@@ -1,4 +1,5 @@
-from .json_context import ContextValues, JSONReturnType
+from .constants import STRING_DELIMITERS, JSONReturnType
+from .json_context import ContextValues
 
 
 def parse_array(self) -> list[JSONReturnType]:
@@ -10,7 +11,7 @@ def parse_array(self) -> list[JSONReturnType]:
     while char and char not in ["]", "}"]:
         self.skip_whitespaces_at()
         value: JSONReturnType = ""
-        if char in self.STRING_DELIMITERS:
+        if char in STRING_DELIMITERS:
             # Sometimes it can happen that LLMs forget to start an object and then you think it's a string in an array
             # So we are going to check if this string is followed by a : or not
             # And either parse the string or parse the object

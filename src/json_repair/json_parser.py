@@ -1,6 +1,7 @@
-from typing import ClassVar, Literal, TextIO
+from typing import Literal, TextIO
 
-from .json_context import JsonContext, JSONReturnType
+from .constants import STRING_DELIMITERS, JSONReturnType
+from .json_context import JsonContext
 from .object_comparer import ObjectComparer
 from .parse_array import parse_array
 from .parse_boolean_or_null import parse_boolean_or_null
@@ -12,9 +13,6 @@ from .string_file_wrapper import StringFileWrapper
 
 
 class JSONParser:
-    # Constants
-    STRING_DELIMITERS: ClassVar[list[str]] = ['"', "'", "“", "”"]
-    NUMBER_CHARS: ClassVar[set[str]] = set("0123456789-.eE/,")
     # Split the parse methods into separate files because this one was like 3000 lines
     parse_array = parse_array
     parse_boolean_or_null = parse_boolean_or_null
@@ -109,7 +107,7 @@ class JSONParser:
                 self.index += 1
                 return self.parse_array()
             # <string> starts with a quote
-            elif not self.context.empty and (char in self.STRING_DELIMITERS or char.isalpha()):
+            elif not self.context.empty and (char in STRING_DELIMITERS or char.isalpha()):
                 return self.parse_string()
             # <number> starts with [0-9] or minus
             elif not self.context.empty and (char.isdigit() or char == "-" or char == "."):

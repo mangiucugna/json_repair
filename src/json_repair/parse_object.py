@@ -1,4 +1,5 @@
-from .json_context import ContextValues, JSONReturnType
+from .constants import JSONReturnType
+from .json_context import ContextValues
 
 
 def parse_object(self) -> dict[str, JSONReturnType]:
