@@ -27,9 +27,7 @@ def parse_comment(self) -> str:
             comment += char
             self.index += 1
             char = self.get_char_at()
-        self.log(f"Found line comment: {comment}")
-        return ""
-
+        self.log(f"Found line comment: {comment}, ignoring")
     # Comments starting with '/'
     elif char == "/":
         next_char = self.get_char_at(1)
@@ -42,8 +40,7 @@ def parse_comment(self) -> str:
                 comment += char
                 self.index += 1
                 char = self.get_char_at()
-            self.log(f"Found line comment: {comment}")
-            return ""
+            self.log(f"Found line comment: {comment}, ignoring")
         # Handle block comment starting with /*
         elif next_char == "*":
             comment = "/*"
@@ -57,11 +54,12 @@ def parse_comment(self) -> str:
                 self.index += 1
                 if comment.endswith("*/"):
                     break
-            self.log(f"Found block comment: {comment}")
-            return ""
+            self.log(f"Found block comment: {comment}, ignoring")
         else:
             # Skip standalone '/' characters that are not part of a comment
             # to avoid getting stuck in an infinite loop
             self.index += 1
-            return ""
-    return ""  # pragma: no cover
+    if self.context.empty:
+        return self.parse_json()
+    else:
+        return ""

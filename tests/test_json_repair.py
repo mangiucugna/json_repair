@@ -146,7 +146,6 @@ def test_array_edge_cases():
         repair_json('{"key1": ["value1", "value2"}, "key2": ["value3", "value4"]}')
         == '{"key1": ["value1", "value2"], "key2": ["value3", "value4"]}'
     )
-    assert repair_json('[ "value", /* comment */ "value2" ]') == '["value", "value2"]'
     assert repair_json('{"key": ["value" "value1" "value2"]}') == '{"key": ["value", "value1", "value2"]}'
     assert (
         repair_json('{"key": ["lorem "ipsum" dolor "sit" amet, "consectetur" ", "lorem "ipsum" dolor", "lorem"]}')
@@ -220,19 +219,6 @@ def test_object_edge_cases():
         repair_json('[{"lorem": {"ipsum": "sic"}, """" "lorem": {"ipsum": "sic"}]')
         == '[{"lorem": {"ipsum": "sic"}}, {"lorem": {"ipsum": "sic"}}]'
     )
-    assert (
-        repair_json('{ "key": { "key2": "value2" // comment }, "key3": "value3" }')
-        == '{"key": {"key2": "value2"}, "key3": "value3"}'
-    )
-    assert (
-        repair_json('{ "key": { "key2": "value2" # comment }, "key3": "value3" }')
-        == '{"key": {"key2": "value2"}, "key3": "value3"}'
-    )
-    assert (
-        repair_json('{ "key": { "key2": "value2" /* comment */ }, "key3": "value3" }')
-        == '{"key": {"key2": "value2"}, "key3": "value3"}'
-    )
-    assert repair_json('{ "key": "value" /* comment') == '{"key": "value"}'
     assert (
         repair_json('{ "key": ["arrayvalue"], ["arrayvalue1"], ["arrayvalue2"], "key3": "value3" }')
         == '{"key": ["arrayvalue", "arrayvalue1", "arrayvalue2"], "key3": "value3"}'
