@@ -55,6 +55,7 @@ def test_missing_and_mixed_quotes():
         == '{"comment": "lorem, \\"ipsum\\" sic \\"tamet\\". To improve"}'
     )
     assert repair_json('{"key": "v"alu"e"} key:') == '{"key": "v\\"alu\\"e"}'
+    assert repair_json('{"key": "v"alue", "key2": "value2"}') == '{"key": "v\\"alue", "key2": "value2"}'
 
 
 def test_escaping():
