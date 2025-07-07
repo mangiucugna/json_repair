@@ -1,8 +1,13 @@
+from typing import TYPE_CHECKING
+
 from .constants import JSONReturnType
 from .json_context import ContextValues
 
+if TYPE_CHECKING:
+    from .json_parser import JSONParser
 
-def parse_object(self) -> dict[str, JSONReturnType]:
+
+def parse_object(self: "JSONParser") -> dict[str, JSONReturnType]:
     # <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
     obj: dict[str, JSONReturnType] = {}
     # Stop when you either find the closing parentheses or you have iterated over the entire string

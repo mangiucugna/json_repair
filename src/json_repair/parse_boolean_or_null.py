@@ -1,4 +1,10 @@
-def parse_boolean_or_null(self) -> bool | str | None:
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .json_parser import JSONParser
+
+
+def parse_boolean_or_null(self: "JSONParser") -> bool | str | None:
     # <boolean> is one of the literal strings 'true', 'false', or 'null' (unquoted)
     starting_index = self.index
     char = (self.get_char_at() or "").lower()

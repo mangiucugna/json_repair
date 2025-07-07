@@ -1,8 +1,13 @@
+from typing import TYPE_CHECKING
+
 from .constants import STRING_DELIMITERS
 from .json_context import ContextValues
 
+if TYPE_CHECKING:
+    from .json_parser import JSONParser
 
-def parse_string(self) -> str | bool | None:
+
+def parse_string(self: "JSONParser") -> str | bool | None:
     # <string> is a string of valid characters enclosed in quotes
     # i.e. { name: "John" }
     # Somehow all weird cases in an invalid JSON happen to be resolved in this function, so be careful here

@@ -3,23 +3,34 @@ from typing import Literal, TextIO
 from .constants import STRING_DELIMITERS, JSONReturnType
 from .json_context import JsonContext
 from .object_comparer import ObjectComparer
-from .parse_array import parse_array
-from .parse_boolean_or_null import parse_boolean_or_null
-from .parse_comment import parse_comment
-from .parse_number import parse_number
-from .parse_object import parse_object
-from .parse_string import parse_string
+from .parse_array import parse_array as _parse_array
+from .parse_boolean_or_null import parse_boolean_or_null as _parse_boolean_or_null
+from .parse_comment import parse_comment as _parse_comment
+from .parse_number import parse_number as _parse_number
+from .parse_object import parse_object as _parse_object
+from .parse_string import parse_string as _parse_string
 from .string_file_wrapper import StringFileWrapper
 
 
 class JSONParser:
     # Split the parse methods into separate files because this one was like 3000 lines
-    parse_array = parse_array
-    parse_boolean_or_null = parse_boolean_or_null
-    parse_comment = parse_comment
-    parse_number = parse_number
-    parse_object = parse_object
-    parse_string = parse_string
+    def parse_array(self, *args, **kwargs):
+        return _parse_array(self, *args, **kwargs)
+
+    def parse_boolean_or_null(self, *args, **kwargs):
+        return _parse_boolean_or_null(self, *args, **kwargs)
+
+    def parse_comment(self, *args, **kwargs):
+        return _parse_comment(self, *args, **kwargs)
+
+    def parse_number(self, *args, **kwargs):
+        return _parse_number(self, *args, **kwargs)
+
+    def parse_object(self, *args, **kwargs):
+        return _parse_object(self, *args, **kwargs)
+
+    def parse_string(self, *args, **kwargs):
+        return _parse_string(self, *args, **kwargs)
 
     def __init__(
         self,

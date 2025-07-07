@@ -1,7 +1,13 @@
+from typing import TYPE_CHECKING
+
+from .constants import JSONReturnType
 from .json_context import ContextValues
 
+if TYPE_CHECKING:
+    from .json_parser import JSONParser
 
-def parse_comment(self) -> str:
+
+def parse_comment(self: "JSONParser") -> JSONReturnType:
     """
     Parse code-like comments:
 

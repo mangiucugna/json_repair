@@ -1,8 +1,13 @@
+from typing import TYPE_CHECKING
+
 from .constants import STRING_DELIMITERS, JSONReturnType
 from .json_context import ContextValues
 
+if TYPE_CHECKING:
+    from .json_parser import JSONParser
 
-def parse_array(self) -> list[JSONReturnType]:
+
+def parse_array(self: "JSONParser") -> list[JSONReturnType]:
     # <array> ::= '[' [ <json> *(', ' <json>) ] ']' ; A sequence of JSON values separated by commas
     arr = []
     self.context.set(ContextValues.ARRAY)
