@@ -158,3 +158,4 @@ def test_stream_stable():
     assert repair_json('{"key": "val\\n', stream_stable=True) == '{"key": "val\\n"}'
     assert repair_json('{"key": "val\\n123,`key2:value2', stream_stable=True) == '{"key": "val\\n123,`key2:value2"}'
     assert repair_json('{"key": "val\\n123,`key2:value2`"}', stream_stable=True) == '{"key": "val\\n123,`key2:value2`"}'
+    assert repair_json('[{"key": "value", "key', stream_stable=True) == '[{"key": "value"}]'
