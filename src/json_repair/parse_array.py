@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 from .constants import STRING_DELIMITERS, JSONReturnType
 from .json_context import ContextValues
+from .object_comparer import ObjectComparer
 
 if TYPE_CHECKING:
     from .json_parser import JSONParser
@@ -28,7 +29,7 @@ def parse_array(self: "JSONParser") -> list[JSONReturnType]:
             value = self.parse_json()
 
         # It is possible that parse_json() returns nothing valid, so we increase by 1
-        if value == "":
+        if ObjectComparer.is_strictly_empty(value):
             self.index += 1
         elif value == "..." and self.get_char_at(-1) == ".":
             self.log(

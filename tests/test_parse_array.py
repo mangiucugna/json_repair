@@ -9,7 +9,7 @@ def test_parse_array():
 
 
 def test_parse_array_edge_cases():
-    assert repair_json("[{]") == "[{}]"
+    assert repair_json("[{]") == "[]"
     assert repair_json("[") == "[]"
     assert repair_json('["') == "[]"
     assert repair_json("]") == ""
@@ -35,3 +35,4 @@ def test_parse_array_edge_cases():
     )
     assert repair_json('{"k"e"y": "value"}') == '{"k\\"e\\"y": "value"}'
     assert repair_json('["key":"value"}]') == '[{"key": "value"}]'
+    assert repair_json('[{"key": "value", "key') == '[{"key": "value"}]'
