@@ -324,10 +324,18 @@ def parse_string(self: "JSONParser") -> str | bool | None:
                     i += 1
                     i = self.skip_to_character(character=rstring_delimiter, idx=i)
                     next_c = self.get_char_at(i)
-                    # Ok now I found a delimiter, let's skip whitespaces and see if next we find a }
+                    # Ok now I found a delimiter, let's skip whitespaces and see if next we find a } or a ,
                     i += 1
                     i = self.skip_whitespaces_at(idx=i, move_main_index=False)
                     next_c = self.get_char_at(i)
+                    if next_c in ["}", ","]:
+                        self.log(
+                            "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
+                        )
+                        string_acc += str(char)
+                        self.index += 1
+                        char = self.get_char_at()
+                        continue
                 elif next_c == rstring_delimiter and self.get_char_at(i - 1) != "\\":
                     # Check if self.index:self.index+i is only whitespaces, break if that's the case
                     if all(str(self.get_char_at(j)).isspace() for j in range(1, i) if self.get_char_at(j)):

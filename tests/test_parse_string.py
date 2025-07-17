@@ -56,6 +56,7 @@ def test_missing_and_mixed_quotes():
     )
     assert repair_json('{"key": "v"alu"e"} key:') == '{"key": "v\\"alu\\"e"}'
     assert repair_json('{"key": "v"alue", "key2": "value2"}') == '{"key": "v\\"alue", "key2": "value2"}'
+    assert repair_json('[{"key": "v"alu,e", "key2": "value2"}]') == '[{"key": "v\\"alu,e", "key2": "value2"}]'
 
 
 def test_escaping():
