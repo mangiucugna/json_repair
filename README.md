@@ -1,6 +1,7 @@
 [![PyPI](https://img.shields.io/pypi/v/json-repair)](https://pypi.org/project/json-repair/)
 ![Python version](https://img.shields.io/badge/python-3.10+-important)
 [![PyPI downloads](https://img.shields.io/pypi/dm/json-repair)](https://pypi.org/project/json-repair/)
+[![PyPI Downloads](https://static.pepy.tech/badge/json-repair)](https://pepy.tech/projects/json-repair)
 [![Github Sponsors](https://img.shields.io/github/sponsors/mangiucugna)](https://github.com/sponsors/mangiucugna)
 [![GitHub Repo stars](https://img.shields.io/github/stars/mangiucugna/json_repair?style=flat)](https://github.com/mangiucugna/json_repair/stargazers)
 
