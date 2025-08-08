@@ -74,7 +74,7 @@ def repair_json(
         json_str (str, optional): The JSON string to repair. Defaults to an empty string.
         return_objects (bool, optional): If True, return the decoded data structure. Defaults to False.
         skip_json_loads (bool, optional): If True, skip calling the built-in json.loads() function to verify that the json is valid before attempting to repair. Defaults to False.
-        logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False.
+        logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False. When no repairs where required, the repair log will be an empty list.
         json_fd (Optional[TextIO], optional): File descriptor for JSON input. Do not use! Use `from_file` or `load` instead. Defaults to None.
         ensure_ascii (bool, optional): Set to False to avoid converting non-latin characters to ascii (for example when using chinese characters). Defaults to True. Ignored if `skip_json_loads` is True.
         chunk_length (int, optional): Size in bytes of the file chunks to read at once. Ignored if `json_fd` is None. Do not use! Use `from_file` or `load` instead. Defaults to 1MB.
@@ -93,6 +93,10 @@ def repair_json(
     # It's useful to return the actual object instead of the json string,
     # it allows this lib to be a replacement of the json library
     if return_objects or logging:
+        # If logging is True, the user should expect a tuple.
+        # If json.load(s) worked, the repair log list is empty
+        if logging and isinstance(parsed_json, tuple) is False:
+            return parsed_json, []
         return parsed_json
     # Avoid returning only a pair of quotes if it's an empty string
     elif parsed_json == "":
