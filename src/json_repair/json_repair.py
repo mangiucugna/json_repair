@@ -66,7 +66,7 @@ def repair_json(
     chunk_length: int = 0,
     stream_stable: bool = False,
     **json_dumps_args,
-) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
+) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]] | tuple[JSONReturnType, list]:
     """
     Given a json formatted string, it will try to decode it and, if it fails, it will try to fix it.
 
@@ -95,7 +95,7 @@ def repair_json(
     if return_objects or logging:
         # If logging is True, the user should expect a tuple.
         # If json.load(s) worked, the repair log list is empty
-        if logging and isinstance(parsed_json, tuple) is False:
+        if logging and not isinstance(parsed_json, tuple):
             return parsed_json, []
         return parsed_json
     # Avoid returning only a pair of quotes if it's an empty string
