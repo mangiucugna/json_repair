@@ -73,6 +73,7 @@ def test_escaping():
     assert repair_json("{\"key\": '\u0076\u0061\u006c\u0075\u0065'}") == '{"key": "value"}'
     assert repair_json('{"key": "\\u0076\\u0061\\u006C\\u0075\\u0065"}', skip_json_loads=True) == '{"key": "value"}'
     assert repair_json("""{"key": "valu\\'e"}""") == """{"key": "valu'e"}"""
+    assert repair_json('{\'key\': "{\\"key\\": 1, \\"key2\\": 1}"}') == '{"key": "{\\"key\\": 1, \\"key2\\": 1}"}'
 
 
 def test_markdown():

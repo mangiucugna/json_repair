@@ -169,6 +169,9 @@ class JSONParser:
                 char = self.json_str[self.index + idx]
             except IndexError:
                 return idx
+        if self.json_str[self.index + idx - 1] == "\\":
+            # Ah shoot this was actually escaped, continue
+            return self.skip_to_character(character, idx + 1)
         return idx
 
     def _log(self, text: str) -> None:
