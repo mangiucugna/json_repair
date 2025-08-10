@@ -158,3 +158,22 @@ def test_stream_stable():
     assert repair_json('{"key": "val\\n', stream_stable=True) == '{"key": "val\\n"}'
     assert repair_json('{"key": "val\\n123,`key2:value2', stream_stable=True) == '{"key": "val\\n123,`key2:value2"}'
     assert repair_json('{"key": "val\\n123,`key2:value2`"}', stream_stable=True) == '{"key": "val\\n123,`key2:value2`"}'
+
+
+def test_logging():
+    assert repair_json("{}", logging=True) == ({}, [])
+    assert repair_json('{"key": "value}', logging=True) == (
+        {"key": "value"},
+        [
+            {
+                "context": 'y": "value}',
+                "text": "While parsing a string missing the left delimiter in object value "
+                "context, we found a , or } and we couldn't determine that a right "
+                "delimiter was present. Stopping here",
+            },
+            {
+                "context": 'y": "value}',
+                "text": "While parsing a string, we missed the closing quote, ignoring",
+            },
+        ],
+    )
