@@ -18,7 +18,7 @@ jobs:
         with:
           activate-environment: true
 
-      - name: Create and populate virtualenv
+      - name: Install mypy
         run: |
           uv pip install mypy
 
