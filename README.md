@@ -31,11 +31,6 @@ I searched for a lightweight python package that was able to reliably fix this p
 
 *So I wrote one*
 
-### Wouldn't GPT-4o Structured Output make this library outdated?
-
-As part of my job we use OpenAI APIs and we noticed that even with structured output sometimes the result isn't a fully valid json.
-So we still use this library to cover those outliers.
-
 # Supported use cases
 
 ### Fixing Syntax Errors in JSON
