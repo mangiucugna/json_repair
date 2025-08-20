@@ -104,11 +104,17 @@ def parse_string(self: "JSONParser") -> str | bool | None:
     char = self.get_char_at()
     unmatched_delimiter = False
     while char and char != rstring_delimiter:
-        if missing_quotes and self.context.current == ContextValues.OBJECT_KEY and (char == ":" or char.isspace()):
-            self.log(
-                "While parsing a string missing the left delimiter in object key context, we found a :, stopping here",
-            )
-            break
+        if missing_quotes:
+            if self.context.current == ContextValues.OBJECT_KEY and (char == ":" or char.isspace()):
+                self.log(
+                    "While parsing a string missing the left delimiter in object key context, we found a :, stopping here",
+                )
+                break
+            elif self.context.current == ContextValues.ARRAY and char in ["]", ","]:
+                self.log(
+                    "While parsing a string missing the left delimiter in array context, we found a ] or ,, stopping here",
+                )
+                break
         if (
             not self.stream_stable
             and self.context.current == ContextValues.OBJECT_VALUE
@@ -385,16 +391,30 @@ def parse_string(self: "JSONParser") -> str | bool | None:
                             self.index += 1
                             char = self.get_char_at()
                     elif self.context.current == ContextValues.ARRAY:
-                        # If we got up to here it means that this is a situation like this:
-                        # ["bla bla bla "puppy" bla bla bla "kitty" bla bla"]
-                        # So we need to ignore this quote
-                        self.log(
-                            "While parsing a string in Array context, we detected a quoted section that would have closed the string but has a different meaning here, ignoring it",
-                        )
-                        unmatched_delimiter = not unmatched_delimiter
-                        string_acc += str(char)
-                        self.index += 1
-                        char = self.get_char_at()
+                        # Let's check if after this quote there are two quotes in a row followed by a comma or a closing bracket
+                        i = self.skip_to_character(character=[rstring_delimiter, "]"], idx=i + 1)
+                        next_c = self.get_char_at(i)
+                        even_delimiters = next_c and next_c == rstring_delimiter
+                        while even_delimiters and next_c and next_c == rstring_delimiter:
+                            i = self.skip_to_character(character=[rstring_delimiter, "]"], idx=i + 1)
+                            i = self.skip_to_character(character=[rstring_delimiter, "]"], idx=i + 1)
+                            next_c = self.get_char_at(i)
+                        # i = self.skip_whitespaces_at(idx=i + 1, move_main_index=False)
+                        # next_c = self.get_char_at(i)
+                        # if next_c in [",", "]"]:
+                        if even_delimiters and next_c != "]":
+                            # If we got up to here it means that this is a situation like this:
+                            # ["bla bla bla "puppy" bla bla bla "kitty" bla bla"]
+                            # So we need to ignore this quote
+                            self.log(
+                                "While parsing a string in Array context, we detected a quoted section that would have closed the string but has a different meaning here, ignoring it",
+                            )
+                            unmatched_delimiter = not unmatched_delimiter
+                            string_acc += str(char)
+                            self.index += 1
+                            char = self.get_char_at()
+                        else:
+                            break
                     elif self.context.current == ContextValues.OBJECT_KEY:
                         # In this case we just ignore this and move on
                         self.log(
