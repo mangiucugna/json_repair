@@ -391,18 +391,21 @@ def parse_string(self: "JSONParser") -> str | bool | None:
                             self.index += 1
                             char = self.get_char_at()
                     elif self.context.current == ContextValues.ARRAY:
-                        # Let's check if after this quote there are two quotes in a row followed by a comma or a closing bracket
-                        i = self.skip_to_character(character=[rstring_delimiter, "]"], idx=i + 1)
-                        next_c = self.get_char_at(i)
-                        even_delimiters = next_c and next_c == rstring_delimiter
-                        while even_delimiters and next_c and next_c == rstring_delimiter:
-                            i = self.skip_to_character(character=[rstring_delimiter, "]"], idx=i + 1)
+                        # So here we can have a few valid cases:
+                        # ["bla bla bla "puppy" bla bla bla "kitty" bla bla"]
+                        # ["value1" value2", "value3"]
+                        # The basic idea is that if we find an even number of delimiters after this delimiter
+                        # we ignore this delimiter as it should be fine
+                        even_delimiters = next_c == rstring_delimiter
+                        while next_c == rstring_delimiter:
                             i = self.skip_to_character(character=[rstring_delimiter, "]"], idx=i + 1)
                             next_c = self.get_char_at(i)
-                        # i = self.skip_whitespaces_at(idx=i + 1, move_main_index=False)
-                        # next_c = self.get_char_at(i)
-                        # if next_c in [",", "]"]:
-                        if even_delimiters and next_c != "]":
+                            if next_c != rstring_delimiter:
+                                even_delimiters = False
+                                break
+                            i = self.skip_to_character(character=[rstring_delimiter, "]"], idx=i + 1)
+                            next_c = self.get_char_at(i)
+                        if even_delimiters:
                             # If we got up to here it means that this is a situation like this:
                             # ["bla bla bla "puppy" bla bla bla "kitty" bla bla"]
                             # So we need to ignore this quote
