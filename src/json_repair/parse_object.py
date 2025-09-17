@@ -129,6 +129,13 @@ def parse_object(self: "JSONParser") -> dict[str, JSONReturnType]:
     self.index += 1
     self.skip_whitespaces_at()
 
+    # If what follows is not a quoted key or a new container, leave it to the
+    # outer parser by setting value context so primitives can be parsed at top-level.
+    next_char = self.get_char_at() or ""
+    if next_char not in ['"', "'", "{", "["]:
+        self.context.set(ContextValues.OBJECT_VALUE)
+        return obj
+
     # Try to parse additional key-value pairs
     while self.get_char_at():
         self.skip_whitespaces_at()
@@ -141,9 +148,6 @@ def parse_object(self: "JSONParser") -> dict[str, JSONReturnType]:
         self.context.set(ContextValues.OBJECT_KEY)
         key = str(self.parse_string())
         self.context.reset()
-
-        if not key:
-            break
 
         self.skip_whitespaces_at()
 
