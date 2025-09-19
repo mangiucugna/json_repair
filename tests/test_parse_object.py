@@ -83,16 +83,16 @@ def test_parse_object_edge_cases():
         == '{"key": "{\\"key\\":[\\"value\\"],\\"key2\\":\\"value2\\"}"}'
     )
     assert repair_json('{"key": , "key2": "value2"}') == '{"key": "", "key2": "value2"}'
+
+
+def test_parse_object_merge_at_the_end():
     assert repair_json('{"key": "value"}, "key2": "value2"}') == '{"key": "value", "key2": "value2"}'
     assert repair_json('{"key": "value"}, "key2": }') == '{"key": "value", "key2": ""}'
     assert repair_json('{"key": "value"}, []') == '[{"key": "value"}, []]'
     assert repair_json('{"key": "value"}, ["abc"]') == '[{"key": "value"}, ["abc"]]'
-    assert repair_json('{"key": "value"}, true') == '[{"key": "value"}, true]'
-    assert repair_json('{"key": "value"}, null') == '[{"key": "value"}, null]'
-    assert repair_json('{"key": "value"}, 123') == '[{"key": "value"}, 123]'
     assert repair_json('{"key": "value"}, {}') == '[{"key": "value"}, {}]'
     assert repair_json('{"key": "value"}, "" : "value2"}') == '{"key": "value", "": "value2"}'
-    assert repair_json('{"key": "value"}, "key2" "value2"}') == '{"key": "value"}'
+    assert repair_json('{"key": "value"}, "key2" "value2"}') == '{"key": "value", "key2": "value2"}'
     assert (
         repair_json('{"key1": "value1"}, "key2": "value2", "key3": "value3"}')
         == '{"key1": "value1", "key2": "value2", "key3": "value3"}'

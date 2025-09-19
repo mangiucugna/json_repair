@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from .constants import JSONReturnType
+from .constants import STRING_DELIMITERS, JSONReturnType
 from .json_context import ContextValues
 
 if TYPE_CHECKING:
@@ -122,58 +122,18 @@ def parse_object(self: "JSONParser") -> dict[str, JSONReturnType]:
     self.skip_whitespaces_at()
     if (self.get_char_at() or "") != ",":
         return obj
-
-    self.log(
-        "Found comma after object closing brace, checking for additional key-value pairs",
-    )
     self.index += 1
     self.skip_whitespaces_at()
-
-    # If what follows is not a quoted key or a new container, leave it to the
-    # outer parser by setting value context so primitives can be parsed at top-level.
-    next_char = self.get_char_at() or ""
-    if next_char not in ['"', "'", "{", "["]:
-        self.context.set(ContextValues.OBJECT_VALUE)
+    if (self.get_char_at() or "") not in STRING_DELIMITERS:
         return obj
-
-    # Try to parse additional key-value pairs
-    while self.get_char_at():
-        self.skip_whitespaces_at()
-
-        # Check if we have a string key
-        if (self.get_char_at() or "") not in ['"', "'"]:
-            break
-
-        # Parse the key
-        self.context.set(ContextValues.OBJECT_KEY)
-        key = str(self.parse_string())
-        self.context.reset()
-
-        self.skip_whitespaces_at()
-
-        # Look for colon
-        if (self.get_char_at() or "") != ":":
-            break
-
-        self.index += 1
-        self.skip_whitespaces_at()
-
-        # Parse the value
-        self.context.set(ContextValues.OBJECT_VALUE)
-        value = self.parse_json()
-        self.context.reset()
-
-        obj[key] = value
-
-        # Check for comma or end
-        self.skip_whitespaces_at()
-        char = self.get_char_at() or ""
-        if char == ",":
-            self.index += 1
-            continue
-        elif char == "}":
-            break
-        else:
-            break
+    self.log(
+        "Found a comma and string delimiter after object closing brace, checking for additional key-value pairs",
+    )
+    revert_index = self.index
+    additional_obj = self.parse_object()
+    if isinstance(additional_obj, dict):
+        obj.update(additional_obj)
+    else:
+        self.index = revert_index
 
     return obj
