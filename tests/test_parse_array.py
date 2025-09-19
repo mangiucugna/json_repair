@@ -36,6 +36,9 @@ def test_parse_array_edge_cases():
     assert repair_json('{"k"e"y": "value"}') == '{"k\\"e\\"y": "value"}'
     assert repair_json('["key":"value"}]') == '[{"key": "value"}]'
     assert repair_json('[{"key": "value", "key') == '[{"key": "value"}]'
+
+
+def test_parse_array_missing_quotes():
     assert repair_json('["value1" value2", "value3"]') == '["value1", "value2", "value3"]'
     assert (
         repair_json('{"bad_one":["Lorem Ipsum", "consectetur" comment" ], "good_one":[ "elit", "sed", "tempor"]}')
