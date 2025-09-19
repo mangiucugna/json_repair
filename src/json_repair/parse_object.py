@@ -129,11 +129,8 @@ def parse_object(self: "JSONParser") -> dict[str, JSONReturnType]:
     self.log(
         "Found a comma and string delimiter after object closing brace, checking for additional key-value pairs",
     )
-    revert_index = self.index
     additional_obj = self.parse_object()
     if isinstance(additional_obj, dict):
         obj.update(additional_obj)
-    else:
-        self.index = revert_index
 
     return obj
