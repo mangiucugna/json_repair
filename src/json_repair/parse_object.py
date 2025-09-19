@@ -112,4 +112,68 @@ def parse_object(self: "JSONParser") -> dict[str, JSONReturnType]:
         self.skip_whitespaces_at()
 
     self.index += 1
+
+    # Check if there are more key-value pairs after the closing brace
+    # This handles cases like '{"key": "value"}, "key2": "value2"}'
+    # But only if we're not in a nested context
+    if not self.context.empty:
+        return obj
+
+    self.skip_whitespaces_at()
+    if (self.get_char_at() or "") != ",":
+        return obj
+
+    self.log(
+        "Found comma after object closing brace, checking for additional key-value pairs",
+    )
+    self.index += 1
+    self.skip_whitespaces_at()
+
+    # If what follows is not a quoted key or a new container, leave it to the
+    # outer parser by setting value context so primitives can be parsed at top-level.
+    next_char = self.get_char_at() or ""
+    if next_char not in ['"', "'", "{", "["]:
+        self.context.set(ContextValues.OBJECT_VALUE)
+        return obj
+
+    # Try to parse additional key-value pairs
+    while self.get_char_at():
+        self.skip_whitespaces_at()
+
+        # Check if we have a string key
+        if (self.get_char_at() or "") not in ['"', "'"]:
+            break
+
+        # Parse the key
+        self.context.set(ContextValues.OBJECT_KEY)
+        key = str(self.parse_string())
+        self.context.reset()
+
+        self.skip_whitespaces_at()
+
+        # Look for colon
+        if (self.get_char_at() or "") != ":":
+            break
+
+        self.index += 1
+        self.skip_whitespaces_at()
+
+        # Parse the value
+        self.context.set(ContextValues.OBJECT_VALUE)
+        value = self.parse_json()
+        self.context.reset()
+
+        obj[key] = value
+
+        # Check for comma or end
+        self.skip_whitespaces_at()
+        char = self.get_char_at() or ""
+        if char == ",":
+            self.index += 1
+            continue
+        elif char == "}":
+            break
+        else:
+            break
+
     return obj
