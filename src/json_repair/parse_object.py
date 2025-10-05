@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 def parse_object(self: "JSONParser") -> dict[str, JSONReturnType]:
     # <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
     obj: dict[str, JSONReturnType] = {}
+    start_index = self.index
     # Stop when you either find the closing parentheses or you have iterated over the entire string
     while (self.get_char_at() or "}") != "}":
         # This is what we expect to find:
@@ -112,6 +113,12 @@ def parse_object(self: "JSONParser") -> dict[str, JSONReturnType]:
         self.skip_whitespaces_at()
 
     self.index += 1
+
+    # If the object is empty but also isn't just {}
+    if not obj and self.index - start_index > 2:
+        self.log("Parsed object is empty, we will try to parse this as an array instead")
+        self.index = start_index
+        return self.parse_array()
 
     # Check if there are more key-value pairs after the closing brace
     # This handles cases like '{"key": "value"}, "key2": "value2"}'

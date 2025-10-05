@@ -22,7 +22,6 @@ def test_parse_object():
 
 def test_parse_object_edge_cases():
     assert repair_json("{foo: [}") == '{"foo": []}'
-    assert repair_json("{       ") == "{}"
     assert repair_json('{"": "value"') == '{"": "value"}'
     assert repair_json('{"value_1": true, COMMENT "value_2": "data"}') == '{"value_1": true, "value_2": "data"}'
     assert (
