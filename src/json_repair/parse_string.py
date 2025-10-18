@@ -1,13 +1,13 @@
 from typing import TYPE_CHECKING
 
-from .constants import STRING_DELIMITERS
+from .constants import STRING_DELIMITERS, JSONReturnType
 from .json_context import ContextValues
 
 if TYPE_CHECKING:
     from .json_parser import JSONParser
 
 
-def parse_string(self: "JSONParser") -> str | bool | None:
+def parse_string(self: "JSONParser") -> JSONReturnType:
     # <string> is a string of valid characters enclosed in quotes
     # i.e. { name: "John" }
     # Somehow all weird cases in an invalid JSON happen to be resolved in this function, so be careful here
@@ -200,6 +200,16 @@ def parse_string(self: "JSONParser") -> str | bool | None:
             i = self.skip_to_character(rstring_delimiter)
             if not self.get_char_at(i):
                 # No delimiter found
+                break
+        if self.context.current == ContextValues.OBJECT_VALUE and char == "}":
+            # We found the end of an object while parsing a value
+            # Check if the object is really over, to avoid doubling the closing brace
+            i = self.skip_whitespaces_at(idx=1, move_main_index=False)
+            next_c = self.get_char_at(i)
+            if not next_c:
+                self.log(
+                    "While parsing a string in object value context, we found a } that closes the object, stopping here",
+                )
                 break
         string_acc += char
         self.index += 1

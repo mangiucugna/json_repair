@@ -155,7 +155,7 @@ class JSONParser:
                 return idx
         return idx
 
-    def skip_to_character(self, character: str | list, idx: int = 0) -> int:
+    def skip_to_character(self, character: str | list[str], idx: int = 0) -> int:
         """
         This function quickly iterates to find a character, syntactic sugar to make the code more concise
         """
