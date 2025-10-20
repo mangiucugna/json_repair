@@ -206,6 +206,17 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
             # Check if the object is really over, to avoid doubling the closing brace
             i = self.skip_whitespaces_at(idx=1, move_main_index=False)
             next_c = self.get_char_at(i)
+            if next_c and next_c == "`":
+                # This could be a special case in which the LLM added code fences after the object
+                # So we need to check if there are another two ` after this one`
+                next_c = self.get_char_at(i + 1)
+                if next_c and next_c == "`":
+                    next_c = self.get_char_at(i + 2)
+                    if next_c and next_c == "`":
+                        self.log(
+                            "While parsing a string in object value context, we found a } that closes the object before code fences, stopping here",
+                        )
+                        break
             if not next_c:
                 self.log(
                     "While parsing a string in object value context, we found a } that closes the object, stopping here",

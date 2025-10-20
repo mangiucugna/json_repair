@@ -63,6 +63,7 @@ def test_parse_object_edge_cases():
     assert repair_json("{text:words{words in brackets}}") == '{"text": "words{words in brackets}"}'
     assert repair_json("{text:words{words in brackets}m}") == '{"text": "words{words in brackets}m"}'
     assert repair_json('{"key": "value, value2"```') == '{"key": "value, value2"}'
+    assert repair_json('{"key": "value}```') == '{"key": "value"}'
     assert repair_json("{key:value,key2:value2}") == '{"key": "value", "key2": "value2"}'
     assert repair_json('{"key:"value"}') == '{"key": "value"}'
     assert repair_json('{"key:value}') == '{"key": "value"}'
