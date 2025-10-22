@@ -81,6 +81,7 @@ class JSONParser:
             )
             json = [json]
             while self.index < len(self.json_str):
+                self.context.reset()
                 j = self.parse_json()
                 if j != "":
                     if ObjectComparer.is_same_object(json[-1], j):
