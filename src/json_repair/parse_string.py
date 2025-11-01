@@ -193,7 +193,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
             not self.stream_stable
             and char == "]"
             and ContextValues.ARRAY in self.context.context
-            and string_acc[-1] != rstring_delimiter
+            and (not string_acc or string_acc[-1] != rstring_delimiter)
         ):
             # We found the end of an array and we are in array context
             # So let's check if we find a rstring_delimiter forward otherwise end early
@@ -226,9 +226,9 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
         self.index += 1
         char = self.get_char_at()
         # Unclosed string ends with a \ character. This character is ignored if stream_stable = True.
-        if self.stream_stable and not char and string_acc[-1] == "\\":
+        if self.stream_stable and not char and string_acc and string_acc[-1] == "\\":
             string_acc = string_acc[:-1]
-        if char and string_acc[-1] == "\\":
+        if char and string_acc and string_acc[-1] == "\\":
             # This is a special case, if people use real strings this might happen
             self.log("Found a stray escape sequence, normalizing it")
             if char in [rstring_delimiter, "t", "n", "r", "b", "\\"]:
@@ -237,7 +237,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                 string_acc += escape_seqs.get(char, char)
                 self.index += 1
                 char = self.get_char_at()
-                while char and string_acc[-1] == "\\" and char in [rstring_delimiter, "\\"]:
+                while char and string_acc and string_acc[-1] == "\\" and char in [rstring_delimiter, "\\"]:
                     # this is a bit of a special case, if I don't do this it will close the loop or create a train of \\
                     # I don't love it though
                     string_acc = string_acc[:-1] + char
@@ -289,7 +289,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                 )
                 break
         # ChatGPT sometimes forget to quote stuff in html tags or markdown, so we do this whole thing here
-        if char == rstring_delimiter and string_acc[-1] != "\\":
+        if char == rstring_delimiter and string_acc and string_acc[-1] != "\\":
             # Special case here, in case of double quotes one after another
             if doubled_quotes and self.get_char_at(1) == rstring_delimiter:
                 self.log("While parsing a string, we found a doubled quote, ignoring it")
