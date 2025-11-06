@@ -158,23 +158,32 @@ class JSONParser:
 
     def skip_to_character(self, character: str | list[str], idx: int = 0) -> int:
         """
-        This function quickly iterates to find a character, syntactic sugar to make the code more concise
+        Advance from (self.index + idx) until we hit an *unescaped* target character.
+        Returns the offset (idx) from self.index to that position, or the distance to the end if not found.
         """
-        try:
-            char = self.json_str[self.index + idx]
-        except IndexError:
-            return idx
-        character_list = character if isinstance(character, list) else [character]
-        while char not in character_list:
-            idx += 1
-            try:
-                char = self.json_str[self.index + idx]
-            except IndexError:
-                return idx
-        if self.json_str[self.index + idx - 1] == "\\":
-            # Ah shoot this was actually escaped, continue
-            return self.skip_to_character(character, idx + 1)
-        return idx
+        targets = set(character) if isinstance(character, list) else {character}
+        i = self.index + idx
+        n = len(self.json_str)
+        backslashes = 0  # count of consecutive '\' immediately before current char
+
+        while i < n:
+            ch = self.json_str[i]
+
+            if ch == "\\":
+                backslashes += 1
+                i += 1
+                continue
+
+            # ch is not a backslash; if it's a target and not escaped (even backslashes), we're done
+            if ch in targets and (backslashes % 2 == 0):
+                return i - self.index
+
+            # reset backslash run when we see a non-backslash
+            backslashes = 0
+            i += 1
+
+        # not found; return distance to end
+        return n - self.index
 
     def _log(self, text: str) -> None:
         window: int = 10
