@@ -2,7 +2,7 @@ import os.path
 import pathlib
 import tempfile
 
-from src.json_repair.json_repair import from_file
+from json_repair.json_repair import from_file
 
 
 def test_repair_json_from_file():

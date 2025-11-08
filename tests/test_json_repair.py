@@ -1,4 +1,4 @@
-from src.json_repair.json_repair import loads, repair_json
+from json_repair.json_repair import loads, repair_json
 
 
 def test_valid_json():

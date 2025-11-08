@@ -3,7 +3,7 @@ import pathlib
 
 import pytest
 
-from src.json_repair import repair_json
+from json_repair import repair_json
 
 path = pathlib.Path(__file__).parent.resolve()
 CI = os.getenv("CI") is not None
