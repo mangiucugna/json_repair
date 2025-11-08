@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 from .constants import STRING_DELIMITERS, JSONReturnType
 from .json_context import ContextValues
+from .parse_string_helpers.parse_json_llm_block import parse_json_llm_block
 
 if TYPE_CHECKING:
     from .json_parser import JSONParser
@@ -49,7 +50,14 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
 
     if not missing_quotes:
         self.index += 1
-
+    if self.get_char_at() == "`":
+        ret_val = parse_json_llm_block(self)
+        # If we found a valid JSON block, return it, otherwise continue parsing the string
+        if ret_val is not False:
+            return ret_val
+        self.log(
+            "While parsing a string, we found code fences but they did not enclose valid JSON, continuing parsing the string",
+        )
     # There is sometimes a weird case of doubled quotes, we manage this also later in the while loop
     if self.get_char_at() in STRING_DELIMITERS and self.get_char_at() == lstring_delimiter:
         # If it's an empty key, this was easy

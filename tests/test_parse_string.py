@@ -100,3 +100,13 @@ def test_leading_trailing_characters():
                        ```""")
         == '{"key": "value"}'
     )
+
+
+def test_string_json_llm_block():
+    assert repair_json('{"key": "``"') == '{"key": "``"}'
+    assert repair_json('{"key": "```json"') == '{"key": "```json"}'
+    assert (
+        repair_json('{"key": "```json {"key": [{"key1": 1},{"key2": 2}]}```"}')
+        == '{"key": {"key": [{"key1": 1}, {"key2": 2}]}}'
+    )
+    assert repair_json('{"response": "```json{}"') == '{"response": "```json{}"}'

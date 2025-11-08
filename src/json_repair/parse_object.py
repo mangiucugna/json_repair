@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from .json_parser import JSONParser
 
 
-def parse_object(self: "JSONParser") -> dict[str, JSONReturnType]:
+def parse_object(self: "JSONParser") -> JSONReturnType:
     # <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
     obj: dict[str, JSONReturnType] = {}
     start_index = self.index
