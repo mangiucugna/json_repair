@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
 
-from json_repair.constants import JSONReturnType
+from ..constants import JSONReturnType  # noqa: TID252
 
 if TYPE_CHECKING:
-    from json_repair.json_parser import JSONParser
+    from ..json_parser import JSONParser  # noqa: TID252
 
 
 def parse_json_llm_block(self: "JSONParser") -> JSONReturnType:
