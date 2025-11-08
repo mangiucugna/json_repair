@@ -5,29 +5,29 @@ from unittest.mock import patch
 
 import pytest
 
-from json_repair.json_repair import cli
+from src.json_repair.json_repair import cli
 
 
 def test_cli(capsys):
     # Create a temporary file
     temp_fd, temp_path = tempfile.mkstemp(suffix=".json")
-    tempout_fd, tempout_path = tempfile.mkstemp(suffix=".json")
     try:
         # Write content to the temporary file
         with os.fdopen(temp_fd, "w") as tmp:
             tmp.write("{key:value")
-        cli(inline_args=[temp_path, "--indent", "0", "--ensure_ascii"])
+        cli(inline_args=[temp_path, "--indent", 0, "--ensure_ascii"])
         captured = capsys.readouterr()
         assert captured.out == '{\n"key": "value"\n}\n'
 
         # Test the output option
-        cli(inline_args=[temp_path, "--indent", "0", "-o", tempout_path])
+        tempout_fd, tempout_path = tempfile.mkstemp(suffix=".json")
+        cli(inline_args=[temp_path, "--indent", 0, "-o", tempout_path])
         with open(tempout_path) as tmp:
             out = tmp.read()
         assert out == '{\n"key": "value"\n}'
 
         # Test the inline option
-        cli(inline_args=[temp_path, "--indent", "0", "-i"])
+        cli(inline_args=[temp_path, "--indent", 0, "-i"])
         with open(temp_path) as tmp:
             out = tmp.read()
         assert out == '{\n"key": "value"\n}'
@@ -43,7 +43,7 @@ def test_cli(capsys):
     expected_output = '{\n"key": "value"\n}\n'
     # Patch sys.stdin so that cli() reads from it instead of a file.
     with patch("sys.stdin", new=io.StringIO(test_input)):
-        cli(inline_args=["--indent", "0"])
+        cli(inline_args=["--indent", 0])
     captured = capsys.readouterr()
     assert captured.out == expected_output
 

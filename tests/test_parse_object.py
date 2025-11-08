@@ -1,4 +1,4 @@
-from json_repair.json_repair import repair_json
+from src.json_repair.json_repair import repair_json
 
 
 def test_parse_object():
