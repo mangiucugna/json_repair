@@ -14,23 +14,23 @@ from .string_file_wrapper import StringFileWrapper
 
 class JSONParser:
     # Split the parse methods into separate files because this one was like 3000 lines
-    def parse_array(self, *args, **kwargs):
-        return _parse_array(self, *args, **kwargs)
+    def parse_array(self) -> list[JSONReturnType]:
+        return _parse_array(self)
 
-    def parse_boolean_or_null(self, *args, **kwargs):
-        return _parse_boolean_or_null(self, *args, **kwargs)
+    def parse_boolean_or_null(self) -> bool | str | None:
+        return _parse_boolean_or_null(self)
 
-    def parse_comment(self, *args, **kwargs):
-        return _parse_comment(self, *args, **kwargs)
+    def parse_comment(self) -> JSONReturnType:
+        return _parse_comment(self)
 
-    def parse_number(self, *args, **kwargs):
-        return _parse_number(self, *args, **kwargs)
+    def parse_number(self) -> JSONReturnType:
+        return _parse_number(self)
 
-    def parse_object(self, *args, **kwargs):
-        return _parse_object(self, *args, **kwargs)
+    def parse_object(self) -> JSONReturnType:
+        return _parse_object(self)
 
-    def parse_string(self, *args, **kwargs):
-        return _parse_string(self, *args, **kwargs)
+    def parse_string(self) -> JSONReturnType:
+        return _parse_string(self)
 
     def __init__(
         self,
@@ -137,7 +137,7 @@ class JSONParser:
         except IndexError:
             return False
 
-    def skip_whitespaces_at(self, idx: int = 0, move_main_index=True) -> int:
+    def skip_whitespaces_at(self, idx: int = 0, move_main_index: bool = True) -> int:
         """
         This function quickly iterates on whitespaces, syntactic sugar to make the code more concise
         """

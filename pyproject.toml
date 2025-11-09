@@ -117,3 +117,5 @@ line-ending = "auto"
 [tool.ruff.lint.per-file-ignores]
 # Explicit re-exports is fine in __init__.py, still a code smell elsewhere.
 "__init__.py" = ["PLC0414"]
+[tool.mypy]
+strict = true

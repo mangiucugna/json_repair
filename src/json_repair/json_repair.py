@@ -25,7 +25,7 @@ All supported use cases are in the unit tests
 import argparse
 import json
 import sys
-from typing import Literal, TextIO, overload
+from typing import Any, Literal, TextIO, overload
 
 from .constants import JSONReturnType
 from .json_parser import JSONParser
@@ -40,7 +40,7 @@ def repair_json(
     json_fd: TextIO | None = None,
     chunk_length: int = 0,
     stream_stable: bool = False,
-    **json_dumps_args,
+    **json_dumps_args: Any,
 ) -> str: ...
 
 
@@ -53,7 +53,7 @@ def repair_json(
     json_fd: TextIO | None = None,
     chunk_length: int = 0,
     stream_stable: bool = False,
-    **json_dumps_args,
+    **json_dumps_args: Any,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]: ...
 
 
@@ -65,8 +65,8 @@ def repair_json(
     json_fd: TextIO | None = None,
     chunk_length: int = 0,
     stream_stable: bool = False,
-    **json_dumps_args,
-) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]] | tuple[JSONReturnType, list]:
+    **json_dumps_args: Any,
+) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
     """
     Given a json formatted string, it will try to decode it and, if it fails, it will try to fix it.
 

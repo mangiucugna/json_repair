@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+from .constants import JSONReturnType
 from .json_context import ContextValues
 
 NUMBER_CHARS: set[str] = set("0123456789-.eE/,")
@@ -9,7 +10,7 @@ if TYPE_CHECKING:
     from .json_parser import JSONParser
 
 
-def parse_number(self: "JSONParser") -> float | int | str | bool | None:
+def parse_number(self: "JSONParser") -> JSONReturnType:
     # <number> is a valid real number expressed in one of a number of given formats
     number_str = ""
     char = self.get_char_at()
