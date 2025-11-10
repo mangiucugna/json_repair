@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 from .constants import STRING_DELIMITERS, JSONReturnType
 from .json_context import ContextValues
+from .parse_string_helpers.parse_boolean_or_null import parse_boolean_or_null
 from .parse_string_helpers.parse_json_llm_block import parse_json_llm_block
 
 if TYPE_CHECKING:
@@ -40,7 +41,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
         # This could be a <boolean> and not a string. Because (T)rue or (F)alse or (N)ull are valid
         # But remember, object keys are only of type string
         if char.lower() in ["t", "f", "n"] and self.context.current != ContextValues.OBJECT_KEY:
-            value = self.parse_boolean_or_null()
+            value = parse_boolean_or_null(self)
             if value != "":
                 return value
         self.log(
@@ -59,7 +60,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
             "While parsing a string, we found code fences but they did not enclose valid JSON, continuing parsing the string",
         )
     # There is sometimes a weird case of doubled quotes, we manage this also later in the while loop
-    if self.get_char_at() in STRING_DELIMITERS and self.get_char_at() == lstring_delimiter:
+    if self.get_char_at() == lstring_delimiter:
         # If it's an empty key, this was easy
         if (self.context.current == ContextValues.OBJECT_KEY and self.get_char_at(1) == ":") or (
             self.context.current == ContextValues.OBJECT_VALUE and self.get_char_at(1) in [",", "}"]
@@ -77,7 +78,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
         next_c = self.get_char_at(i)
         # Now check that the next character is also a delimiter to ensure that we have "".....""
         # In that case we ignore this rstring delimiter
-        if next_c and (self.get_char_at(i + 1) or "") == rstring_delimiter:
+        if self.get_char_at(i + 1) == rstring_delimiter:
             self.log(
                 "While parsing a string, we found a valid starting doubled quote",
             )
@@ -214,17 +215,13 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
             # Check if the object is really over, to avoid doubling the closing brace
             i = self.skip_whitespaces_at(idx=1, move_main_index=False)
             next_c = self.get_char_at(i)
-            if next_c and next_c == "`":
+            if next_c == "`" and self.get_char_at(i + 1) == "`" and self.get_char_at(i + 2) == "`":
                 # This could be a special case in which the LLM added code fences after the object
                 # So we need to check if there are another two ` after this one`
-                next_c = self.get_char_at(i + 1)
-                if next_c and next_c == "`":
-                    next_c = self.get_char_at(i + 2)
-                    if next_c and next_c == "`":
-                        self.log(
-                            "While parsing a string in object value context, we found a } that closes the object before code fences, stopping here",
-                        )
-                        break
+                self.log(
+                    "While parsing a string in object value context, we found a } that closes the object before code fences, stopping here",
+                )
+                break
             if not next_c:
                 self.log(
                     "While parsing a string in object value context, we found a } that closes the object, stopping here",
@@ -283,8 +280,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     i += 1
                     # Skip spaces
                     i = self.skip_whitespaces_at(idx=i, move_main_index=False)
-                    next_c = self.get_char_at(i)
-                    if next_c and next_c in [",", "}"]:
+                    if self.get_char_at(i) in [",", "}"]:
                         # Ok then this is a missing right quote
                         self.log(
                             "While parsing a string missing the right delimiter in object key context, we found a :, stopping here",
@@ -317,8 +313,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     i += 1
                     # found a delimiter, now we need to check that is followed strictly by a comma or brace
                     i = self.skip_whitespaces_at(idx=i, move_main_index=False)
-                    next_c = self.get_char_at(i)
-                    if next_c and next_c == ":":
+                    if self.get_char_at(i) == ":":
                         # Reset the cursor
                         self.index -= 1
                         char = self.get_char_at()

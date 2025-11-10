@@ -1,10 +1,9 @@
-from typing import Literal, TextIO
+from typing import TextIO
 
 from .constants import STRING_DELIMITERS, JSONReturnType
 from .json_context import JsonContext
 from .object_comparer import ObjectComparer
 from .parse_array import parse_array as _parse_array
-from .parse_boolean_or_null import parse_boolean_or_null as _parse_boolean_or_null
 from .parse_comment import parse_comment as _parse_comment
 from .parse_number import parse_number as _parse_number
 from .parse_object import parse_object as _parse_object
@@ -16,9 +15,6 @@ class JSONParser:
     # Split the parse methods into separate files because this one was like 3000 lines
     def parse_array(self) -> list[JSONReturnType]:
         return _parse_array(self)
-
-    def parse_boolean_or_null(self) -> bool | str | None:
-        return _parse_boolean_or_null(self)
 
     def parse_comment(self) -> JSONReturnType:
         return _parse_comment(self)
@@ -107,8 +103,8 @@ class JSONParser:
     ) -> JSONReturnType:
         while True:
             char = self.get_char_at()
-            # False means that we are at the end of the string provided
-            if char is False:
+            # None means that we are at the end of the string provided
+            if char is None:
                 return ""
             # <object> starts with '{'
             elif char == "{":
@@ -130,12 +126,12 @@ class JSONParser:
             else:
                 self.index += 1
 
-    def get_char_at(self, count: int = 0) -> str | Literal[False]:
+    def get_char_at(self, count: int = 0) -> str | None:
         # Why not use something simpler? Because try/except in python is a faster alternative to an "if" statement that is often True
         try:
             return self.json_str[self.index + count]
         except IndexError:
-            return False
+            return None
 
     def skip_whitespaces_at(self, idx: int = 0, move_main_index: bool = True) -> int:
         """

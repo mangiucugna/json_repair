@@ -20,7 +20,7 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
         self.skip_whitespaces_at()
 
         # Sometimes LLMs do weird things, if we find a ":" so early, we'll change it to "," and move on
-        if (self.get_char_at() or "") == ":":
+        if self.get_char_at() == ":":
             self.log(
                 "While parsing an object we found a : before a key, ignoring",
             )
@@ -83,7 +83,7 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
         self.skip_whitespaces_at()
 
         # An extreme case of missing ":" after a key
-        if (self.get_char_at() or "") != ":":
+        if self.get_char_at() != ":":
             self.log(
                 "While parsing an object we missed a : after a key",
             )
@@ -95,7 +95,7 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
         self.skip_whitespaces_at()
         # Corner case, a lone comma
         value: JSONReturnType = ""
-        if (self.get_char_at() or "") in [",", "}"]:
+        if self.get_char_at() in [",", "}"]:
             self.log(
                 "While parsing an object value we found a stray , ignoring it",
             )
@@ -106,7 +106,7 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
         self.context.reset()
         obj[key] = value
 
-        if (self.get_char_at() or "") in [",", "'", '"']:
+        if self.get_char_at() in [",", "'", '"']:
             self.index += 1
 
         # Remove trailing spaces
@@ -127,11 +127,11 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
         return obj
 
     self.skip_whitespaces_at()
-    if (self.get_char_at() or "") != ",":
+    if self.get_char_at() != ",":
         return obj
     self.index += 1
     self.skip_whitespaces_at()
-    if (self.get_char_at() or "") not in STRING_DELIMITERS:
+    if self.get_char_at() not in STRING_DELIMITERS:
         return obj
     self.log(
         "Found a comma and string delimiter after object closing brace, checking for additional key-value pairs",
