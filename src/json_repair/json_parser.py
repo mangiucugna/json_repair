@@ -1,14 +1,14 @@
 from typing import TextIO
 
-from .constants import STRING_DELIMITERS, JSONReturnType
-from .json_context import JsonContext
-from .object_comparer import ObjectComparer
 from .parse_array import parse_array as _parse_array
 from .parse_comment import parse_comment as _parse_comment
 from .parse_number import parse_number as _parse_number
 from .parse_object import parse_object as _parse_object
 from .parse_string import parse_string as _parse_string
-from .string_file_wrapper import StringFileWrapper
+from .utils.constants import STRING_DELIMITERS, JSONReturnType
+from .utils.json_context import JsonContext
+from .utils.object_comparer import ObjectComparer
+from .utils.string_file_wrapper import StringFileWrapper
 
 
 class JSONParser:

@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
-from .constants import JSONReturnType
-from .json_context import ContextValues
+from .utils.constants import JSONReturnType
+from .utils.json_context import ContextValues
 
 NUMBER_CHARS: set[str] = set("0123456789-.eE/,")
 

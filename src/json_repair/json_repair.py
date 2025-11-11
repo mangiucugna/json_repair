@@ -27,8 +27,8 @@ import json
 import sys
 from typing import Any, Literal, TextIO, overload
 
-from .constants import JSONReturnType
 from .json_parser import JSONParser
+from .utils.constants import JSONReturnType
 
 
 @overload

@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
-from .constants import STRING_DELIMITERS, JSONReturnType
-from .json_context import ContextValues
+from .utils.constants import STRING_DELIMITERS, JSONReturnType
+from .utils.json_context import ContextValues
 
 if TYPE_CHECKING:
     from .json_parser import JSONParser

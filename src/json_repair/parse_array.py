@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING
 
-from .constants import STRING_DELIMITERS, JSONReturnType
-from .json_context import ContextValues
-from .object_comparer import ObjectComparer
+from .utils.constants import STRING_DELIMITERS, JSONReturnType
+from .utils.json_context import ContextValues
+from .utils.object_comparer import ObjectComparer
 
 if TYPE_CHECKING:
     from .json_parser import JSONParser

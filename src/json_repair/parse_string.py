@@ -1,15 +1,22 @@
 from typing import TYPE_CHECKING
 
-from .constants import STRING_DELIMITERS, JSONReturnType
-from .json_context import ContextValues
 from .parse_string_helpers.parse_boolean_or_null import parse_boolean_or_null
 from .parse_string_helpers.parse_json_llm_block import parse_json_llm_block
+from .utils.constants import STRING_DELIMITERS, JSONReturnType
+from .utils.json_context import ContextValues
 
 if TYPE_CHECKING:
     from .json_parser import JSONParser
 
 
 def parse_string(self: "JSONParser") -> JSONReturnType:
+    # Utility function to append a character to the accumulator and update the index
+    def _append_literal_char(acc: str, current_char: str | None) -> tuple[str, str | None]:
+        acc += str(current_char)
+        self.index += 1
+        char = self.get_char_at()
+        return acc, char
+
     # <string> is a string of valid characters enclosed in quotes
     # i.e. { name: "John" }
     # Somehow all weird cases in an invalid JSON happen to be resolved in this function, so be careful here
@@ -283,7 +290,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     if self.get_char_at(i) in [",", "}"]:
                         # Ok then this is a missing right quote
                         self.log(
-                            "While parsing a string missing the right delimiter in object key context, we found a :, stopping here",
+                            "While parsing a string missing the right delimiter in object key context, we found a , or } stopping here",
                         )
                         break
             else:
@@ -323,9 +330,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                         break
             elif unmatched_delimiter:
                 unmatched_delimiter = False
-                string_acc += str(char)
-                self.index += 1
-                char = self.get_char_at()
+                string_acc, char = _append_literal_char(string_acc, char)
             else:
                 # Check if eventually there is a rstring delimiter, otherwise we bail
                 i = 1
@@ -364,11 +369,9 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     next_c = self.get_char_at(i)
                     if next_c in ["}", ","]:
                         self.log(
-                            "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
+                            "While parsing a string, we found a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
                         )
-                        string_acc += str(char)
-                        self.index += 1
-                        char = self.get_char_at()
+                        string_acc, char = _append_literal_char(string_acc, char)
                         continue
                 elif next_c == rstring_delimiter and self.get_char_at(i - 1) != "\\":
                     # Check if self.index:self.index+i is only whitespaces, break if that's the case
@@ -387,11 +390,9 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                             next_c = self.get_char_at(i)
                             if next_c == ":":
                                 self.log(
-                                    "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
+                                    "While parsing a string, we found a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
                                 )
-                                string_acc += str(char)
-                                self.index += 1
-                                char = self.get_char_at()
+                                string_acc, char = _append_literal_char(string_acc, char)
                                 continue
                         # We found a delimiter and we need to check if this is a key
                         # so find a rstring_delimiter and a colon after
@@ -408,12 +409,10 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                         # Only if we fail to find a ':' then we know this is misplaced quote
                         if next_c != ":":
                             self.log(
-                                "While parsing a string, we a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
+                                "While parsing a string, we found a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
                             )
                             unmatched_delimiter = not unmatched_delimiter
-                            string_acc += str(char)
-                            self.index += 1
-                            char = self.get_char_at()
+                            string_acc, char = _append_literal_char(string_acc, char)
                     elif self.context.current == ContextValues.ARRAY:
                         # So here we can have a few valid cases:
                         # ["bla bla bla "puppy" bla bla bla "kitty" bla bla"]
@@ -437,9 +436,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                                 "While parsing a string in Array context, we detected a quoted section that would have closed the string but has a different meaning here, ignoring it",
                             )
                             unmatched_delimiter = not unmatched_delimiter
-                            string_acc += str(char)
-                            self.index += 1
-                            char = self.get_char_at()
+                            string_acc, char = _append_literal_char(string_acc, char)
                         else:
                             break
                     elif self.context.current == ContextValues.OBJECT_KEY:
@@ -447,9 +444,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                         self.log(
                             "While parsing a string in Object Key context, we detected a quoted section that would have closed the string but has a different meaning here, ignoring it",
                         )
-                        string_acc += str(char)
-                        self.index += 1
-                        char = self.get_char_at()
+                        string_acc, char = _append_literal_char(string_acc, char)
     if char and missing_quotes and self.context.current == ContextValues.OBJECT_KEY and char.isspace():
         self.log(
             "While parsing a string, handling an extreme corner case in which the LLM added a comment instead of valid string, invalidate the string and return an empty value",
