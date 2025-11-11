@@ -93,7 +93,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
             self.index += 1
         else:
             # Ok this is not a doubled quote, check if this is an empty string or not
-            i = self.skip_whitespaces_at(idx=1, move_main_index=False)
+            i = self.scroll_whitespaces(idx=1)
             next_c = self.get_char_at(i)
             if next_c in STRING_DELIMITERS + ["{", "["]:
                 # something fishy is going on here
@@ -143,7 +143,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
         ):
             rstring_delimiter_missing = True
             # check if this is a case in which the closing comma is NOT missing instead
-            self.skip_whitespaces_at()
+            self.skip_whitespaces()
             if self.get_char_at(1) == "\\":
                 # Ok this is a quoted string, skip
                 rstring_delimiter_missing = False
@@ -153,7 +153,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                 i += 1
                 # found a delimiter, now we need to check that is followed strictly by a comma or brace
                 # or the string ended
-                i = self.skip_whitespaces_at(idx=i, move_main_index=False)
+                i = self.scroll_whitespaces(idx=i)
                 next_c = self.get_char_at(i)
                 if not next_c or next_c in [",", "}"]:
                     rstring_delimiter_missing = False
@@ -168,7 +168,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     else:
                         # But again, this could just be something a bit stupid like "lorem, "ipsum" sic"
                         # Check if we find a : afterwards (skipping space)
-                        i = self.skip_whitespaces_at(idx=i + 1, move_main_index=False)
+                        i = self.scroll_whitespaces(idx=i + 1)
                         next_c = self.get_char_at(i)
                         if next_c and next_c != ":":
                             rstring_delimiter_missing = False
@@ -183,7 +183,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     break
                 else:
                     # skip any whitespace first
-                    i = self.skip_whitespaces_at(idx=1, move_main_index=False)
+                    i = self.scroll_whitespaces(idx=1)
                     # We couldn't find any rstring_delimeter before the end of the string
                     # check if this is the last string of an object and therefore we can keep going
                     # make an exception if this is the last char before the closing brace
@@ -220,7 +220,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
         if self.context.current == ContextValues.OBJECT_VALUE and char == "}":
             # We found the end of an object while parsing a value
             # Check if the object is really over, to avoid doubling the closing brace
-            i = self.skip_whitespaces_at(idx=1, move_main_index=False)
+            i = self.scroll_whitespaces(idx=1)
             next_c = self.get_char_at(i)
             if next_c == "`" and self.get_char_at(i + 1) == "`" and self.get_char_at(i + 2) == "`":
                 # This could be a special case in which the LLM added code fences after the object
@@ -286,7 +286,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     # found a second delimiter
                     i += 1
                     # Skip spaces
-                    i = self.skip_whitespaces_at(idx=i, move_main_index=False)
+                    i = self.scroll_whitespaces(idx=i)
                     if self.get_char_at(i) in [",", "}"]:
                         # Ok then this is a missing right quote
                         self.log(
@@ -319,7 +319,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     # We found a quote, now let's make sure there's a ":" following
                     i += 1
                     # found a delimiter, now we need to check that is followed strictly by a comma or brace
-                    i = self.skip_whitespaces_at(idx=i, move_main_index=False)
+                    i = self.scroll_whitespaces(idx=i)
                     if self.get_char_at(i) == ":":
                         # Reset the cursor
                         self.index -= 1
@@ -365,7 +365,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     next_c = self.get_char_at(i)
                     # Ok now I found a delimiter, let's skip whitespaces and see if next we find a } or a ,
                     i += 1
-                    i = self.skip_whitespaces_at(idx=i, move_main_index=False)
+                    i = self.scroll_whitespaces(idx=i)
                     next_c = self.get_char_at(i)
                     if next_c in ["}", ","]:
                         self.log(
@@ -378,7 +378,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     if all(str(self.get_char_at(j)).isspace() for j in range(1, i) if self.get_char_at(j)):
                         break
                     if self.context.current == ContextValues.OBJECT_VALUE:
-                        i = self.skip_whitespaces_at(idx=i + 1, move_main_index=False)
+                        i = self.scroll_whitespaces(idx=i + 1)
                         if self.get_char_at(i) == ",":
                             # So we found a comma, this could be a case of a single quote like "va"lue",
                             # Search if it's followed by another key, starting with the first delimeter
@@ -386,7 +386,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                             i += 1
                             i = self.skip_to_character(character=rstring_delimiter, idx=i + 1)
                             i += 1
-                            i = self.skip_whitespaces_at(idx=i, move_main_index=False)
+                            i = self.scroll_whitespaces(idx=i)
                             next_c = self.get_char_at(i)
                             if next_c == ":":
                                 self.log(
@@ -449,7 +449,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
         self.log(
             "While parsing a string, handling an extreme corner case in which the LLM added a comment instead of valid string, invalidate the string and return an empty value",
         )
-        self.skip_whitespaces_at()
+        self.skip_whitespaces()
         if self.get_char_at() not in [":", ","]:
             return ""
 

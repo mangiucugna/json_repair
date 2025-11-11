@@ -15,7 +15,7 @@ def parse_array(self: "JSONParser") -> list[JSONReturnType]:
     # Stop when you either find the closing parentheses or you have iterated over the entire string
     char = self.get_char_at()
     while char and char not in ["]", "}"]:
-        self.skip_whitespaces_at()
+        self.skip_whitespaces()
         value: JSONReturnType = ""
         if char in STRING_DELIMITERS:
             # Sometimes it can happen that LLMs forget to start an object and then you think it's a string in an array
@@ -23,7 +23,7 @@ def parse_array(self: "JSONParser") -> list[JSONReturnType]:
             # And either parse the string or parse the object
             i = 1
             i = self.skip_to_character(char, i)
-            i = self.skip_whitespaces_at(idx=i + 1, move_main_index=False)
+            i = self.scroll_whitespaces(idx=i + 1)
             value = self.parse_object() if self.get_char_at(i) == ":" else self.parse_string()
         else:
             value = self.parse_json()

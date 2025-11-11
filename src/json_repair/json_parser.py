@@ -133,23 +133,29 @@ class JSONParser:
         except IndexError:
             return None
 
-    def skip_whitespaces_at(self, idx: int = 0, move_main_index: bool = True) -> int:
+    def skip_whitespaces(self) -> None:
         """
-        This function quickly iterates on whitespaces, syntactic sugar to make the code more concise
+        This function quickly iterates on whitespaces, moving the self.index forward
+        """
+        try:
+            char = self.json_str[self.index]
+            while char.isspace():
+                self.index += 1
+                char = self.json_str[self.index]
+        except IndexError:
+            pass
+
+    def scroll_whitespaces(self, idx: int = 0) -> int:
+        """
+        This function quickly iterates on whitespaces. Doesn't move the self.index and returns the offset from self.index
         """
         try:
             char = self.json_str[self.index + idx]
-        except IndexError:
-            return idx
-        while char.isspace():
-            if move_main_index:
-                self.index += 1
-            else:
+            while char.isspace():
                 idx += 1
-            try:
                 char = self.json_str[self.index + idx]
-            except IndexError:
-                return idx
+        except IndexError:
+            pass
         return idx
 
     def skip_to_character(self, character: str | list[str], idx: int = 0) -> int:

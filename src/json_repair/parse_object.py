@@ -17,7 +17,7 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
         # <member> ::= <string> ': ' <json>
 
         # Skip filler whitespaces
-        self.skip_whitespaces_at()
+        self.skip_whitespaces()
 
         # Sometimes LLMs do weird things, if we find a ":" so early, we'll change it to "," and move on
         if self.get_char_at() == ":":
@@ -53,14 +53,14 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
                             prev_value.extend(
                                 new_array[0] if len(new_array) == 1 and isinstance(new_array[0], list) else new_array
                             )
-                        self.skip_whitespaces_at()
+                        self.skip_whitespaces()
                         if self.get_char_at() == ",":
                             self.index += 1
-                        self.skip_whitespaces_at()
+                        self.skip_whitespaces()
                         continue
             key = str(self.parse_string())
             if key == "":
-                self.skip_whitespaces_at()
+                self.skip_whitespaces()
             if key != "" or (key == "" and self.get_char_at() in [":", "}"]):
                 # If the string is empty but there is a object divider, we are done here
                 break
@@ -74,13 +74,13 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
             break
 
         # Skip filler whitespaces
-        self.skip_whitespaces_at()
+        self.skip_whitespaces()
 
         # We reached the end here
         if (self.get_char_at() or "}") == "}":
             continue
 
-        self.skip_whitespaces_at()
+        self.skip_whitespaces()
 
         # An extreme case of missing ":" after a key
         if self.get_char_at() != ":":
@@ -92,7 +92,7 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
         self.context.reset()
         self.context.set(ContextValues.OBJECT_VALUE)
         # The value can be any valid json
-        self.skip_whitespaces_at()
+        self.skip_whitespaces()
         # Corner case, a lone comma
         value: JSONReturnType = ""
         if self.get_char_at() in [",", "}"]:
@@ -110,7 +110,7 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
             self.index += 1
 
         # Remove trailing spaces
-        self.skip_whitespaces_at()
+        self.skip_whitespaces()
 
     self.index += 1
 
@@ -126,11 +126,11 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
     if not self.context.empty:
         return obj
 
-    self.skip_whitespaces_at()
+    self.skip_whitespaces()
     if self.get_char_at() != ",":
         return obj
     self.index += 1
-    self.skip_whitespaces_at()
+    self.skip_whitespaces()
     if self.get_char_at() not in STRING_DELIMITERS:
         return obj
     self.log(
