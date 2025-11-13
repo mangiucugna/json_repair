@@ -45,7 +45,7 @@ def parse_array(self: "JSONParser") -> list[JSONReturnType]:
             char = self.get_char_at()
 
     # Especially at the end of an LLM generated json you might miss the last "]"
-    if char and char != "]":
+    if char != "]":
         self.log(
             "While parsing an array we missed the closing ], ignoring it",
         )

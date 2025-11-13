@@ -38,7 +38,7 @@ repos:
     pass_filenames: false
     types: [python]
 - repo: https://github.com/semgrep/pre-commit
-  rev: "v1.142.1"
+  rev: "v1.142.2"
   hooks:
     - id: semgrep
       args:
