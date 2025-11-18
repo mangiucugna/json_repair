@@ -14,9 +14,21 @@ def test_strict_duplicate_keys_inside_array():
         repair_json(payload, strict=True, skip_json_loads=True)
 
 
+def test_strict_rejects_empty_keys():
+    payload = '{"" : "value"}'
+    with pytest.raises(ValueError, match="Empty key found"):
+        repair_json(payload, strict=True, skip_json_loads=True)
+
+
 def test_strict_requires_colon_between_key_and_value():
     with pytest.raises(ValueError, match="Missing ':' after key"):
         repair_json('{"missing" "colon"}', strict=True)
+
+
+def test_strict_rejects_empty_values():
+    payload = '{"key": , "key2": "value2"}'
+    with pytest.raises(ValueError, match="Parsed value is empty"):
+        repair_json(payload, strict=True, skip_json_loads=True)
 
 
 def test_strict_rejects_empty_object_with_extra_characters():

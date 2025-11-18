@@ -62,7 +62,12 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
             if key == "":
                 self.skip_whitespaces()
             if key != "" or (key == "" and self.get_char_at() in [":", "}"]):
-                # If the string is empty but there is a object divider, we are done here
+                # Empty keys now trigger in strict mode, otherwise we keep repairing as before
+                if key == "" and self.strict:
+                    self.log(
+                        "Empty key found in strict mode while parsing object, raising an error",
+                    )
+                    raise ValueError("Empty key found in strict mode while parsing object.")
                 break
         if ContextValues.ARRAY in self.context.context and key in obj:
             if self.strict:
@@ -99,7 +104,7 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
         self.index += 1
         self.context.reset()
         self.context.set(ContextValues.OBJECT_VALUE)
-        # The value can be any valid json
+        # The value can be any valid json; strict mode will refuse repaired empties
         self.skip_whitespaces()
         # Corner case, a lone comma
         value: JSONReturnType = ""
@@ -109,7 +114,11 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
             )
         else:
             value = self.parse_json()
-
+        if value == "" and self.strict and self.get_char_at(-1) not in STRING_DELIMITERS:
+            self.log(
+                "Parsed value is empty in strict mode while parsing object, raising an error",
+            )
+            raise ValueError("Parsed value is empty in strict mode while parsing object.")
         # Reset context since our job is done
         self.context.reset()
         obj[key] = value

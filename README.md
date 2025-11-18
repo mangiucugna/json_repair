@@ -150,6 +150,23 @@ Some rules of thumb to use:
 - `skip_json_loads` is faster only if you 100% know that the string is not a valid JSON
 - If you are having issues with escaping pass the string as **raw** string like: `r"string with escaping\""`
 
+### Strict mode
+
+By default `json_repair` does its best to “fix” input, even when the JSON is far from valid.  
+In some scenarios you want the opposite behavior and need the parser to error out instead of repairing; pass `strict=True` to `repair_json`, `loads`, `load`, or `from_file` to enable that mode:
+
+```
+from json_repair import repair_json
+
+repair_json(bad_json_string, strict=True)
+```
+
+The CLI exposes the same behavior with `json_repair --strict input.json` (or piping data via stdin).
+
+In strict mode the parser raises `ValueError` as soon as it encounters structural issues such as duplicate keys, missing `:` separators, empty keys/values introduced by stray commas, multiple top-level elements, or other ambiguous constructs. This is useful when you just need validation with friendlier error messages while still benefiting from json_repair’s resilience elsewhere in your stack.
+
+Strict mode still honors `skip_json_loads=True`; combining them lets you skip the initial `json.loads` check but still enforce strict parsing rules.
+
 ### Use json_repair with streaming
 
 Sometimes you are streaming some data and want to repair the JSON coming from it. Normally this won't work but you can pass `stream_stable` to `repair_json()` or `loads()` to make it work:
@@ -181,6 +198,7 @@ options:
                         If specified, the output will be written to TARGET filename instead of stdout
   --ensure_ascii        Pass ensure_ascii=True to json.dumps()
   --indent INDENT       Number of spaces for indentation (Default 2)
+  --strict              Raise on duplicate keys, missing separators, empty keys/values, and similar structural issues instead of repairing them
 ```
 
 ## Adding to requirements
