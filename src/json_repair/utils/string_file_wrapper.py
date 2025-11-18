@@ -19,14 +19,16 @@ class StringFileWrapper:
             buffer_length (int): The length of each buffer chunk.
         """
         self.fd = fd
-        self.length: int = 0
-        # Buffers are 1MB strings that are read from the file
-        # and kept in memory to keep reads low
+        # Buffers are chunks of text read from the file and cached to reduce disk access.
         self.buffers: dict[int, str] = {}
-        # chunk_length is in bytes
         if not chunk_length or chunk_length < 2:
             chunk_length = 1_000_000
+        # chunk_length now refers to the number of characters per chunk.
         self.buffer_length = chunk_length
+        # Keep track of the starting file position ("cookie") for each chunk so we can
+        # seek safely without landing in the middle of a multibyte code point.
+        self._chunk_positions: list[int] = [0]
+        self.length: int | None = None
 
     def get_buffer(self, index: int) -> str:
         """
@@ -38,15 +40,33 @@ class StringFileWrapper:
         Returns:
             str: The buffer chunk at the specified index.
         """
-        if self.buffers.get(index) is None:
-            self.fd.seek(index * self.buffer_length)
-            self.buffers[index] = self.fd.read(self.buffer_length)
-            # Save memory by keeping max 2MB buffer chunks and min 2 chunks
-            if len(self.buffers) > max(2, 2_000_000 / self.buffer_length):
-                oldest_key = next(iter(self.buffers))
-                if oldest_key != index:
-                    self.buffers.pop(oldest_key)
-        return self.buffers[index]
+        if index < 0:
+            raise IndexError("Negative indexing is not supported")
+
+        cached = self.buffers.get(index)
+        if cached is not None:
+            return cached
+
+        self._ensure_chunk_position(index)
+        start_pos = self._chunk_positions[index]
+        self.fd.seek(start_pos)
+        chunk = self.fd.read(self.buffer_length)
+        if not chunk:
+            raise IndexError("Chunk index out of range")
+        end_pos = self.fd.tell()
+        if len(self._chunk_positions) <= index + 1:
+            self._chunk_positions.append(end_pos)
+        if len(chunk) < self.buffer_length:
+            self.length = index * self.buffer_length + len(chunk)
+
+        self.buffers[index] = chunk
+        # Save memory by keeping max 2MB buffer chunks and min 2 chunks
+        max_buffers = max(2, int(2_000_000 / self.buffer_length))
+        if len(self.buffers) > max_buffers:
+            oldest_key = next(iter(self.buffers))
+            if oldest_key != index:
+                self.buffers.pop(oldest_key)
+        return chunk
 
     def __getitem__(self, index: int | slice) -> str:
         """
@@ -62,18 +82,49 @@ class StringFileWrapper:
         # self.buffers[index]: the row in the array of length 1MB, index is `i` modulo CHUNK_LENGTH
         # self.buffures[index][j]: the column of the row that is `i` remainder CHUNK_LENGTH
         if isinstance(index, slice):
-            buffer_index = index.start // self.buffer_length
-            buffer_end = index.stop // self.buffer_length
+            total_len = len(self)
+            start = 0 if index.start is None else index.start
+            stop = total_len if index.stop is None else index.stop
+            step = 1 if index.step is None else index.step
+
+            if start < 0:
+                start += total_len
+            if stop < 0:
+                stop += total_len
+
+            start = max(start, 0)
+            stop = min(stop, total_len)
+
+            if step == 0:
+                raise ValueError("slice step cannot be zero")
+            if step != 1:
+                return "".join(self[i] for i in range(start, stop, step))
+
+            if start >= stop:
+                return ""
+
+            buffer_index = start // self.buffer_length
+            buffer_end = (stop - 1) // self.buffer_length
+            start_mod = start % self.buffer_length
+            stop_mod = stop % self.buffer_length
+            if stop_mod == 0 and stop > start:
+                stop_mod = self.buffer_length
             if buffer_index == buffer_end:
-                return self.get_buffer(buffer_index)[index.start % self.buffer_length : index.stop % self.buffer_length]
-            else:
-                start_slice = self.get_buffer(buffer_index)[index.start % self.buffer_length :]
-                end_slice = self.get_buffer(buffer_end)[: index.stop % self.buffer_length]
-                middle_slices = [self.get_buffer(i) for i in range(buffer_index + 1, buffer_end)]
-                return start_slice + "".join(middle_slices) + end_slice
+                buffer = self.get_buffer(buffer_index)
+                return buffer[start_mod:stop_mod]
+
+            start_slice = self.get_buffer(buffer_index)[start_mod:]
+            end_slice = self.get_buffer(buffer_end)[:stop_mod]
+            middle_slices = [self.get_buffer(i) for i in range(buffer_index + 1, buffer_end)]
+            return start_slice + "".join(middle_slices) + end_slice
         else:
+            if index < 0:
+                index += len(self)
+            if index < 0:
+                raise IndexError("string index out of range")
             buffer_index = index // self.buffer_length
-            return self.get_buffer(buffer_index)[index % self.buffer_length]
+            buffer = self.get_buffer(buffer_index)
+            return buffer[index % self.buffer_length]
 
     def __len__(self) -> int:
         """
@@ -82,11 +133,10 @@ class StringFileWrapper:
         Returns:
             int: The total number of characters in the file.
         """
-        if self.length < 1:
-            current_position = self.fd.tell()
-            self.fd.seek(0, os.SEEK_END)
-            self.length = self.fd.tell()
-            self.fd.seek(current_position)
+        if self.length is None:
+            while self.length is None:
+                chunk_index = len(self._chunk_positions)
+                self._ensure_chunk_position(chunk_index)
         return self.length
 
     def __setitem__(self, index: int | slice, value: str) -> None:  # pragma: no cover
@@ -106,3 +156,21 @@ class StringFileWrapper:
         self.fd.seek(start)
         self.fd.write(value)
         self.fd.seek(current_position)
+
+    def _ensure_chunk_position(self, chunk_index: int) -> None:
+        """
+        Ensure that we know the starting file position for the given chunk index.
+        """
+        while len(self._chunk_positions) <= chunk_index:
+            prev_index = len(self._chunk_positions) - 1
+            start_pos = self._chunk_positions[-1]
+            self.fd.seek(start_pos, os.SEEK_SET)
+            chunk = self.fd.read(self.buffer_length)
+            end_pos = self.fd.tell()
+            if len(chunk) < self.buffer_length:
+                self.length = prev_index * self.buffer_length + len(chunk)
+            self._chunk_positions.append(end_pos)
+            if not chunk:
+                break
+        if len(self._chunk_positions) <= chunk_index:
+            raise IndexError("Chunk index out of range")
