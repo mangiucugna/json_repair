@@ -28,8 +28,8 @@ def parse_array(self: "JSONParser") -> list[JSONReturnType]:
         else:
             value = self.parse_json()
 
-        # It is possible that parse_json() returns nothing valid, so we increase by 1
-        if ObjectComparer.is_strictly_empty(value):
+        # It is possible that parse_json() returns nothing valid, so we increase by 1, unless we find an array separator
+        if ObjectComparer.is_strictly_empty(value) and self.get_char_at() not in ["]", ","]:
             self.index += 1
         elif value == "..." and self.get_char_at(-1) == ".":
             self.log(

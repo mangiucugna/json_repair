@@ -69,8 +69,10 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
     # There is sometimes a weird case of doubled quotes, we manage this also later in the while loop
     if self.get_char_at() == lstring_delimiter:
         # If it's an empty key, this was easy
-        if (self.context.current == ContextValues.OBJECT_KEY and self.get_char_at(1) == ":") or (
-            self.context.current == ContextValues.OBJECT_VALUE and self.get_char_at(1) in [",", "}"]
+        if (
+            (self.context.current == ContextValues.OBJECT_KEY and self.get_char_at(1) == ":")
+            or (self.context.current == ContextValues.OBJECT_VALUE and self.get_char_at(1) in [",", "}"])
+            or (self.context.current == ContextValues.ARRAY and self.get_char_at(1) in [",", "]"])
         ):
             self.index += 1
             return ""
