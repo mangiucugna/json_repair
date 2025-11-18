@@ -81,7 +81,10 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
             self.log(
                 "While parsing a string, we found a doubled quote and then a quote again, ignoring it",
             )
-            return ""
+            if self.strict:
+                raise ValueError("Found doubled quotes followed by another quote.")
+            else:
+                return ""
         # Find the next delimiter
         i = self.skip_to_character(character=rstring_delimiter, idx=1)
         next_c = self.get_char_at(i)
@@ -102,6 +105,10 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                 self.log(
                     "While parsing a string, we found a doubled quote but also another quote afterwards, ignoring it",
                 )
+                if self.strict:
+                    raise ValueError(
+                        "Found doubled quotes followed by another quote while parsing a string.",
+                    )
                 self.index += 1
                 return ""
             elif next_c not in [",", "]", "}"]:
@@ -292,7 +299,9 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     if self.get_char_at(i) in [",", "}"]:
                         # Ok then this is a missing right quote
                         self.log(
-                            "While parsing a string missing the right delimiter in object key context, we found a , or } stopping here",
+                            "While parsing a string missing the right delimiter in object key context, we found a "
+                            + str(self.get_char_at(i))
+                            + " stopping here",
                         )
                         break
             else:

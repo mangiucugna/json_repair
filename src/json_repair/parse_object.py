@@ -65,6 +65,9 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
                 # If the string is empty but there is a object divider, we are done here
                 break
         if ContextValues.ARRAY in self.context.context and key in obj:
+            if self.strict:
+                self.log("Duplicate key found in strict mode while parsing object, raising an error")
+                raise ValueError("Duplicate key found in strict mode while parsing object.")
             self.log(
                 "While parsing an object we found a duplicate key, closing the object here and rolling back the index",
             )
@@ -84,6 +87,11 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
 
         # An extreme case of missing ":" after a key
         if self.get_char_at() != ":":
+            if self.strict:
+                self.log(
+                    "Missing ':' after key in strict mode while parsing object, raising an error",
+                )
+                raise ValueError("Missing ':' after key in strict mode while parsing object.")
             self.log(
                 "While parsing an object we missed a : after a key",
             )
@@ -97,7 +105,7 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
         value: JSONReturnType = ""
         if self.get_char_at() in [",", "}"]:
             self.log(
-                "While parsing an object value we found a stray , ignoring it",
+                "While parsing an object value we found a stray " + str(self.get_char_at()) + ", ignoring it",
             )
         else:
             value = self.parse_json()
@@ -116,6 +124,11 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
 
     # If the object is empty but also isn't just {}
     if not obj and self.index - start_index > 2:
+        if self.strict:
+            self.log(
+                "Parsed object is empty but contains extra characters in strict mode, raising an error",
+            )
+            raise ValueError("Parsed object is empty but contains extra characters in strict mode.")
         self.log("Parsed object is empty, we will try to parse this as an array instead")
         self.index = start_index
         return self.parse_array()
@@ -133,11 +146,12 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
     self.skip_whitespaces()
     if self.get_char_at() not in STRING_DELIMITERS:
         return obj
-    self.log(
-        "Found a comma and string delimiter after object closing brace, checking for additional key-value pairs",
-    )
-    additional_obj = self.parse_object()
-    if isinstance(additional_obj, dict):
-        obj.update(additional_obj)
+    if not self.strict:
+        self.log(
+            "Found a comma and string delimiter after object closing brace, checking for additional key-value pairs",
+        )
+        additional_obj = self.parse_object()
+        if isinstance(additional_obj, dict):
+            obj.update(additional_obj)
 
     return obj

@@ -35,6 +35,7 @@ class JSONParser:
         logging: bool | None,
         json_fd_chunk_length: int = 0,
         stream_stable: bool = False,
+        strict: bool = False,
     ) -> None:
         # The string to parse
         self.json_str: str | StringFileWrapper = json_str
@@ -66,6 +67,10 @@ class JSONParser:
         #   case 3:  '{"key": "val\\n123,`key2:value2' => '{"key": "val\\n123,`key2:value2"}'
         #   case 4:  '{"key": "val\\n123,`key2:value2`"}' => '{"key": "val\\n123,`key2:value2`"}'
         self.stream_stable = stream_stable
+        # Over time the library got more and more complex heuristics to repair JSON. Some of these heuristics
+        # may not be desirable in some use cases and the user would prefer json_repair to return an exception.
+        # So strict mode was added to disable some of those heuristics.
+        self.strict = strict
 
     def parse(
         self,
@@ -93,6 +98,11 @@ class JSONParser:
                     "There were no more elements, returning the element without the array",
                 )
                 json = json[0]
+            elif self.strict:
+                self.log(
+                    "Multiple top-level JSON elements found in strict mode, raising an error",
+                )
+                raise ValueError("Multiple top-level JSON elements found in strict mode.")
         if self.logging:
             return json, self.logger
         else:
