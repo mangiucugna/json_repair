@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from .utils.constants import JSONReturnType
 from .utils.json_context import ContextValues
 
-NUMBER_CHARS: set[str] = set("0123456789-.eE/,")
+NUMBER_CHARS: set[str] = set("0123456789-.eE/,_")
 
 
 if TYPE_CHECKING:
@@ -16,7 +16,8 @@ def parse_number(self: "JSONParser") -> JSONReturnType:
     char = self.get_char_at()
     is_array = self.context.current == ContextValues.ARRAY
     while char and char in NUMBER_CHARS and (not is_array or char != ","):
-        number_str += char
+        if char != "_":
+            number_str += char
         self.index += 1
         char = self.get_char_at()
     if number_str and number_str[-1] in "-eE/,":

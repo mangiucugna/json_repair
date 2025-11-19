@@ -4,6 +4,8 @@ from src.json_repair.json_repair import repair_json
 def test_parse_number():
     assert repair_json("1", return_objects=True) == 1
     assert repair_json("1.2", return_objects=True) == 1.2
+    assert repair_json('{"value": 82_461_110}', return_objects=True) == {"value": 82461110}
+    assert repair_json('{"value": 1_234.5_6}', return_objects=True) == {"value": 1234.56}
 
 
 def test_parse_number_edge_cases():
