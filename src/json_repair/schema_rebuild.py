@@ -337,7 +337,7 @@ def check_valid_schema(schema, obj):
 def comply_schema(
     json_str: str = "",
     schema: dict = {},
-    return_objects: bool = False,
+    return_objects: bool = True,
     skip_json_loads: bool = False,
     logging: bool = False,
     json_fd = None,
