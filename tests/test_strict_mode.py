@@ -5,7 +5,7 @@ from src.json_repair.json_repair import repair_json
 
 def test_strict_rejects_multiple_top_level_values():
     with pytest.raises(ValueError, match="Multiple top-level JSON elements"):
-        repair_json("{}[]", strict=True)
+        repair_json('{"key":"value"}["value"]', strict=True)
 
 
 def test_strict_duplicate_keys_inside_array():

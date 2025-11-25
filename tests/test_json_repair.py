@@ -18,8 +18,8 @@ def test_valid_json():
 
 
 def test_multiple_jsons():
-    assert repair_json("[]{}") == "[[], {}]"
-    assert repair_json("{}[]{}") == "[{}, [], {}]"
+    assert repair_json("[]{}") == "[]"
+    assert repair_json('[]{"key":"value"}') == '{"key": "value"}'
     assert repair_json('{"key":"value"}[1,2,3,True]') == '[{"key": "value"}, [1, 2, 3, true]]'
     assert (
         repair_json('lorem ```json {"key":"value"} ``` ipsum ```json [1,2,3,True] ``` 42')

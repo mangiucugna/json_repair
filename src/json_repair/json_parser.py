@@ -84,10 +84,13 @@ class JSONParser:
             while self.index < len(self.json_str):
                 self.context.reset()
                 j = self.parse_json()
-                if j != "":
+                if j:
                     if ObjectComparer.is_same_object(json[-1], j):
                         # replace the last entry with the new one since the new one seems an update
                         json.pop()
+                    else:
+                        if not json[-1]:
+                            json.pop()
                     json.append(j)
                 else:
                     # this was a bust, move the index

@@ -89,9 +89,9 @@ def test_parse_object_edge_cases():
 def test_parse_object_merge_at_the_end():
     assert repair_json('{"key": "value"}, "key2": "value2"}') == '{"key": "value", "key2": "value2"}'
     assert repair_json('{"key": "value"}, "key2": }') == '{"key": "value", "key2": ""}'
-    assert repair_json('{"key": "value"}, []') == '[{"key": "value"}, []]'
+    assert repair_json('{"key": "value"}, []') == '{"key": "value"}'
     assert repair_json('{"key": "value"}, ["abc"]') == '[{"key": "value"}, ["abc"]]'
-    assert repair_json('{"key": "value"}, {}') == '[{"key": "value"}, {}]'
+    assert repair_json('{"key": "value"}, {}') == '{"key": "value"}'
     assert repair_json('{"key": "value"}, "" : "value2"}') == '{"key": "value", "": "value2"}'
     assert repair_json('{"key": "value"}, "key2" "value2"}') == '{"key": "value", "key2": "value2"}'
     assert (
