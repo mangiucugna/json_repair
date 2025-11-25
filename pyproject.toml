@@ -17,6 +17,10 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
+dependencies = [
+    "jsonschema",
+    "numpy",
+]
 [project.urls]
 "Homepage" = "https://github.com/mangiucugna/json_repair/"
 "Bug Tracker" = "https://github.com/mangiucugna/json_repair/issues"
