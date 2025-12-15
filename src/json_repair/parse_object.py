@@ -125,7 +125,12 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
 
         if self.get_char_at() in [",", "'", '"']:
             self.index += 1
-
+        if self.get_char_at() == "]" and ContextValues.ARRAY in self.context.context:
+            self.log(
+                "While parsing an object we found a closing array bracket, closing the object here and rolling back the index"
+            )
+            self.index -= 1
+            break
         # Remove trailing spaces
         self.skip_whitespaces()
 
