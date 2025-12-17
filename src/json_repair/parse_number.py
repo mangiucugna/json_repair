@@ -30,7 +30,7 @@ def parse_number(self: "JSONParser") -> JSONReturnType:
         return self.parse_string()
     try:
         if "," in number_str:
-            return str(number_str)
+            return number_str
         if "." in number_str or "e" in number_str or "E" in number_str:
             return float(number_str)
         else:

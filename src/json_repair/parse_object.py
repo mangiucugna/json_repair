@@ -58,7 +58,9 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
                             self.index += 1
                         self.skip_whitespaces()
                         continue
-            key = str(self.parse_string())
+            raw_key = self.parse_string()
+            assert isinstance(raw_key, str)
+            key = raw_key
             if key == "":
                 self.skip_whitespaces()
             if key != "" or (key == "" and self.get_char_at() in [":", "}"]):
@@ -108,9 +110,10 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
         self.skip_whitespaces()
         # Corner case, a lone comma
         value: JSONReturnType = ""
-        if self.get_char_at() in [",", "}"]:
+        char = self.get_char_at()
+        if char in [",", "}"]:
             self.log(
-                "While parsing an object value we found a stray " + str(self.get_char_at()) + ", ignoring it",
+                f"While parsing an object value we found a stray {char}, ignoring it",
             )
         else:
             value = self.parse_json()

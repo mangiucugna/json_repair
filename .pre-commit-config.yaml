@@ -25,6 +25,12 @@ repos:
     language: system
     pass_filenames: false
     types: [python]
+  - id: ty
+    name: ty
+    entry: ty check --python .venv src/ tests/
+    language: system
+    pass_filenames: false
+    types: [python]
   - id: run-tests
     name: run tests
     entry: .venv/bin/coverage run -m pytest

@@ -137,6 +137,7 @@ class StringFileWrapper:
             while self.length is None:
                 chunk_index = len(self._chunk_positions)
                 self._ensure_chunk_position(chunk_index)
+        assert self.length is not None
         return self.length
 
     def __setitem__(self, index: int | slice, value: str) -> None:  # pragma: no cover

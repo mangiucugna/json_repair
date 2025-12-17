@@ -11,8 +11,8 @@ if TYPE_CHECKING:
 
 def parse_string(self: "JSONParser") -> JSONReturnType:
     # Utility function to append a character to the accumulator and update the index
-    def _append_literal_char(acc: str, current_char: str | None) -> tuple[str, str | None]:
-        acc += str(current_char)
+    def _append_literal_char(acc: str, current_char: str) -> tuple[str, str | None]:
+        acc += current_char
         self.index += 1
         char = self.get_char_at()
         return acc, char
@@ -246,10 +246,12 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
         string_acc += char
         self.index += 1
         char = self.get_char_at()
-        # Unclosed string ends with a \ character. This character is ignored if stream_stable = True.
-        if self.stream_stable and not char and string_acc and string_acc[-1] == "\\":
-            string_acc = string_acc[:-1]
-        if char and string_acc and string_acc[-1] == "\\":
+        if char is None:
+            # Unclosed string ends with a \ character. This character is ignored if stream_stable = True.
+            if self.stream_stable and string_acc and string_acc[-1] == "\\":
+                string_acc = string_acc[:-1]
+            break
+        if string_acc and string_acc[-1] == "\\":
             # This is a special case, if people use real strings this might happen
             self.log("Found a stray escape sequence, normalizing it")
             if char in [rstring_delimiter, "t", "n", "r", "b", "\\"]:
@@ -296,12 +298,11 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     i += 1
                     # Skip spaces
                     i = self.scroll_whitespaces(idx=i)
-                    if self.get_char_at(i) in [",", "}"]:
+                    ch = self.get_char_at(i)
+                    if ch in [",", "}"]:
                         # Ok then this is a missing right quote
                         self.log(
-                            "While parsing a string missing the right delimiter in object key context, we found a "
-                            + str(self.get_char_at(i))
-                            + " stopping here",
+                            f"While parsing a string missing the right delimiter in object key context, we found a {ch} stopping here",
                         )
                         break
             else:
@@ -386,7 +387,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                         continue
                 elif next_c == rstring_delimiter and self.get_char_at(i - 1) != "\\":
                     # Check if self.index:self.index+i is only whitespaces, break if that's the case
-                    if all(str(self.get_char_at(j)).isspace() for j in range(1, i) if self.get_char_at(j)):
+                    if _only_whitespace_until(self, i):
                         break
                     if self.context.current == ContextValues.OBJECT_VALUE:
                         i = self.scroll_whitespaces(idx=i + 1)
@@ -481,3 +482,11 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
         string_acc = string_acc.rstrip()
 
     return string_acc
+
+
+def _only_whitespace_until(self: "JSONParser", end: int) -> bool:
+    for j in range(1, end):
+        c = self.get_char_at(j)
+        if c is not None and not c.isspace():
+            return False
+    return True
