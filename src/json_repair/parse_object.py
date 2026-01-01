@@ -154,6 +154,17 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
     # This handles cases like '{"key": "value"}, "key2": "value2"}'
     # But only if we're not in a nested context
     if not self.context.empty:
+        # Sometimes there could be an extra closing brace that closes the object twice
+        # So we check the context to see if the next one in the stack is an object or not
+        # If not we skip it
+        if self.get_char_at() == "}" and self.context.current not in [
+            ContextValues.OBJECT_KEY,
+            ContextValues.OBJECT_VALUE,
+        ]:
+            self.log(
+                "Found an extra closing brace that shouldn't be there, skipping it",
+            )
+            self.index += 1
         return obj
 
     self.skip_whitespaces()
