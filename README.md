@@ -11,8 +11,12 @@ This simple package can be used to fix an invalid json string. To know all cases
 ![banner](banner.png)
 
 ---
-# Offer me a beer
-If you find this library useful, you can help me by donating toward my monthly beer budget here: https://github.com/sponsors/mangiucugna
+
+# Think about sponsoring this library!
+This library is free for everyone and it's maintained and developed as a side project so, if you find this library useful for your work, consider becoming a sponsor via this link: https://github.com/sponsors/mangiucugna
+
+## Premium sponsors
+- [Icana-AI](https://github.com/Icana-AI) Makers of CallCoach, the world's best Call Centre AI Coach. Visit [https://www.icana.ai/](https://www.icana.ai/)
 
 ---
 
