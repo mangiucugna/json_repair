@@ -5,6 +5,7 @@
 [![Github Sponsors](https://img.shields.io/github/sponsors/mangiucugna)](https://github.com/sponsors/mangiucugna)
 [![GitHub Repo stars](https://img.shields.io/github/stars/mangiucugna/json_repair?style=flat)](https://github.com/mangiucugna/json_repair/stargazers)
 
+English | [中文](README.zh.md)
 
 This simple package can be used to fix an invalid json string. To know all cases in which this package will work, check out the unit test.
 
