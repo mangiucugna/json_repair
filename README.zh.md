@@ -2,7 +2,8 @@
 
 [![PyPI](https://img.shields.io/pypi/v/json-repair)](https://pypi.org/project/json-repair/) ![Python version](https://img.shields.io/badge/python-3.10+-important) [![PyPI downloads](https://img.shields.io/pypi/dm/json-repair)](https://pypi.org/project/json-repair/) [![PyPI Downloads](https://static.pepy.tech/badge/json-repair)](https://pepy.tech/projects/json-repair) [![Github Sponsors](https://img.shields.io/github/sponsors/mangiucugna)](https://github.com/sponsors/mangiucugna) [![GitHub Repo stars](https://img.shields.io/github/stars/mangiucugna/json_repair?style=flat)](https://github.com/mangiucugna/json_repair/stargazers)
 
-> 本文档由 AI 翻译，如有疏漏欢迎指正。  
+> 本文档由 AI 翻译，如有疏漏欢迎指正。
+
 [English](README.md) | **中文**
 
 这个轻量工具包可以修复无效的 JSON 字符串。想了解支持的全部场景，请查看单元测试。
