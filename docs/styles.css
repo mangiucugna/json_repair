@@ -30,6 +30,48 @@ header {
     border-radius: 6px;
 }
 
+.language-switch {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+}
+
+.language-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ecfeff;
+    border: 1px solid #06b6d4;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    gap: 12px;
+}
+
+.language-banner .button {
+    background: #06b6d4;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 6px;
+    text-decoration: none;
+}
+
+.banner-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.banner-actions button {
+    padding: 6px 10px;
+}
+
+.hidden {
+    display: none;
+}
+
 section {
     border-bottom: solid 1px #d8dee9;
     padding-bottom: 14px;

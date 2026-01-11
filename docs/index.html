@@ -9,6 +9,9 @@
         <meta name="keywords" content="json repair, json fixer, json validator, fix malformed json, json formatter, llm json, json linter">
         <meta name="robots" content="index, follow">
         <link rel="canonical" href="https://mangiucugna.github.io/json_repair/">
+        <link rel="alternate" hreflang="en" href="https://mangiucugna.github.io/json_repair/">
+        <link rel="alternate" hreflang="zh-CN" href="https://mangiucugna.github.io/json_repair/index.zh.html">
+        <link rel="alternate" hreflang="x-default" href="https://mangiucugna.github.io/json_repair/">
         <meta property="og:type" content="website">
         <meta property="og:title" content="JSON Repair — Fix Broken JSON Online">
         <meta property="og:description" content="Free online JSON repair and validator. Paste malformed JSON (even from LLMs) and instantly get valid, formatted output with a log of fixes.">
@@ -60,6 +63,16 @@
         <noscript>
             <div class="notice">JavaScript is required to repair and format JSON in real time.</div>
         </noscript>
+        <div class="language-switch">
+            <strong>English</strong> | <a href="index.zh.html" rel="alternate" hreflang="zh-CN">中文</a>
+        </div>
+        <div id="locale-banner" class="language-banner hidden" role="status" aria-live="polite">
+            <span id="locale-text">We noticed your browser is in Chinese. Switch to the Chinese version?</span>
+            <div class="banner-actions">
+                <a id="locale-switch" class="button" href="index.zh.html" rel="alternate" hreflang="zh-CN">Switch to 中文</a>
+                <button type="button" id="dismiss-locale">No thanks</button>
+            </div>
+        </div>
         <header>
             <p class="eyebrow">Open source · Free · No signup</p>
             <h1>JSON Repair — fix malformed JSON online</h1>
@@ -141,6 +154,34 @@ python -m json_repair</code></pre>
             gtag('js', new Date());
 
             gtag('config', 'G-B77ZM0PG9W');
+        </script>
+        <script>
+            (function() {
+                const banner = document.getElementById('locale-banner');
+                const dismissBtn = document.getElementById('dismiss-locale');
+                const localeText = document.getElementById('locale-text');
+                const localeSwitch = document.getElementById('locale-switch');
+                if (!banner || !dismissBtn) return;
+                const dismissed = localStorage.getItem('jsonRepairLocalePromptDismissed') === '1';
+                const userLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+                if (!dismissed && userLang.startsWith('zh')) {
+                    if (localeText) {
+                        localeText.textContent = '检测到您的浏览器语言为中文，是否切换到中文版？';
+                    }
+                    if (localeSwitch) {
+                        localeSwitch.textContent = '切换到中文版';
+                    }
+                    if (dismissBtn) {
+                        dismissBtn.textContent = '暂不切换';
+                        dismissBtn.setAttribute('aria-label', '暂不切换到中文版');
+                    }
+                    banner.classList.remove('hidden');
+                }
+                dismissBtn.addEventListener('click', () => {
+                    banner.classList.add('hidden');
+                    localStorage.setItem('jsonRepairLocalePromptDismissed', '1');
+                });
+            })();
         </script>
     </body>
 </html>
