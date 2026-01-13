@@ -16,7 +16,8 @@
 这个库免费且由作者业余维护。如果它帮到了你的工作，欢迎在 GitHub Sponsors 支持：https://github.com/sponsors/mangiucugna
 
 ## 高级赞助商
-- [Icana-AI](https://github.com/Icana-AI) —— CallCoach（全球领先的呼叫中心 AI 教练）的开发者。访问 [https://www.icana.ai/](https://www.icana.ai/)。
+- [Icana-AI](https://github.com/Icana-AI) —— CallCoach（全球领先的呼叫中心 AI 教练）的开发者。访问 [https://www.icana.ai/](https://www.icana.ai/)
+- [mjharte](https://github.com/mjharte)
 
 ---
 
