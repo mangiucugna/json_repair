@@ -18,6 +18,7 @@ This library is free for everyone and it's maintained and developed as a side pr
 
 ## Premium sponsors
 - [Icana-AI](https://github.com/Icana-AI) Makers of CallCoach, the world's best Call Centre AI Coach. Visit [https://www.icana.ai/](https://www.icana.ai/)
+- [mjharte](https://github.com/mjharte)
 
 ---
 
