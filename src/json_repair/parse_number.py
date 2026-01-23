@@ -20,14 +20,14 @@ def parse_number(self: "JSONParser") -> JSONReturnType:
             number_str += char
         self.index += 1
         char = self.get_char_at()
+    if (self.get_char_at() or "").isalpha():
+        # this was a string instead, sorry
+        self.index -= len(number_str)
+        return self.parse_string()
     if number_str and number_str[-1] in "-eE/,":
         # The number ends with a non valid character for a number/currency, rolling back one
         number_str = number_str[:-1]
         self.index -= 1
-    elif (self.get_char_at() or "").isalpha():
-        # this was a string instead, sorry
-        self.index -= len(number_str)
-        return self.parse_string()
     try:
         if "," in number_str:
             return number_str

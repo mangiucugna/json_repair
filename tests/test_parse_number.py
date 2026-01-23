@@ -26,4 +26,8 @@ def test_parse_number_edge_cases():
     assert repair_json('{"key": 1e10 }') == '{"key": 10000000000.0}'
     assert repair_json('{"key": 1e }') == '{"key": 1}'
     assert repair_json('{"key": 1notanumber }') == '{"key": "1notanumber"}'
+    assert (
+        repair_json('{"rowId": 57eeeeb1-450b-482c-81b9-4be77e95dee2}')
+        == '{"rowId": "57eeeeb1-450b-482c-81b9-4be77e95dee2"}'
+    )
     assert repair_json("[1, 2notanumber]") == '[1, "2notanumber"]'
