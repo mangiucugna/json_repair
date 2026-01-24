@@ -189,6 +189,9 @@ json_repair==0.*
 
 如有遗漏的边界情况，欢迎提交 Issue 或 PR。
 
+# 贡献
+想要参与贡献，请先阅读 `CONTRIBUTING.md`，再浏览 Code Wiki 的代码库导览与入口说明：https://codewiki.google/github.com/mangiucugna/json_repair
+
 # 开发指南
 创建虚拟环境并安装 `requirements.txt`。项目使用 [pre-commit](https://pre-commit.com/) 在提交前运行检查。提交后请确认 GitHub Actions 通过。
 

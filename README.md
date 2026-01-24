@@ -257,6 +257,9 @@ If something is wrong (a missing parentheses or quotes for example) it will use 
 
 I am sure some corner cases will be missing, if you have examples please open an issue or even better push a PR
 
+# Contributing
+If you want to contribute, start with `CONTRIBUTING.md` and read the Code Wiki writeup for a tour of the codebase and key entry points: https://codewiki.google/github.com/mangiucugna/json_repair
+
 # How to develop
 Just create a virtual environment with `requirements.txt`, the setup uses [pre-commit](https://pre-commit.com/) to make sure all tests are run.
 
