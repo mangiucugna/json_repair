@@ -1,5 +1,8 @@
 let timeoutId;
 let controller;
+const inputEl = document.getElementById('input-json');
+const outputEl = document.getElementById('output-json');
+const logEl = document.getElementById('log-output');
 
 // Function to update the URL with the input JSON
 function updateURL(inputJSON) {
@@ -17,21 +20,21 @@ function getJSONFromURL() {
 document.addEventListener('DOMContentLoaded', () => {
     const initialJSON = getJSONFromURL();
     if (initialJSON) {
-        document.getElementById('input-json').value = initialJSON;
+        inputEl.value = initialJSON;
         processInput(initialJSON);
     }
 });
 
-document.getElementById('input-json').addEventListener('input', function () {
-    const inputJSON = document.getElementById('input-json').value;
+inputEl.addEventListener('input', function () {
+    const inputJSON = inputEl.value;
     updateURL(inputJSON);
     processInput(inputJSON);
 });
 
 function processInput(inputJSON) {
     if (inputJSON.trim() === '') {
-        document.getElementById('output-json').value = '';
-        document.getElementById('log-output').value = '';
+        outputEl.value = '';
+        logEl.value = '';
         return;
     }
 
@@ -62,16 +65,16 @@ function processInput(inputJSON) {
                 formattedJSON = data;
                 logs = [{context: "", text: "Nothing to do, this was a valid JSON"}];
             }
-            document.getElementById('output-json').value = JSON.stringify(formattedJSON, null, 4);
+            outputEl.value = JSON.stringify(formattedJSON, null, 4);
             const formattedLogs = logs.map(log => {
                 return `Context: ${log.context}\nMessage: ${log.text}`;
             }).join('\n\n');
-            document.getElementById('log-output').value = formattedLogs;
+            logEl.value = formattedLogs;
         })
         .catch(error => {
             if (error.name !== 'AbortError') {
-                document.getElementById('output-json').value = 'Error formatting JSON: ' + error.message;
-                document.getElementById('log-output').value = '';
+                outputEl.value = 'Error formatting JSON: ' + error.message;
+                logEl.value = '';
             }
         });
     }, 500);

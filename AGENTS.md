@@ -9,6 +9,7 @@
 ## Tests
 - Run the full test suite with:
   - `. .venv/bin/activate && python -m pytest`
+- Performance benchmarks in `tests/test_performance.py` are timing-sensitive and may fail on slower machines.
 
 ## Pre-commit
 - Run all hooks with:
@@ -53,3 +54,7 @@
 
 ## Contributing
 - PRs follow `.github/PULL_REQUEST_TEMPLATE.md` (review `CONTRIBUTING.md`, add tests, and run pre-commit + unit tests).
+
+## Style preferences
+- Avoid extracting small, non-shared helper functions if the original block is short; keep logic inline for readability.
+- For JSONParser logging, prefer the inline no-op lambda over a module-level `_noop` helper.

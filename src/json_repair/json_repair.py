@@ -258,7 +258,7 @@ def cli(inline_args: list[str] | None = None) -> int:
         help="Raise on duplicate keys, missing separators, empty keys/values, and other unrecoverable structures instead of repairing them",
     )
 
-    args = parser.parse_args() if inline_args is None else parser.parse_args(inline_args)
+    args = parser.parse_args(inline_args)
 
     # Inline mode requires a filename, so error out if none was provided.
     if args.inline and not args.filename:  # pragma: no cover
@@ -269,9 +269,7 @@ def cli(inline_args: list[str] | None = None) -> int:
         print("Error: You cannot pass both --inline and --output", file=sys.stderr)
         sys.exit(1)
 
-    ensure_ascii = False
-    if args.ensure_ascii:
-        ensure_ascii = True
+    ensure_ascii = args.ensure_ascii
 
     try:
         # Use from_file if a filename is provided; otherwise read from stdin.

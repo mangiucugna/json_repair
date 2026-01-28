@@ -82,18 +82,7 @@ class StringFileWrapper:
         # self.buffers[index]: the row in the array of length 1MB, index is `i` modulo CHUNK_LENGTH
         # self.buffures[index][j]: the column of the row that is `i` remainder CHUNK_LENGTH
         if isinstance(index, slice):
-            total_len = len(self)
-            start = 0 if index.start is None else index.start
-            stop = total_len if index.stop is None else index.stop
-            step = 1 if index.step is None else index.step
-
-            if start < 0:
-                start += total_len
-            if stop < 0:
-                stop += total_len
-
-            start = max(start, 0)
-            stop = min(stop, total_len)
+            start, stop, step = self._normalize_slice(index)
 
             if step == 0:
                 raise ValueError("slice step cannot be zero")
@@ -102,21 +91,7 @@ class StringFileWrapper:
 
             if start >= stop:
                 return ""
-
-            buffer_index = start // self.buffer_length
-            buffer_end = (stop - 1) // self.buffer_length
-            start_mod = start % self.buffer_length
-            stop_mod = stop % self.buffer_length
-            if stop_mod == 0 and stop > start:
-                stop_mod = self.buffer_length
-            if buffer_index == buffer_end:
-                buffer = self.get_buffer(buffer_index)
-                return buffer[start_mod:stop_mod]
-
-            start_slice = self.get_buffer(buffer_index)[start_mod:]
-            end_slice = self.get_buffer(buffer_end)[:stop_mod]
-            middle_slices = [self.get_buffer(i) for i in range(buffer_index + 1, buffer_end)]
-            return start_slice + "".join(middle_slices) + end_slice
+            return self._slice_from_buffers(start, stop)
         if index < 0:
             index += len(self)
         if index < 0:
@@ -138,6 +113,37 @@ class StringFileWrapper:
                 self._ensure_chunk_position(chunk_index)
         assert self.length is not None
         return self.length
+
+    def _normalize_slice(self, index: slice) -> tuple[int, int, int]:
+        total_len = len(self)
+        start = 0 if index.start is None else index.start
+        stop = total_len if index.stop is None else index.stop
+        step = 1 if index.step is None else index.step
+
+        if start < 0:
+            start += total_len
+        if stop < 0:
+            stop += total_len
+
+        start = max(start, 0)
+        stop = min(stop, total_len)
+        return start, stop, step
+
+    def _slice_from_buffers(self, start: int, stop: int) -> str:
+        buffer_index = start // self.buffer_length
+        buffer_end = (stop - 1) // self.buffer_length
+        start_mod = start % self.buffer_length
+        stop_mod = stop % self.buffer_length
+        if stop_mod == 0 and stop > start:
+            stop_mod = self.buffer_length
+        if buffer_index == buffer_end:
+            buffer = self.get_buffer(buffer_index)
+            return buffer[start_mod:stop_mod]
+
+        start_slice = self.get_buffer(buffer_index)[start_mod:]
+        end_slice = self.get_buffer(buffer_end)[:stop_mod]
+        middle_slices = [self.get_buffer(i) for i in range(buffer_index + 1, buffer_end)]
+        return start_slice + "".join(middle_slices) + end_slice
 
     def __setitem__(self, index: int | slice, value: str) -> None:  # pragma: no cover
         """
