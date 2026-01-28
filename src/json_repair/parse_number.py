@@ -33,7 +33,6 @@ def parse_number(self: "JSONParser") -> JSONReturnType:
             return number_str
         if "." in number_str or "e" in number_str or "E" in number_str:
             return float(number_str)
-        else:
-            return int(number_str)
+        return int(number_str)
     except ValueError:
         return number_str

@@ -69,13 +69,19 @@ target-version = "py313"
 # Flake8-bugbear – catches real-world Python footguns - B
 # Flake8-builtins - A
 # Flake8-comprehensions  - C4
+# Flake8-blind-except - BLE
 # Flake8-commas - COM
+# Flake8-print - T20
 # Flake8-quotes - Q
+# Flake8-return - RET
 # Flake8-tidy-imports - TID
 # Flake8-unused-arguments - ARG
+# Refurb - FURB
 # Isort - I
 # Mccabe – code complexity warnings - C90
 # PEP 8 Naming convention - N
+# Perflint - PERF
+# Flake8-use-pathlib - PTH
 # Pycodestyle - E, W
 # Pyflakes - F
 # Pylint - PLC, PLE, PLR, PLW
@@ -83,10 +89,11 @@ target-version = "py313"
 # Pyupgrade – safe modernization (e.g., str() → f"") - UP
 # Ruff specific - RUF
 # Simplifications (e.g., if x == True → if x) - SIM
-select = ['A', 'ARG', 'B', 'C4', 'COM', 'C90', 'E', 'F', 'I', 'N', 'PLC', 'PLE', 'PLW', 'PT', 'Q', 'S', 'SIM', 'TID', 'UP', 'W']
+select = ['A', 'ARG', 'B', 'BLE', 'C4', 'COM', 'C90', 'E', 'F', 'FURB', 'I', 'N', 'PERF', 'PLC', 'PLE', 'PLW', 'PT', 'PTH', 'Q', 'RET', 'S', 'SIM', 'T20', 'TID', 'UP', 'W']
 # Only enable these RUF rules
 extend-select = [
   "RUF001",  # ambiguous Unicode
+  "RUF100",  # unused noqa
   "RUF012",  # mutable default arguments
   "RUF013",  # unnecessary super()
   "RUF016",  # unnecessary else after return (optional)
@@ -117,5 +124,7 @@ line-ending = "auto"
 [tool.ruff.lint.per-file-ignores]
 # Explicit re-exports is fine in __init__.py, still a code smell elsewhere.
 "__init__.py" = ["PLC0414"]
+"src/json_repair/json_repair.py" = ["T201"]
+"tests/profiler.py" = ["T201"]
 [tool.mypy]
 strict = true

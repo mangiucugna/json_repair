@@ -1,4 +1,4 @@
-import os.path
+import os
 import pathlib
 import tempfile
 
@@ -9,7 +9,7 @@ def test_repair_json_from_file():
     path = pathlib.Path(__file__).parent.resolve()
 
     # Use chunk_length 2 to test the buffering feature
-    assert from_file(filename=os.path.join(path, "invalid.json")) == [
+    assert from_file(filename=path / "invalid.json") == [
         {
             "_id": "655b66256574f09bdae8abe8",
             "index": 0,
@@ -211,7 +211,7 @@ def test_repair_json_from_file():
             "favoriteFruit": "banana",
         },
     ]
-    assert from_file(filename=os.path.join(path, "invalid.json"), chunk_length=2) == [
+    assert from_file(filename=path / "invalid.json", chunk_length=2) == [
         {
             "_id": "655b66256574f09bdae8abe8",
             "index": 0,
@@ -480,7 +480,7 @@ def test_repair_json_from_file():
         )
     finally:
         # Clean up - delete the temporary file
-        os.remove(temp_path)
+        pathlib.Path(temp_path).unlink()
 
     # Create a temporary file
     temp_fd, temp_path = tempfile.mkstemp(suffix=".json")
@@ -492,4 +492,4 @@ def test_repair_json_from_file():
 
     finally:
         # Clean up - delete the temporary file
-        os.remove(temp_path)
+        pathlib.Path(temp_path).unlink()

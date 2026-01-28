@@ -25,6 +25,7 @@ All supported use cases are in the unit tests
 import argparse
 import json
 import sys
+from pathlib import Path
 from typing import Any, Literal, TextIO, overload
 
 from .json_parser import JSONParser
@@ -103,7 +104,7 @@ def repair_json(
             return parsed_json, []
         return parsed_json
     # Avoid returning only a pair of quotes if it's an empty string
-    elif parsed_json == "":
+    if parsed_json == "":
         return ""
     return json.dumps(parsed_json, **json_dumps_args)
 
@@ -170,7 +171,7 @@ def load(
 
 
 def from_file(
-    filename: str,
+    filename: str | Path,
     skip_json_loads: bool = False,
     logging: bool = False,
     chunk_length: int = 0,
@@ -180,7 +181,7 @@ def from_file(
     This function is a wrapper around `load()` so you can pass the filename as string
 
     Args:
-        filename (str): The name of the file containing JSON data to load and repair.
+        filename (str | Path): The name of the file containing JSON data to load and repair.
         skip_json_loads (bool, optional): If True, skip calling the built-in json.loads() function to verify that the json is valid before attempting to repair. Defaults to False.
         logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False.
         chunk_length (int, optional): Size in bytes of the file chunks to read at once. Defaults to 1MB.
@@ -189,16 +190,14 @@ def from_file(
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
     """
-    with open(filename) as fd:
-        jsonobj = load(
+    with Path(filename).open() as fd:
+        return load(
             fd=fd,
             skip_json_loads=skip_json_loads,
             logging=logging,
             chunk_length=chunk_length,
             strict=strict,
         )
-
-    return jsonobj
 
 
 def cli(inline_args: list[str] | None = None) -> int:
@@ -282,11 +281,11 @@ def cli(inline_args: list[str] | None = None) -> int:
             data = sys.stdin.read()
             result = loads(data, strict=args.strict)
         if args.inline or args.output:
-            with open(args.output or args.filename, mode="w") as fd:
+            with Path(args.output or args.filename).open(mode="w") as fd:
                 json.dump(result, fd, indent=args.indent, ensure_ascii=ensure_ascii)
         else:
             print(json.dumps(result, indent=args.indent, ensure_ascii=ensure_ascii))
-    except Exception as e:  # pragma: no cover
+    except (OSError, TypeError, ValueError) as e:  # pragma: no cover
         print(f"Error: {str(e)}", file=sys.stderr)
         return 1
 

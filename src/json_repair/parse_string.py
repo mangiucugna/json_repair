@@ -76,15 +76,14 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
         ):
             self.index += 1
             return ""
-        elif self.get_char_at(1) == lstring_delimiter:
+        if self.get_char_at(1) == lstring_delimiter:
             # There's something fishy about this, we found doubled quotes and then again quotes
             self.log(
                 "While parsing a string, we found a doubled quote and then a quote again, ignoring it",
             )
             if self.strict:
                 raise ValueError("Found doubled quotes followed by another quote.")
-            else:
-                return ""
+            return ""
         # Find the next delimiter
         i = self.skip_to_character(character=rstring_delimiter, idx=1)
         next_c = self.get_char_at(i)
@@ -111,7 +110,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     )
                 self.index += 1
                 return ""
-            elif next_c not in [",", "]", "}"]:
+            if next_c not in [",", "]", "}"]:
                 self.log(
                     "While parsing a string, we found a doubled quote but it was a mistake, removing one quote",
                 )
@@ -135,7 +134,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     "While parsing a string missing the left delimiter in object key context, we found a :, stopping here",
                 )
                 break
-            elif self.context.current == ContextValues.ARRAY and char in ["]", ","]:
+            if self.context.current == ContextValues.ARRAY and char in ["]", ","]:
                 self.log(
                     "While parsing a string missing the left delimiter in array context, we found a ] or ,, stopping here",
                 )
@@ -190,25 +189,24 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                 if next_c:
                     # OK then this is a systemic issue with the output
                     break
-                else:
-                    # skip any whitespace first
-                    i = self.scroll_whitespaces(idx=1)
-                    # We couldn't find any rstring_delimeter before the end of the string
-                    # check if this is the last string of an object and therefore we can keep going
-                    # make an exception if this is the last char before the closing brace
-                    j = self.skip_to_character(character="}", idx=i)
-                    if j - i > 1:
-                        # Ok it's not right after the comma
-                        # Let's ignore
-                        rstring_delimiter_missing = False
-                    # Check that j was not out of bound
-                    elif self.get_char_at(j):
-                        # Check for an unmatched opening brace in string_acc
-                        for c in reversed(string_acc):
-                            if c == "{":
-                                # Ok then this is part of the string
-                                rstring_delimiter_missing = False
-                                break
+                # skip any whitespace first
+                i = self.scroll_whitespaces(idx=1)
+                # We couldn't find any rstring_delimeter before the end of the string
+                # check if this is the last string of an object and therefore we can keep going
+                # make an exception if this is the last char before the closing brace
+                j = self.skip_to_character(character="}", idx=i)
+                if j - i > 1:
+                    # Ok it's not right after the comma
+                    # Let's ignore
+                    rstring_delimiter_missing = False
+                # Check that j was not out of bound
+                elif self.get_char_at(j):
+                    # Check for an unmatched opening brace in string_acc
+                    for c in reversed(string_acc):
+                        if c == "{":
+                            # Ok then this is part of the string
+                            rstring_delimiter_missing = False
+                            break
             if rstring_delimiter_missing:
                 self.log(
                     "While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn't determine that a right delimiter was present. Stopping here",
@@ -267,7 +265,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     self.index += 1
                     char = self.get_char_at()
                 continue
-            elif char in ["u", "x"]:
+            if char in ["u", "x"]:
                 # If we find a unicode escape sequence, normalize it
                 num_chars = 4 if char == "u" else 2
                 next_chars = self.json_str[self.index + 1 : self.index + 1 + num_chars]

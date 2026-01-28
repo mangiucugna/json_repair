@@ -67,5 +67,4 @@ def parse_comment(self: "JSONParser") -> JSONReturnType:
             self.index += 1
     if self.context.empty:
         return self.parse_json()
-    else:
-        return ""
+    return ""

@@ -1,6 +1,7 @@
 import io
 import os
 import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -12,30 +13,32 @@ def test_cli(capsys):
     # Create a temporary file
     temp_fd, temp_path = tempfile.mkstemp(suffix=".json")
     _, tempout_path = tempfile.mkstemp(suffix=".json")
+    temp_path = Path(temp_path)
+    tempout_path = Path(tempout_path)
     try:
         # Write content to the temporary file
         with os.fdopen(temp_fd, "w") as tmp:
             tmp.write("{key:value")
-        cli(inline_args=[temp_path, "--indent", "0", "--ensure_ascii"])
+        cli(inline_args=[str(temp_path), "--indent", "0", "--ensure_ascii"])
         captured = capsys.readouterr()
         assert captured.out == '{\n"key": "value"\n}\n'
 
         # Test the output option
-        cli(inline_args=[temp_path, "--indent", "0", "-o", tempout_path])
-        with open(tempout_path) as tmp:
+        cli(inline_args=[str(temp_path), "--indent", "0", "-o", str(tempout_path)])
+        with tempout_path.open() as tmp:
             out = tmp.read()
         assert out == '{\n"key": "value"\n}'
 
         # Test the inline option
-        cli(inline_args=[temp_path, "--indent", "0", "-i"])
-        with open(temp_path) as tmp:
+        cli(inline_args=[str(temp_path), "--indent", "0", "-i"])
+        with temp_path.open() as tmp:
             out = tmp.read()
         assert out == '{\n"key": "value"\n}'
 
     finally:
         # Clean up - delete the temporary file
-        os.remove(temp_path)
-        os.remove(tempout_path)
+        temp_path.unlink()
+        tempout_path.unlink()
 
     # Prepare a JSON string that needs to be repaired.
     test_input = "{key:value"

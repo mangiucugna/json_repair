@@ -28,7 +28,7 @@ class ObjectComparer:  # pragma: no cover
                     return False
             return True
 
-        elif isinstance(obj1, list):
+        if isinstance(obj1, list):
             # Check that both are lists and same length
             if not isinstance(obj2, list) or len(obj1) != len(obj2):
                 return False

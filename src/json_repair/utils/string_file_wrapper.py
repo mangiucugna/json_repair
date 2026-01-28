@@ -117,14 +117,13 @@ class StringFileWrapper:
             end_slice = self.get_buffer(buffer_end)[:stop_mod]
             middle_slices = [self.get_buffer(i) for i in range(buffer_index + 1, buffer_end)]
             return start_slice + "".join(middle_slices) + end_slice
-        else:
-            if index < 0:
-                index += len(self)
-            if index < 0:
-                raise IndexError("string index out of range")
-            buffer_index = index // self.buffer_length
-            buffer = self.get_buffer(buffer_index)
-            return buffer[index % self.buffer_length]
+        if index < 0:
+            index += len(self)
+        if index < 0:
+            raise IndexError("string index out of range")
+        buffer_index = index // self.buffer_length
+        buffer = self.get_buffer(buffer_index)
+        return buffer[index % self.buffer_length]
 
     def __len__(self) -> int:
         """

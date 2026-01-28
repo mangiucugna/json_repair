@@ -108,8 +108,7 @@ class JSONParser:
                 raise ValueError("Multiple top-level JSON elements found in strict mode.")
         if self.logging:
             return json, self.logger
-        else:
-            return json
+        return json
 
     def parse_json(
         self,
@@ -120,24 +119,23 @@ class JSONParser:
             if char is None:
                 return ""
             # <object> starts with '{'
-            elif char == "{":
+            if char == "{":
                 self.index += 1
                 return self.parse_object()
             # <array> starts with '['
-            elif char == "[":
+            if char == "[":
                 self.index += 1
                 return self.parse_array()
             # <string> starts with a quote
-            elif not self.context.empty and (char in STRING_DELIMITERS or char.isalpha()):
+            if not self.context.empty and (char in STRING_DELIMITERS or char.isalpha()):
                 return self.parse_string()
             # <number> starts with [0-9] or minus
-            elif not self.context.empty and (char.isdigit() or char == "-" or char == "."):
+            if not self.context.empty and (char.isdigit() or char == "-" or char == "."):
                 return self.parse_number()
-            elif char in ["#", "/"]:
+            if char in ["#", "/"]:
                 return self.parse_comment()
             # If everything else fails, we just ignore and move on
-            else:
-                self.index += 1
+            self.index += 1
 
     def get_char_at(self, count: int = 0) -> str | None:
         # Why not use something simpler? Because try/except in python is a faster alternative to an "if" statement that is often True

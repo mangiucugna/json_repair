@@ -1,4 +1,4 @@
-import os.path
+import os
 import pathlib
 
 import pytest
@@ -8,11 +8,9 @@ from src.json_repair import repair_json
 path = pathlib.Path(__file__).parent.resolve()
 CI = os.getenv("CI") is not None
 
-with open(os.path.join(path, "valid.json")) as fd:
-    correct_json = fd.read()
+correct_json = (path / "valid.json").read_text()
 
-with open(os.path.join(path, "invalid.json")) as fd:
-    incorrect_json = fd.read()
+incorrect_json = (path / "invalid.json").read_text()
 
 
 @pytest.mark.skipif(CI, reason="Performance tests are skipped in CI")
