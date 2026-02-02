@@ -37,6 +37,7 @@ test = [
 ]
 typecheck = [
     "mypy",
+    "ty",
 ]
 [tool.pytest.ini_options]
 pythonpath = [

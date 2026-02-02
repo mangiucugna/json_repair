@@ -24,3 +24,6 @@ jobs:
 
       - name: Run mypy
         run: uv run mypy src/
+
+      - name: Run ty
+        run: uv run ty check src/ tests/

@@ -188,6 +188,7 @@ test = [
 ]
 typecheck = [
     { name = "mypy" },
+    { name = "ty" },
 ]
 
 [package.metadata]
@@ -206,7 +207,10 @@ test = [
     { name = "pytest" },
     { name = "pytest-benchmark" },
 ]
-typecheck = [{ name = "mypy" }]
+typecheck = [
+    { name = "mypy" },
+    { name = "ty" },
+]
 
 [[package]]
 name = "librt"
