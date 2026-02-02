@@ -1,19 +1,19 @@
 # Repo Notes for Codex
 
 ## Environment
-- Use the existing venv at `.venv`; activate before running any Python tooling.
-- If `python` is not on PATH, use the venv's interpreter: `. .venv/bin/activate` then `python -m ...`.
-- `requirements.txt` includes `pytest`, `pre-commit`, etc. Install into `.venv` if needed.
+- Use the uv-managed environment at `.venv`; install dev dependencies with `uv sync --group dev`.
+- Prefer `uv run ...` for Python tooling (use `uv run python -m ...` if `python` is not on PATH).
+- Dependency groups live in `pyproject.toml`; update `uv.lock` when dependencies change.
 - You may see `/Users/s.baccianella/.rvm/scripts/rvm:29: operation not permitted: ps` in shell output; safe to ignore.
 
 ## Tests
 - Run the full test suite with:
-  - `. .venv/bin/activate && python -m pytest`
+  - `uv run pytest`
 - Performance benchmarks in `tests/test_performance.py` are timing-sensitive and may fail on slower machines.
 
 ## Pre-commit
-- Run all hooks with:
-  - `. .venv/bin/activate && pre-commit run --all-files`
+- Run all hooks without activating a venv:
+  - `pre-commit run --all-files`
 - The `pre-commit autoupdate` hook can modify `.pre-commit-config.yaml` (e.g., bumping hook revs). Re-run pre-commit after updates.
 - Hooks like `ruff-pre-commit` and `semgrep` require network access to fetch resources.
 - Always run pre-commit fully; do not leave it partially completed.

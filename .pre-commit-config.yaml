@@ -1,6 +1,11 @@
 repos:
 - repo: local
   hooks:
+  - id: uv-lock-upgrade
+    name: Run uv lock --upgrade
+    entry: uv lock --upgrade
+    language: python
+    pass_filenames: false
   - id: pre-commit autoupdate
     name: autoupdate pre-commit
     entry: pre-commit autoupdate
@@ -21,26 +26,26 @@ repos:
   hooks:
   - id: mypy
     name: mypy
-    entry: mypy --python-executable .venv/bin/python src/
+    entry: uv run mypy src/
     language: system
     pass_filenames: false
     types: [python]
   - id: ty
     name: ty
-    entry: ty check --python .venv src/ tests/
+    entry: uv run ty check src/ tests/
     language: system
     pass_filenames: false
     types: [python]
   - id: run-tests
     name: run tests
-    entry: .venv/bin/coverage run -m pytest
+    entry: uv run coverage run -m pytest
     language: system
     pass_filenames: false
     types: [python]
   - id: check-coverage
     name: Check Coverage
-    entry: .venv/bin/coverage report -m --fail-under=100
-    language: python
+    entry: uv run coverage report -m --fail-under=100
+    language: system
     pass_filenames: false
     types: [python]
 - repo: https://github.com/semgrep/pre-commit

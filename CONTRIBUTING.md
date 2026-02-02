@@ -11,8 +11,8 @@ Make sure to work in a branch to make it easier to create a new PR.
 We use TDD for this project.
 
 ## Step 3. Run pre-commit
-Make sure to have pre-commit installed as git hook for this repository and use a virtualenviroment.
-This will run all the necessary tests and linters. Saving lots of time to the reviewers
+Install the dev dependencies with `uv sync --group dev`, then run `uv run pre-commit run --all-files`.
+This will run all the necessary tests and linters, saving lots of time to the reviewers.
 
 ## Step 4. Open a PR to review
 Refer the Issue number in your PR

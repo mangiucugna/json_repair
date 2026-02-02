@@ -193,7 +193,13 @@ json_repair==0.*
 想要参与贡献，请先阅读 `CONTRIBUTING.md`，再浏览 Code Wiki 的代码库导览与入口说明：https://codewiki.google/github.com/mangiucugna/json_repair
 
 # 开发指南
-创建虚拟环境并安装 `requirements.txt`。项目使用 [pre-commit](https://pre-commit.com/) 在提交前运行检查。提交后请确认 GitHub Actions 通过。
+使用 `uv` 配置开发环境并运行工具：
+
+    uv sync --group dev
+    uv run pre-commit run --all-files
+    uv run pytest
+
+提交后请确认 GitHub Actions 通过。
 
 # 发布指南
 需要仓库 owner 权限：

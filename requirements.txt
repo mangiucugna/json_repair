@@ -1,4 +1,0 @@
-coverage
-pre-commit
-pytest
-pytest-benchmark

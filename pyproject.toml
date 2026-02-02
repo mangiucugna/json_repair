@@ -21,6 +21,23 @@ classifiers = [
 "Homepage" = "https://github.com/mangiucugna/json_repair/"
 "Bug Tracker" = "https://github.com/mangiucugna/json_repair/issues"
 "Live demo" = "https://mangiucugna.github.io/json_repair/"
+[dependency-groups]
+dev = [
+    "coverage",
+    "mypy",
+    "pre-commit",
+    "pytest",
+    "pytest-benchmark",
+    "ty",
+]
+test = [
+    "coverage",
+    "pytest",
+    "pytest-benchmark",
+]
+typecheck = [
+    "mypy",
+]
 [tool.pytest.ini_options]
 pythonpath = [
   "."

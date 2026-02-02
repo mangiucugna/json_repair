@@ -4,6 +4,7 @@ permissions:
   contents: read
 
 on:
+  workflow_dispatch:
   pull_request:
 
 jobs:
@@ -18,9 +19,8 @@ jobs:
         with:
           activate-environment: true
 
-      - name: Install mypy
-        run: |
-          uv pip install mypy
+      - name: Sync dependencies
+        run: uv sync --group typecheck --frozen
 
       - name: Run mypy
-        run: uv run mypy --python-executable .venv/bin/python src/
+        run: uv run mypy src/

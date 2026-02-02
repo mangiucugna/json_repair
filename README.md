@@ -261,7 +261,11 @@ I am sure some corner cases will be missing, if you have examples please open an
 If you want to contribute, start with `CONTRIBUTING.md` and read the Code Wiki writeup for a tour of the codebase and key entry points: https://codewiki.google/github.com/mangiucugna/json_repair
 
 # How to develop
-Just create a virtual environment with `requirements.txt`, the setup uses [pre-commit](https://pre-commit.com/) to make sure all tests are run.
+Use `uv` to set up the dev environment and run tooling:
+
+    uv sync --group dev
+    uv run pre-commit run --all-files
+    uv run pytest
 
 Make sure that the Github Actions running after pushing a new commit don't fail as well.
 
