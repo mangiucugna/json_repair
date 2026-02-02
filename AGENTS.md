@@ -16,6 +16,7 @@
   - `. .venv/bin/activate && pre-commit run --all-files`
 - The `pre-commit autoupdate` hook can modify `.pre-commit-config.yaml` (e.g., bumping hook revs). Re-run pre-commit after updates.
 - Hooks like `ruff-pre-commit` and `semgrep` require network access to fetch resources.
+- Always run pre-commit fully; do not leave it partially completed.
 
 ## Releases
 - Project version lives in `pyproject.toml` under `[project].version`.
@@ -58,3 +59,4 @@
 ## Style preferences
 - Avoid extracting small, non-shared helper functions if the original block is short; keep logic inline for readability.
 - For JSONParser logging, prefer the inline no-op lambda over a module-level `_noop` helper.
+- When adding new repair heuristics, emit a `self.log` entry and skip the repair in `strict=True` unless explicitly intended.

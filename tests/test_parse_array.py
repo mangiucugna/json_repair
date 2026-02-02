@@ -28,6 +28,14 @@ def test_parse_array_edge_cases():
         repair_json('{"key1": ["value1", "value2"}, "key2": ["value3", "value4"]}')
         == '{"key1": ["value1", "value2"], "key2": ["value3", "value4"]}'
     )
+    assert (
+        repair_json(
+            '{"headers": ["A", "B", "C"], "rows": [["r1a", "r1b", "r1c"], ["r2a", "r2b", "r2c"], '
+            '"r3a", "r3b", "r3c"], ["r4a", "r4b", "r4c"], ["r5a", "r5b", "r5c"]]}'
+        )
+        == '{"headers": ["A", "B", "C"], "rows": [["r1a", "r1b", "r1c"], ["r2a", "r2b", "r2c"], '
+        '["r3a", "r3b", "r3c"], ["r4a", "r4b", "r4c"], ["r5a", "r5b", "r5c"]]}'
+    )
     assert repair_json('{"key": ["value" "value1" "value2"]}') == '{"key": ["value", "value1", "value2"]}'
     assert (
         repair_json('{"key": ["lorem "ipsum" dolor "sit" amet, "consectetur" ", "lorem "ipsum" dolor", "lorem"]}')

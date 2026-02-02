@@ -42,7 +42,7 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
                 # Is this an array?
                 # Need to check if the previous parsed value contained in obj is an array and in that case parse and merge the two
                 prev_key = list(obj.keys())[-1] if obj else None
-                if prev_key and isinstance(obj[prev_key], list):
+                if prev_key and isinstance(obj[prev_key], list) and not self.strict:
                     # If the previous key's value is an array, parse the new array and merge
                     self.index += 1
                     new_array = self.parse_array()
@@ -50,14 +50,49 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
                         # Merge and flatten the arrays
                         prev_value = obj[prev_key]
                         if isinstance(prev_value, list):
-                            prev_value.extend(
-                                new_array[0] if len(new_array) == 1 and isinstance(new_array[0], list) else new_array
+                            list_lengths = [len(item) for item in prev_value if isinstance(item, list)]
+                            expected_len = (
+                                list_lengths[0]
+                                if list_lengths and all(length == list_lengths[0] for length in list_lengths)
+                                else None
                             )
-                        self.skip_whitespaces()
-                        if self.get_char_at() == ",":
-                            self.index += 1
-                        self.skip_whitespaces()
-                        continue
+                            if expected_len:
+                                # Matrix-style JSON: list of uniform-length rows.
+                                # Repair a missing inner "[" by regrouping trailing scalar cells into rows.
+                                tail = []
+                                while prev_value and not isinstance(prev_value[-1], list):
+                                    tail.append(prev_value.pop())
+                                if tail:
+                                    tail.reverse()
+                                    if len(tail) % expected_len == 0:
+                                        self.log(
+                                            "While parsing an object we found row values without an inner array, grouping them into rows",
+                                        )
+                                        for i in range(0, len(tail), expected_len):
+                                            prev_value.append(tail[i : i + expected_len])
+                                    else:
+                                        prev_value.extend(tail)
+                                # Keep incoming rows as rows instead of flattening them into the table.
+                                if new_array:
+                                    if all(isinstance(item, list) for item in new_array):
+                                        self.log(
+                                            "While parsing an object we found additional rows, appending them without flattening",
+                                        )
+                                        prev_value.extend(new_array)
+                                    else:
+                                        prev_value.append(new_array)
+                            else:
+                                # Fallback to legacy merge behavior when not a uniform row list or in strict mode.
+                                prev_value.extend(
+                                    new_array[0]
+                                    if len(new_array) == 1 and isinstance(new_array[0], list)
+                                    else new_array
+                                )
+                    self.skip_whitespaces()
+                    if self.get_char_at() == ",":
+                        self.index += 1
+                    self.skip_whitespaces()
+                    continue
             raw_key = self.parse_string()
             assert isinstance(raw_key, str)
             key = raw_key
