@@ -33,6 +33,9 @@ jobs:
       uses: astral-sh/setup-uv@v6
       with:
         activate-environment: true
+    - name: Enable PyO3 ABI3 forward compatibility (Py 3.15)
+      if: startsWith(matrix.python-version, '3.15.0-')
+      run: echo "PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1" >> "$GITHUB_ENV"
     - name: Sync dependencies
       run: uv sync --group test --frozen
     - name: Test with pytest
