@@ -175,7 +175,7 @@ Strict mode still honors `skip_json_loads=True`; combining them lets you skip th
 
 ### Schema-guided repairs
 
-**Alpha feature (not yet in stable releases).** Schema-guided repairs are currently shipped only in alpha builds (e.g., `0.56.0-alpha.*`). The API and behavior may change or break between alpha releases.
+**Alpha feature (not yet stable).** Schema-guided repairs are currently considered in alpha: The API and behavior may change or break between releases.
 
 You can guide repairs with a JSON Schema (or a Pydantic v2 model). When enabled, the parser will:
 
