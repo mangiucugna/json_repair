@@ -173,6 +173,58 @@ In strict mode the parser raises `ValueError` as soon as it encounters structura
 
 Strict mode still honors `skip_json_loads=True`; combining them lets you skip the initial `json.loads` check but still enforce strict parsing rules.
 
+### Schema-guided repairs
+
+**Alpha feature (not yet in stable releases).** Schema-guided repairs are currently shipped only in alpha builds (e.g., `0.56.0-alpha.*`). The API and behavior may change or break between alpha releases.
+
+You can guide repairs with a JSON Schema (or a Pydantic v2 model). When enabled, the parser will:
+
+- Fill missing values (defaults, required fields).
+- Coerce scalars where safe (e.g., `"1"` → `1` for integer fields).
+- Drop properties/items that the schema disallows.
+
+This is especially useful when you need deterministic, schema-valid outputs for downstream validation, storage, or typed processing. If the input cannot be repaired to satisfy the schema, `json_repair` raises `ValueError`.
+
+Install the optional dependencies:
+
+    pip install 'json-repair[schema]'
+
+(For CLI usage, you can also use `pipx install 'json-repair[schema]'`.)
+
+Schema guidance is skipped for already-valid JSON unless you pass `skip_json_loads=True` (this forces the parser to run even on valid JSON). Schema guidance is mutually exclusive with `strict=True`.
+
+```
+from json_repair import repair_json
+
+schema = {
+    "type": "object",
+    "properties": {"value": {"type": "integer"}},
+    "required": ["value"],
+}
+
+repair_json('{"value": "1"}', schema=schema, skip_json_loads=True, return_objects=True)
+```
+
+Pydantic v2 model example:
+
+```
+from pydantic import BaseModel, Field
+from json_repair import repair_json
+
+
+class Payload(BaseModel):
+    value: int
+    tags: list[str] = Field(default_factory=list)
+
+
+repair_json(
+    '{"value": "1", "tags": }',
+    schema=Payload,
+    skip_json_loads=True,
+    return_objects=True,
+)
+```
+
 ### Use json_repair with streaming
 
 Sometimes you are streaming some data and want to repair the JSON coming from it. Normally this won't work but you can pass `stream_stable` to `repair_json()` or `loads()` to make it work:
@@ -190,7 +242,9 @@ pipx install json-repair
 to know all options available:
 ```
 $ json_repair -h
-usage: json_repair [-h] [-i] [-o TARGET] [--ensure_ascii] [--indent INDENT] [filename]
+usage: json_repair [-h] [-i] [-o TARGET] [--ensure_ascii] [--indent INDENT]
+                   [--skip-json-loads] [--schema SCHEMA] [--schema-model MODEL]
+                   [--strict] [filename]
 
 Repair and parse JSON files.
 
@@ -204,6 +258,9 @@ options:
                         If specified, the output will be written to TARGET filename instead of stdout
   --ensure_ascii        Pass ensure_ascii=True to json.dumps()
   --indent INDENT       Number of spaces for indentation (Default 2)
+  --skip-json-loads     Skip initial json.loads validation (needed to force schema on valid JSON)
+  --schema SCHEMA       Path to a JSON Schema file that guides repairs
+  --schema-model MODEL  Pydantic v2 model in 'module:ClassName' form that guides repairs
   --strict              Raise on duplicate keys, missing separators, empty keys/values, and similar structural issues instead of repairing them
 ```
 

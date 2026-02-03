@@ -109,6 +109,57 @@ repair_json(bad_json_string, strict=True)
 
 严格模式可与 `skip_json_loads=True` 组合：跳过初始 `json.loads` 检查，但仍执行严格解析规则。
 
+### Schema 引导修复
+**Alpha 功能（尚未进入稳定版）**：Schema 引导修复目前只在 alpha 版本提供（例如 `0.56.0-alpha.*`），API/行为可能在 alpha 之间发生变化或破坏。
+
+可使用 JSON Schema（或 Pydantic v2 模型）指导修复。开启后解析器会：
+
+- 补齐缺失值（默认值、必填字段）
+- 在安全范围内做类型转换（例如 `"1"` → `1`）
+- 移除 schema 明确禁止的字段/数组项
+
+适用于需要稳定、可验证输出（下游校验、落库、类型化处理等）的场景。若无法修复到满足 schema，将抛出 `ValueError`。
+
+安装可选依赖：
+```
+pip install 'json-repair[schema]'
+```
+（CLI 可用 `pipx install 'json-repair[schema]'`。）
+
+注意：当输入已经是有效 JSON 时，默认不会执行 schema 引导；需要强制执行时请传 `skip_json_loads=True`。Schema 与 `strict=True` 互斥。
+
+```python
+from json_repair import repair_json
+
+schema = {
+    "type": "object",
+    "properties": {"value": {"type": "integer"}},
+    "required": ["value"],
+}
+
+repair_json('{"value": "1"}', schema=schema, skip_json_loads=True, return_objects=True)
+```
+
+Pydantic v2 模型示例：
+
+```python
+from pydantic import BaseModel, Field
+from json_repair import repair_json
+
+
+class Payload(BaseModel):
+    value: int
+    tags: list[str] = Field(default_factory=list)
+
+
+repair_json(
+    '{"value": "1", "tags": }',
+    schema=Payload,
+    skip_json_loads=True,
+    return_objects=True,
+)
+```
+
 ### 流式处理
 需要在流式数据上修复 JSON 时，可传 `stream_stable=True`：
 ```python
@@ -123,7 +174,9 @@ pipx install json-repair
 查看选项：
 ```
 $ json_repair -h
-usage: json_repair [-h] [-i] [-o TARGET] [--ensure_ascii] [--indent INDENT] [filename]
+usage: json_repair [-h] [-i] [-o TARGET] [--ensure_ascii] [--indent INDENT]
+                   [--skip-json-loads] [--schema SCHEMA] [--schema-model MODEL]
+                   [--strict] [filename]
 
 Repair and parse JSON files.
 
@@ -137,6 +190,9 @@ options:
                         If specified, the output will be written to TARGET filename instead of stdout
   --ensure_ascii        Pass ensure_ascii=True to json.dumps()
   --indent INDENT       Number of spaces for indentation (Default 2)
+  --skip-json-loads     Skip initial json.loads validation (needed to force schema on valid JSON)
+  --schema SCHEMA       Path to a JSON Schema file that guides repairs
+  --schema-model MODEL  Pydantic v2 model in 'module:ClassName' form that guides repairs
   --strict              Raise on duplicate keys, missing separators, empty keys/values, and similar structural issues instead of repairing them
 ```
 

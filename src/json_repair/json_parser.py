@@ -1,4 +1,5 @@
-from typing import TextIO
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, TextIO
 
 from .parse_array import parse_array as _parse_array
 from .parse_comment import parse_comment as _parse_comment
@@ -10,11 +11,18 @@ from .utils.json_context import JsonContext
 from .utils.object_comparer import ObjectComparer
 from .utils.string_file_wrapper import StringFileWrapper
 
+if TYPE_CHECKING:
+    from .schema_repair import SchemaRepairer
+
 
 class JSONParser:
     # Split the parse methods into separate files because this one was like 3000 lines
-    def parse_array(self) -> list[JSONReturnType]:
-        return _parse_array(self)
+    def parse_array(
+        self,
+        schema: dict[str, Any] | bool | None = None,
+        path: str = "$",
+    ) -> list[JSONReturnType]:
+        return _parse_array(self, schema, path)
 
     def parse_comment(self) -> JSONReturnType:
         return _parse_comment(self)
@@ -22,8 +30,12 @@ class JSONParser:
     def parse_number(self) -> JSONReturnType:
         return _parse_number(self)
 
-    def parse_object(self) -> JSONReturnType:
-        return _parse_object(self)
+    def parse_object(
+        self,
+        schema: dict[str, Any] | bool | None = None,
+        path: str = "$",
+    ) -> JSONReturnType:
+        return _parse_object(self, schema, path)
 
     def parse_string(self) -> JSONReturnType:
         return _parse_string(self)
@@ -53,8 +65,8 @@ class JSONParser:
         # We could add a guard in the code for each call but that would make this code unreadable, so here's this neat trick
         # Replace self.log with a noop
         self.logging = logging
+        self.logger: list[dict[str, str]] = []
         if logging:
-            self.logger: list[dict[str, str]] = []
             self.log = self._log
         else:
             # No-op
@@ -71,11 +83,26 @@ class JSONParser:
         # may not be desirable in some use cases and the user would prefer json_repair to return an exception.
         # So strict mode was added to disable some of those heuristics.
         self.strict = strict
+        self.schema_repairer: SchemaRepairer | None = None
 
     def parse(
         self,
-    ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
-        json = self.parse_json()
+    ) -> JSONReturnType:
+        return self._parse_top_level(self.parse_json)
+
+    def parse_with_schema(
+        self,
+        repairer: "SchemaRepairer",
+        schema: dict[str, Any] | bool,
+    ) -> JSONReturnType:
+        """Parse with schema guidance enabled for all nested values."""
+        self.schema_repairer = repairer
+        return self._parse_top_level(lambda: self.parse_json(schema, "$"))
+
+    # Consolidate top-level parsing so we handle multiple sequential JSON values consistently
+    # (including update semantics and strict-mode validation).
+    def _parse_top_level(self, parse_element: Callable[[], JSONReturnType]) -> JSONReturnType:
+        json = parse_element()
         if self.index < len(self.json_str):
             self.log(
                 "The parser returned early, checking if there's more json elements",
@@ -83,19 +110,17 @@ class JSONParser:
             json = [json]
             while self.index < len(self.json_str):
                 self.context.reset()
-                j = self.parse_json()
+                j = parse_element()
                 if j:
                     if ObjectComparer.is_same_object(json[-1], j):
-                        # replace the last entry with the new one since the new one seems an update
+                        # Treat repeated objects as updates: keep the newest value.
                         json.pop()
                     else:
                         if not json[-1]:
                             json.pop()
                     json.append(j)
                 else:
-                    # this was a bust, move the index
                     self.index += 1
-            # If nothing extra was found, don't return an array
             if len(json) == 1:
                 self.log(
                     "There were no more elements, returning the element without the array",
@@ -106,13 +131,23 @@ class JSONParser:
                     "Multiple top-level JSON elements found in strict mode, raising an error",
                 )
                 raise ValueError("Multiple top-level JSON elements found in strict mode.")
-        if self.logging:
-            return json, self.logger
         return json
 
     def parse_json(
         self,
+        schema: dict[str, Any] | bool | None = None,
+        path: str = "$",
     ) -> JSONReturnType:
+        """Parse the next JSON value and, when configured, enforce schema constraints."""
+        repairer = self.schema_repairer if self.schema_repairer is not None and schema not in (None, True) else None
+        if repairer is not None:
+            # Resolve references once and decide whether schema-guided repairs are needed.
+            schema = repairer.resolve_schema(schema)
+            if schema is True:
+                repairer = None
+            elif schema is False:
+                raise ValueError("Schema does not allow any values.")
+
         while True:
             char = self.get_char_at()
             # None means that we are at the end of the string provided
@@ -121,19 +156,24 @@ class JSONParser:
             # <object> starts with '{'
             if char == "{":
                 self.index += 1
-                return self.parse_object()
+                value = self.parse_object(schema, path) if repairer else self.parse_object()
+                return repairer.repair_value(value, schema, path) if repairer else value
             # <array> starts with '['
             if char == "[":
                 self.index += 1
-                return self.parse_array()
+                value = self.parse_array(schema, path) if repairer else self.parse_array()
+                return repairer.repair_value(value, schema, path) if repairer else value
             # <string> starts with a quote
             if not self.context.empty and (char in STRING_DELIMITERS or char.isalpha()):
-                return self.parse_string()
+                value = self.parse_string()
+                return repairer.repair_value(value, schema, path) if repairer else value
             # <number> starts with [0-9] or minus
             if not self.context.empty and (char.isdigit() or char == "-" or char == "."):
-                return self.parse_number()
+                value = self.parse_number()
+                return repairer.repair_value(value, schema, path) if repairer else value
             if char in ["#", "/"]:
-                return self.parse_comment()
+                value = self.parse_comment()
+                return repairer.repair_value(value, schema, path) if repairer else value
             # If everything else fails, we just ignore and move on
             self.index += 1
 

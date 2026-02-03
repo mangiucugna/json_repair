@@ -17,6 +17,7 @@
 - The `pre-commit autoupdate` hook can modify `.pre-commit-config.yaml` (e.g., bumping hook revs). Re-run pre-commit after updates.
 - Hooks like `ruff-pre-commit` and `semgrep` require network access to fetch resources.
 - Always run pre-commit fully; do not leave it partially completed.
+- For new/untracked files, manually run ruff (`pre-commit run ruff-check --files ...` and `pre-commit run ruff-format --files ...`) because hooks with `pass_filenames: true` won't see them.
 
 ## Releases
 - Project version lives in `pyproject.toml` under `[project].version`.
@@ -59,4 +60,11 @@
 ## Style preferences
 - Avoid extracting small, non-shared helper functions if the original block is short; keep logic inline for readability.
 - For JSONParser logging, prefer the inline no-op lambda over a module-level `_noop` helper.
+- JSONParser.parse should return only JSON; use `parser.logger` for logs instead of tuple returns.
+- Add brief docstrings/comments for non-obvious control flow; explain intent, not mechanics.
 - When adding new repair heuristics, emit a `self.log` entry and skip the repair in `strict=True` unless explicitly intended.
+
+## Schema-guided parsing (issue #177)
+- Schema guidance applies only in parser mode (`skip_json_loads=True` or invalid JSON).
+- Post-parse validation is only for rejecting or dropping schema-invalid elements; raise if it fails.
+- Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`; avoid duplicating parser switch logic.

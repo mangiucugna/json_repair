@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any, Literal, TextIO, overload
 
 from .json_parser import JSONParser
+from .schema_repair import SchemaRepairer, load_schema_model, schema_from_input
 from .utils.constants import JSONReturnType
 
 
@@ -42,6 +43,7 @@ def repair_json(
     chunk_length: int = 0,
     stream_stable: bool = False,
     strict: bool = False,
+    schema: Any | None = None,
     **json_dumps_args: Any,
 ) -> str: ...
 
@@ -56,6 +58,7 @@ def repair_json(
     chunk_length: int = 0,
     stream_stable: bool = False,
     strict: bool = False,
+    schema: Any | None = None,
     **json_dumps_args: Any,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]: ...
 
@@ -69,6 +72,7 @@ def repair_json(
     chunk_length: int = 0,
     stream_stable: bool = False,
     strict: bool = False,
+    schema: Any | None = None,
     **json_dumps_args: Any,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
     """
@@ -84,24 +88,46 @@ def repair_json(
         chunk_length (int, optional): Size in bytes of the file chunks to read at once. Ignored if `json_fd` is None. Do not use! Use `from_file` or `load` instead. Defaults to 1MB.
         stream_stable (bool, optional): When the json to be repaired is the accumulation of streaming json at a certain moment.If this parameter to True will keep the repair results stable.
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
+        schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs. Schema guidance is skipped for already-valid JSON unless `skip_json_loads=True`.
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON or a tuple with the repaired JSON and repair log when logging is True.
     """
+    # Schema-guided repairs and strict mode are mutually exclusive to avoid conflicting behavior.
+    if schema is not None and strict:
+        raise ValueError("schema and strict cannot be used together.")
+
     parser = JSONParser(json_str, json_fd, logging, chunk_length, stream_stable, strict)
-    if skip_json_loads:
+    # When JSON is already valid, skip schema guidance unless the caller explicitly disables json.loads.
+    if not skip_json_loads:
+        loaded_json: JSONReturnType | None
+        try:
+            loaded_json = json.load(json_fd) if json_fd else json.loads(json_str)
+        except json.JSONDecodeError:
+            loaded_json = None
+        else:
+            if logging:
+                return loaded_json, []
+            if return_objects:
+                return loaded_json
+            if loaded_json == "":
+                return ""
+            return json.dumps(loaded_json, **json_dumps_args)
+
+    # Schema guidance only happens in parser mode.
+    schema_obj = schema_from_input(schema) if schema is not None else None
+    parsed_json: JSONReturnType
+    if schema_obj is None:
         parsed_json = parser.parse()
     else:
-        try:
-            parsed_json = json.load(json_fd) if json_fd else json.loads(json_str)
-        except json.JSONDecodeError:
-            parsed_json = parser.parse()
+        repairer = SchemaRepairer(schema_obj, parser.logger if logging else None)
+        parsed_json = parser.parse_with_schema(repairer, schema_obj)
+        # Post-parse validation ensures we reject values that cannot satisfy the schema.
+        repairer.validate(parsed_json, schema_obj)
     # It's useful to return the actual object instead of the json string,
     # it allows this lib to be a replacement of the json library
-    if return_objects or logging:
-        # If logging is True, the user should expect a tuple.
-        # If json.load(s) worked, the repair log list is empty
-        if logging and not isinstance(parsed_json, tuple):
-            return parsed_json, []
+    if logging:
+        return parsed_json, parser.logger
+    if return_objects:
         return parsed_json
     # Avoid returning only a pair of quotes if it's an empty string
     if parsed_json == "":
@@ -115,6 +141,7 @@ def loads(
     logging: bool = False,
     stream_stable: bool = False,
     strict: bool = False,
+    schema: Any | None = None,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]] | str:
     """
     This function works like `json.loads()` except that it will fix your JSON in the process.
@@ -125,6 +152,7 @@ def loads(
         skip_json_loads (bool, optional): If True, skip calling the built-in json.loads() function to verify that the json is valid before attempting to repair. Defaults to False.
         logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False.
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
+        schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs. Schema guidance is skipped for already-valid JSON unless `skip_json_loads=True`.
 
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]], str]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
@@ -136,6 +164,7 @@ def loads(
         logging=logging,
         stream_stable=stream_stable,
         strict=strict,
+        schema=schema,
     )
 
 
@@ -145,6 +174,7 @@ def load(
     logging: bool = False,
     chunk_length: int = 0,
     strict: bool = False,
+    schema: Any | None = None,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
     """
     This function works like `json.load()` except that it will fix your JSON in the process.
@@ -156,6 +186,7 @@ def load(
         logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False.
         chunk_length (int, optional): Size in bytes of the file chunks to read at once. Defaults to 1MB.
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
+        schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs. Schema guidance is skipped for already-valid JSON unless `skip_json_loads=True`.
 
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
@@ -167,6 +198,7 @@ def load(
         skip_json_loads=skip_json_loads,
         logging=logging,
         strict=strict,
+        schema=schema,
     )
 
 
@@ -176,6 +208,7 @@ def from_file(
     logging: bool = False,
     chunk_length: int = 0,
     strict: bool = False,
+    schema: Any | None = None,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
     """
     This function is a wrapper around `load()` so you can pass the filename as string
@@ -186,6 +219,7 @@ def from_file(
         logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False.
         chunk_length (int, optional): Size in bytes of the file chunks to read at once. Defaults to 1MB.
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
+        schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs. Schema guidance is skipped for already-valid JSON unless `skip_json_loads=True`.
 
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
@@ -197,6 +231,7 @@ def from_file(
             logging=logging,
             chunk_length=chunk_length,
             strict=strict,
+            schema=schema,
         )
 
 
@@ -211,6 +246,10 @@ def cli(inline_args: list[str] | None = None) -> int:
             - -o, --output TARGET (str): If specified, the output will be written to TARGET filename instead of stdout.
             - --ensure_ascii (bool): Pass ensure_ascii=True to json.dumps(). Will pass False otherwise.
             - --indent INDENT (int): Number of spaces for indentation (Default 2).
+            - --skip-json-loads (bool): Skip initial json.loads validation (needed to force schema on valid JSON).
+            - --schema SCHEMA (str): Path to a JSON Schema file that guides repairs.
+            - --schema-model MODEL (str): Pydantic v2 model in 'module:ClassName' form that guides repairs.
+            - --strict (bool): Raise on duplicate keys, missing separators, empty keys/values, and other unrecoverable structures instead of repairing them.
 
     Returns:
         int: Exit code of the CLI operation.
@@ -253,6 +292,21 @@ def cli(inline_args: list[str] | None = None) -> int:
         help="Number of spaces for indentation (Default 2)",
     )
     parser.add_argument(
+        "--skip-json-loads",
+        action="store_true",
+        help="Skip initial json.loads validation (needed to force schema on valid JSON)",
+    )
+    parser.add_argument(
+        "--schema",
+        metavar="SCHEMA",
+        help="Path to a JSON Schema file that guides repairs",
+    )
+    parser.add_argument(
+        "--schema-model",
+        metavar="MODEL",
+        help="Pydantic v2 model in 'module:ClassName' form that guides repairs",
+    )
+    parser.add_argument(
         "--strict",
         action="store_true",
         help="Raise on duplicate keys, missing separators, empty keys/values, and other unrecoverable structures instead of repairing them",
@@ -269,15 +323,40 @@ def cli(inline_args: list[str] | None = None) -> int:
         print("Error: You cannot pass both --inline and --output", file=sys.stderr)
         sys.exit(1)
 
+    if args.schema and args.schema_model:
+        print("Error: You cannot pass both --schema and --schema-model", file=sys.stderr)
+        sys.exit(1)
+
+    if args.strict and (args.schema or args.schema_model):
+        print("Error: --strict cannot be used with --schema or --schema-model", file=sys.stderr)
+        sys.exit(1)
+
     ensure_ascii = args.ensure_ascii
 
     try:
+        schema = None
+        if args.schema:
+            with Path(args.schema).open() as fd:
+                schema = json.load(fd)
+        elif args.schema_model:
+            schema = load_schema_model(args.schema_model)
+
         # Use from_file if a filename is provided; otherwise read from stdin.
         if args.filename:
-            result = from_file(args.filename, strict=args.strict)
+            result = from_file(
+                args.filename,
+                skip_json_loads=args.skip_json_loads,
+                strict=args.strict,
+                schema=schema,
+            )
         else:
             data = sys.stdin.read()
-            result = loads(data, strict=args.strict)
+            result = loads(
+                data,
+                skip_json_loads=args.skip_json_loads,
+                strict=args.strict,
+                schema=schema,
+            )
         if args.inline or args.output:
             with Path(args.output or args.filename).open(mode="w") as fd:
                 json.dump(result, fd, indent=args.indent, ensure_ascii=ensure_ascii)

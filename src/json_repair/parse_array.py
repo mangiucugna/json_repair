@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .utils.constants import STRING_DELIMITERS, JSONReturnType
 from .utils.json_context import ContextValues
@@ -6,51 +6,112 @@ from .utils.object_comparer import ObjectComparer
 
 if TYPE_CHECKING:
     from .json_parser import JSONParser
+    from .schema_repair import SchemaRepairer
 
 
-def parse_array(self: "JSONParser") -> list[JSONReturnType]:
+def parse_array(
+    self: "JSONParser",
+    schema: dict[str, Any] | bool | None = None,
+    path: str = "$",
+) -> list[JSONReturnType]:
     # <array> ::= '[' [ <json> *(', ' <json>) ] ']' ; A sequence of JSON values separated by commas
-    arr = []
+    # Only activate schema-guided parsing if a repairer is available and schema looks array-like.
+    schema_repairer: SchemaRepairer | None = None
+    items_schema: object | None = None
+    additional_items: object | None = None
+    if schema is not None and schema is not True:
+        repairer = self.schema_repairer
+        if repairer is not None:
+            schema = repairer.resolve_schema(schema)
+            if schema is False:
+                raise ValueError("Schema does not allow any values.")
+            if schema is not True and repairer.is_array_schema(schema):
+                schema_repairer = repairer
+                items_schema = schema.get("items")
+                additional_items = schema.get("additionalItems", None)
+
+    arr: list[JSONReturnType] = []
     self.context.set(ContextValues.ARRAY)
-    # Stop when you either find the closing parentheses or you have iterated over the entire string
     char = self.get_char_at()
+    idx = 0
+
     while char and char not in ["]", "}"]:
         self.skip_whitespaces()
-        value: JSONReturnType = ""
+
+        # Resolve per-item schema (tuple schemas + additionalItems) when schema guidance is active.
+        item_schema: dict[str, Any] | bool | None = None
+        drop_item = False
+        if schema_repairer is not None:
+            if isinstance(items_schema, list):
+                if idx < len(items_schema):
+                    raw_schema = items_schema[idx]
+                    # Tuple schemas must contain dict/bool entries only.
+                    if raw_schema is not None and not isinstance(raw_schema, (dict, bool)):
+                        raise ValueError("Schema must be an object.")
+                    item_schema = raw_schema
+                else:
+                    if additional_items is False:
+                        drop_item = True
+                    elif isinstance(additional_items, dict):
+                        item_schema = additional_items
+                    else:
+                        item_schema = True
+            elif isinstance(items_schema, dict):
+                item_schema = items_schema
+            else:
+                item_schema = True
+
+        item_path = f"{path}[{idx}]"
+
         if char in STRING_DELIMITERS:
-            # Sometimes it can happen that LLMs forget to start an object and then you think it's a string in an array
-            # So we are going to check if this string is followed by a : or not
-            # And either parse the string or parse the object
+            # A string followed by ':' is often a missing object start; treat it as an object.
             i = 1
             i = self.skip_to_character(char, i)
             i = self.scroll_whitespaces(idx=i + 1)
-            value = self.parse_object() if self.get_char_at(i) == ":" else self.parse_string()
+            if self.get_char_at(i) == ":":
+                if schema_repairer is not None and not drop_item:
+                    # Schema-guided object parsing, then enforce schema on the parsed object.
+                    value = self.parse_object(item_schema, item_path)
+                    value = schema_repairer.repair_value(value, item_schema, item_path)
+                else:
+                    # No schema (or dropping): still parse to keep the cursor in sync.
+                    value = self.parse_object()
+            else:
+                value = self.parse_string()
+                if schema_repairer is not None and not drop_item:
+                    # Apply schema constraints/coercions to scalar values when configured.
+                    value = schema_repairer.repair_value(value, item_schema, item_path)
         else:
-            value = self.parse_json()
+            if schema_repairer is not None and not drop_item:
+                # Use schema-aware parsing to guide nested repairs.
+                value = self.parse_json(item_schema, item_path)
+            else:
+                # Parse normally (or discard) to keep the index aligned.
+                value = self.parse_json()
 
-        # It is possible that parse_json() returns nothing valid, so we increase by 1, unless we find an array separator
         if ObjectComparer.is_strictly_empty(value) and self.get_char_at() not in ["]", ","]:
             self.index += 1
         elif value == "..." and self.get_char_at(-1) == ".":
             self.log(
                 "While parsing an array, found a stray '...'; ignoring it",
             )
-        else:
+        elif not drop_item:
             arr.append(value)
+        elif schema_repairer is not None:
+            # Record drops for visibility when schema forbids extra tuple items.
+            schema_repairer._log("Dropped extra array item not covered by schema", item_path)
 
-        # skip over whitespace after a value but before closing ]
+        idx += 1
         char = self.get_char_at()
         while char and char != "]" and (char.isspace() or char == ","):
             self.index += 1
             char = self.get_char_at()
 
-    # Especially at the end of an LLM generated json you might miss the last "]"
     if char != "]":
         self.log(
             "While parsing an array we missed the closing ], ignoring it",
         )
 
     self.index += 1
-
     self.context.reset()
     return arr

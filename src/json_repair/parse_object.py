@@ -1,16 +1,63 @@
-from typing import TYPE_CHECKING
+import re
+from typing import TYPE_CHECKING, Any
 
-from .utils.constants import STRING_DELIMITERS, JSONReturnType
+from .utils.constants import MISSING_VALUE, STRING_DELIMITERS, JSONReturnType
 from .utils.json_context import ContextValues
 
 if TYPE_CHECKING:
     from .json_parser import JSONParser
+    from .schema_repair import SchemaRepairer
 
 
-def parse_object(self: "JSONParser") -> JSONReturnType:
+def parse_object(
+    self: "JSONParser",
+    schema: dict[str, Any] | bool | None = None,
+    path: str = "$",
+) -> JSONReturnType:
     # <object> ::= '{' [ <member> *(', ' <member>) ] '}' ; A sequence of 'members'
     obj: dict[str, JSONReturnType] = {}
     start_index = self.index
+
+    # Only activate schema-guided parsing if a repairer is available and schema looks object-like.
+    schema_repairer: SchemaRepairer | None = None
+    properties: dict[str, Any] = {}
+    pattern_properties: dict[str, Any] = {}
+    additional_properties: object | None = None
+    required: set[str] = set()
+
+    if schema is not None and schema is not True:
+        repairer = self.schema_repairer
+        if repairer is not None:
+            schema = repairer.resolve_schema(schema)
+            if schema is False:
+                raise ValueError("Schema does not allow any values.")
+            if schema is not True and repairer.is_object_schema(schema):
+                schema_repairer = repairer
+                properties = schema.get("properties", {})
+                if not isinstance(properties, dict):
+                    properties = {}
+                pattern_properties = schema.get("patternProperties", {})
+                if not isinstance(pattern_properties, dict):
+                    pattern_properties = {}
+                additional_properties = schema.get("additionalProperties", None)
+                required = set(schema.get("required", []))
+
+    def finalize_obj() -> dict[str, JSONReturnType]:
+        if schema_repairer is None:
+            return obj
+        schema_repairer_local = schema_repairer
+        # Enforce required fields and insert defaults for optional properties.
+        missing_required = [key for key in required if key not in obj]
+        if missing_required:
+            raise ValueError(f"Missing required properties at {path}: {', '.join(missing_required)}")
+        for key, prop_schema in properties.items():
+            if key in obj or key in required:
+                continue
+            if isinstance(prop_schema, dict) and "default" in prop_schema:
+                obj[key] = schema_repairer_local._copy_json_value(prop_schema["default"], f"{path}.{key}", "default")
+                schema_repairer_local._log("Inserted default value for missing property", f"{path}.{key}")
+        return obj
+
     # Stop when you either find the closing parentheses or you have iterated over the entire string
     while (self.get_char_at() or "}") != "}":
         # This is what we expect to find:
@@ -145,21 +192,71 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
         self.skip_whitespaces()
         # Corner case, a lone comma
         value: JSONReturnType = ""
+        prop_schema: dict[str, Any] | bool | None = None
+        extra_schemas: list[dict[str, Any] | bool | None] = []
+        drop_property = False
+
+        if schema_repairer is not None:
+            if key in properties:
+                schema_value = properties[key]
+                # Schema entries must be dict/bool; reject invalid metadata early.
+                if schema_value is not None and not isinstance(schema_value, (dict, bool)):
+                    raise ValueError("Schema must be an object.")
+                prop_schema = schema_value
+            else:
+                matched = [
+                    schema_value for pattern, schema_value in pattern_properties.items() if re.search(pattern, key)
+                ]
+                if matched:
+                    # patternProperties can stack: apply the first schema, then any extras in order.
+                    primary_schema = matched[0]
+                    if primary_schema is not None and not isinstance(primary_schema, (dict, bool)):
+                        raise ValueError("Schema must be an object.")
+                    prop_schema = primary_schema
+                    for extra_schema in matched[1:]:
+                        if extra_schema is not None and not isinstance(extra_schema, (dict, bool)):
+                            raise ValueError("Schema must be an object.")
+                        extra_schemas.append(extra_schema)
+                else:
+                    if additional_properties is False:
+                        # Schema forbids unknown keys: parse but drop this property.
+                        drop_property = True
+                    elif isinstance(additional_properties, dict):
+                        prop_schema = additional_properties
+                    else:
+                        prop_schema = True
+
         char = self.get_char_at()
+        key_path = f"{path}.{key}"
         if char in [",", "}"]:
             self.log(
                 f"While parsing an object value we found a stray {char}, ignoring it",
             )
+            if schema_repairer is not None:
+                # Missing value: fill according to schema (defaults/const/enum/type).
+                value = schema_repairer.repair_value(MISSING_VALUE, prop_schema, key_path)
         else:
-            value = self.parse_json()
-        if value == "" and self.strict and self.get_char_at(-1) not in STRING_DELIMITERS:
+            # Schema-aware parsing guides repairs inside nested values.
+            value = self.parse_json(prop_schema, key_path) if schema_repairer is not None else self.parse_json()
+
+        if schema_repairer is not None and extra_schemas:
+            # Apply any additional pattern schemas in order.
+            for extra_schema in extra_schemas:
+                value = schema_repairer.repair_value(value, extra_schema, key_path)
+
+        if schema_repairer is None and value == "" and self.strict and self.get_char_at(-1) not in STRING_DELIMITERS:
             self.log(
                 "Parsed value is empty in strict mode while parsing object, raising an error",
             )
             raise ValueError("Parsed value is empty in strict mode while parsing object.")
+
         # Reset context since our job is done
         self.context.reset()
-        obj[key] = value
+        if schema_repairer is None or not drop_property:
+            obj[key] = value
+        else:
+            # Keep parsing but omit forbidden properties to respect the schema.
+            schema_repairer._log("Dropped extra property not covered by schema", key_path)
 
         if self.get_char_at() in [",", "'", '"']:
             self.index += 1
@@ -204,17 +301,17 @@ def parse_object(self: "JSONParser") -> JSONReturnType:
 
     self.skip_whitespaces()
     if self.get_char_at() != ",":
-        return obj
+        return finalize_obj()
     self.index += 1
     self.skip_whitespaces()
     if self.get_char_at() not in STRING_DELIMITERS:
-        return obj
+        return finalize_obj()
     if not self.strict:
         self.log(
             "Found a comma and string delimiter after object closing brace, checking for additional key-value pairs",
         )
-        additional_obj = self.parse_object()
+        additional_obj = self.parse_object(schema, path)
         if isinstance(additional_obj, dict):
             obj.update(additional_obj)
 
-    return obj
+    return finalize_obj()
