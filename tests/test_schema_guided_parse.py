@@ -59,6 +59,41 @@ def test_schema_and_strict_are_mutually_exclusive():
         repair_json("{}", schema={}, strict=True, return_objects=True)
 
 
+def test_schema_applies_to_valid_json_without_skip_json_loads():
+    pytest.importorskip("jsonschema")
+    with pytest.raises(ValueError, match="Expected string"):
+        repair_json("true", schema={"type": "string"}, return_objects=True)
+
+    schema = {
+        "type": "object",
+        "properties": {"value": {"type": "integer"}},
+        "required": ["value"],
+    }
+    assert repair_json('{"value": "1"}', schema=schema, return_objects=True) == {"value": 1}
+
+    with pytest.raises(ValueError, match="does not match"):
+        repair_json('"bbb"', schema={"type": "string", "pattern": "^a+$"}, return_objects=True)
+
+
+def test_schema_applies_to_valid_json_fast_path_outputs_and_logging():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {"value": {"type": "integer"}},
+        "required": ["value"],
+    }
+    assert repair_json('{"value": "1"}', schema=schema) == '{"value": 1}'
+
+    repaired, logs = repair_json('{"value": "1"}', schema=schema, logging=True)
+    assert repaired == {"value": 1}
+    assert logs
+
+
+def test_schema_applies_to_valid_empty_string():
+    pytest.importorskip("jsonschema")
+    assert repair_json('""', schema={"type": "string"}) == ""
+
+
 def test_schema_pydantic_v2_defaults():
     pydantic = pytest.importorskip("pydantic")
     version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))

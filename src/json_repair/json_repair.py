@@ -88,7 +88,7 @@ def repair_json(
         chunk_length (int, optional): Size in bytes of the file chunks to read at once. Ignored if `json_fd` is None. Do not use! Use `from_file` or `load` instead. Defaults to 1MB.
         stream_stable (bool, optional): When the json to be repaired is the accumulation of streaming json at a certain moment.If this parameter to True will keep the repair results stable.
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
-        schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs. Schema guidance is skipped for already-valid JSON unless `skip_json_loads=True`.
+        schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs and validation for both valid and invalid JSON inputs.
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON or a tuple with the repaired JSON and repair log when logging is True.
     """
@@ -97,14 +97,27 @@ def repair_json(
         raise ValueError("schema and strict cannot be used together.")
 
     parser = JSONParser(json_str, json_fd, logging, chunk_length, stream_stable, strict)
-    # When JSON is already valid, skip schema guidance unless the caller explicitly disables json.loads.
+    schema_obj = schema_from_input(schema) if schema is not None else None
+    repairer = SchemaRepairer(schema_obj, parser.logger if logging else None) if schema_obj is not None else None
+
+    # Fast path for valid JSON: schema-aware mode still applies repair+validation.
     if not skip_json_loads:
-        loaded_json: JSONReturnType | None
         try:
-            loaded_json = json.load(json_fd) if json_fd else json.loads(json_str)
+            loaded_json: JSONReturnType = json.load(json_fd) if json_fd else json.loads(json_str)
         except json.JSONDecodeError:
-            loaded_json = None
+            pass
         else:
+            if repairer is not None:
+                assert schema_obj is not None
+                repaired_json = repairer.repair_value(loaded_json, schema_obj, "$")
+                repairer.validate(repaired_json, schema_obj)
+                if logging:
+                    return repaired_json, parser.logger
+                if return_objects:
+                    return repaired_json
+                if repaired_json == "":
+                    return ""
+                return json.dumps(repaired_json, **json_dumps_args)
             if logging:
                 return loaded_json, []
             if return_objects:
@@ -113,13 +126,11 @@ def repair_json(
                 return ""
             return json.dumps(loaded_json, **json_dumps_args)
 
-    # Schema guidance only happens in parser mode.
-    schema_obj = schema_from_input(schema) if schema is not None else None
     parsed_json: JSONReturnType
-    if schema_obj is None:
+    if repairer is None:
         parsed_json = parser.parse()
     else:
-        repairer = SchemaRepairer(schema_obj, parser.logger if logging else None)
+        assert schema_obj is not None
         parsed_json = parser.parse_with_schema(repairer, schema_obj)
         # Post-parse validation ensures we reject values that cannot satisfy the schema.
         repairer.validate(parsed_json, schema_obj)
@@ -152,7 +163,7 @@ def loads(
         skip_json_loads (bool, optional): If True, skip calling the built-in json.loads() function to verify that the json is valid before attempting to repair. Defaults to False.
         logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False.
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
-        schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs. Schema guidance is skipped for already-valid JSON unless `skip_json_loads=True`.
+        schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs and validation for both valid and invalid JSON inputs.
 
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]], str]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
@@ -186,7 +197,7 @@ def load(
         logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False.
         chunk_length (int, optional): Size in bytes of the file chunks to read at once. Defaults to 1MB.
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
-        schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs. Schema guidance is skipped for already-valid JSON unless `skip_json_loads=True`.
+        schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs and validation for both valid and invalid JSON inputs.
 
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
@@ -219,7 +230,7 @@ def from_file(
         logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False.
         chunk_length (int, optional): Size in bytes of the file chunks to read at once. Defaults to 1MB.
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
-        schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs. Schema guidance is skipped for already-valid JSON unless `skip_json_loads=True`.
+        schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs and validation for both valid and invalid JSON inputs.
 
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
@@ -246,7 +257,7 @@ def cli(inline_args: list[str] | None = None) -> int:
             - -o, --output TARGET (str): If specified, the output will be written to TARGET filename instead of stdout.
             - --ensure_ascii (bool): Pass ensure_ascii=True to json.dumps(). Will pass False otherwise.
             - --indent INDENT (int): Number of spaces for indentation (Default 2).
-            - --skip-json-loads (bool): Skip initial json.loads validation (needed to force schema on valid JSON).
+            - --skip-json-loads (bool): Skip initial json.loads validation.
             - --schema SCHEMA (str): Path to a JSON Schema file that guides repairs.
             - --schema-model MODEL (str): Pydantic v2 model in 'module:ClassName' form that guides repairs.
             - --strict (bool): Raise on duplicate keys, missing separators, empty keys/values, and other unrecoverable structures instead of repairing them.
@@ -294,7 +305,7 @@ def cli(inline_args: list[str] | None = None) -> int:
     parser.add_argument(
         "--skip-json-loads",
         action="store_true",
-        help="Skip initial json.loads validation (needed to force schema on valid JSON)",
+        help="Skip initial json.loads validation",
     )
     parser.add_argument(
         "--schema",

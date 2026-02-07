@@ -32,12 +32,10 @@ def parse_array(
 
     arr: list[JSONReturnType] = []
     self.context.set(ContextValues.ARRAY)
+    self.skip_whitespaces()
     char = self.get_char_at()
     idx = 0
-
     while char and char not in ["]", "}"]:
-        self.skip_whitespaces()
-
         # Resolve per-item schema (tuple schemas + additionalItems) when schema guidance is active.
         item_schema: dict[str, Any] | bool | None = None
         drop_item = False

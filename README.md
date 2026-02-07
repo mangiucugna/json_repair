@@ -191,7 +191,7 @@ Install the optional dependencies:
 
 (For CLI usage, you can also use `pipx install 'json-repair[schema]'`.)
 
-Schema guidance is skipped for already-valid JSON unless you pass `skip_json_loads=True` (this forces the parser to run even on valid JSON). Schema guidance is mutually exclusive with `strict=True`.
+When `schema` is provided, schema guidance is always applied (for both valid and invalid JSON). Schema guidance is mutually exclusive with `strict=True`.
 
 ```
 from json_repair import repair_json
@@ -202,7 +202,7 @@ schema = {
     "required": ["value"],
 }
 
-repair_json('{"value": "1"}', schema=schema, skip_json_loads=True, return_objects=True)
+repair_json('{"value": "1"}', schema=schema, return_objects=True)
 ```
 
 Pydantic v2 model example:
@@ -258,7 +258,7 @@ options:
                         If specified, the output will be written to TARGET filename instead of stdout
   --ensure_ascii        Pass ensure_ascii=True to json.dumps()
   --indent INDENT       Number of spaces for indentation (Default 2)
-  --skip-json-loads     Skip initial json.loads validation (needed to force schema on valid JSON)
+  --skip-json-loads     Skip initial json.loads validation
   --schema SCHEMA       Path to a JSON Schema file that guides repairs
   --schema-model MODEL  Pydantic v2 model in 'module:ClassName' form that guides repairs
   --strict              Raise on duplicate keys, missing separators, empty keys/values, and similar structural issues instead of repairing them

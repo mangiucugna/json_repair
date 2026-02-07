@@ -88,7 +88,7 @@ def test_cli_schema_file_guides_repair(tmp_path, capsys):
     assert captured.out == '{\n"value": 0\n}\n'
 
 
-def test_cli_schema_skip_json_loads_controls_validation(tmp_path, capsys):
+def test_cli_schema_applies_to_valid_json(tmp_path, capsys):
     pytest.importorskip("jsonschema")
     schema_path = tmp_path / "schema.json"
     schema = {
@@ -102,7 +102,7 @@ def test_cli_schema_skip_json_loads_controls_validation(tmp_path, capsys):
 
     cli(inline_args=[str(input_path), "--indent", "0", "--schema", str(schema_path)])
     captured = capsys.readouterr()
-    assert captured.out == '{\n"value": "1"\n}\n'
+    assert captured.out == '{\n"value": 1\n}\n'
 
     cli(
         inline_args=[
