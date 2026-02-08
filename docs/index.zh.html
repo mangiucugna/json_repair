@@ -4,22 +4,22 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="google-site-verification" content="8U1Z8NsGTRyRhB9MJqZGREeby67Q4jv1Y82FMtwLjws" /> <!-- pragma: allowlist secret -->
-        <title>JSON 修复器 — 在线修复损坏的 JSON（校验与格式化）</title>
-        <meta name="description" content="在线修复格式错误的 JSON，清理大模型输出，并格式化结果。json_repair 演示支持修复缺少引号、拖尾逗号和语法错误。">
-        <meta name="keywords" content="json 修复,json 修复器,json 校验,json 修复工具,json 格式化,修复坏 json,大模型 json">
+        <title>JSON 修复器与 Schema 校验 — 在线修复损坏 JSON</title>
+        <meta name="description" content="在线修复格式错误的 JSON，并使用可选 JSON Schema 做校验与类型约束。json_repair 演示支持语法修复、Schema 引导修复与格式化输出。">
+        <meta name="keywords" content="json 修复,json 修复器,json 校验,json schema 校验,json schema 验证,json 修复工具,json 格式化,修复坏 json,大模型 json">
         <meta name="robots" content="index, follow">
         <link rel="canonical" href="https://mangiucugna.github.io/json_repair/index.zh.html">
         <link rel="alternate" hreflang="en" href="https://mangiucugna.github.io/json_repair/">
         <link rel="alternate" hreflang="zh-CN" href="https://mangiucugna.github.io/json_repair/index.zh.html">
         <link rel="alternate" hreflang="x-default" href="https://mangiucugna.github.io/json_repair/">
         <meta property="og:type" content="website">
-        <meta property="og:title" content="JSON 修复器 — 在线修复损坏的 JSON">
-        <meta property="og:description" content="免费在线 JSON 修复与校验。粘贴有问题的 JSON（包括大模型输出），立即获得有效且格式化的结果和修复日志。">
+        <meta property="og:title" content="JSON 修复器与 Schema 校验 — 在线修复损坏 JSON">
+        <meta property="og:description" content="免费在线 JSON 修复、格式化与 JSON Schema 校验。粘贴有问题的 JSON，并可选提供 Schema 获取可追踪修复结果。">
         <meta property="og:url" content="https://mangiucugna.github.io/json_repair/index.zh.html">
         <meta property="og:image" content="https://raw.githubusercontent.com/mangiucugna/json_repair/main/banner.png">
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="JSON 修复器 — 在线修复损坏的 JSON">
-        <meta name="twitter:description" content="在浏览器中校验、修复并格式化损坏的 JSON。">
+        <meta name="twitter:title" content="JSON 修复器与 Schema 校验 — 在线修复损坏 JSON">
+        <meta name="twitter:description" content="在浏览器中修复损坏 JSON，并使用可选 JSON Schema 做校验与类型引导。">
         <meta name="twitter:image" content="https://raw.githubusercontent.com/mangiucugna/json_repair/main/banner.png">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
         <link rel="stylesheet" href="styles.css">
@@ -31,7 +31,7 @@
                         "@type": "WebSite",
                         "name": "JSON Repair Demo",
                         "url": "https://mangiucugna.github.io/json_repair/index.zh.html",
-                        "description": "json_repair Python 包的在线 JSON 修复与校验工具。",
+                        "description": "json_repair Python 包的在线 JSON 修复、格式化与 JSON Schema 校验工具。",
                         "inLanguage": "zh-CN",
                         "potentialAction": {
                             "@type": "SearchAction",
@@ -43,10 +43,10 @@
                         "@type": "SoftwareApplication",
                         "name": "json_repair",
                         "applicationCategory": "DeveloperApplication",
-                        "applicationSubCategory": "JSON validator and fixer",
+                        "applicationSubCategory": "JSON validator, JSON Schema validator, and fixer",
                         "operatingSystem": "Any",
                         "softwareVersion": "0.55.0",
-                        "description": "修复格式错误 JSON 字符串的 Python 工具，适合修复 API 负载和大模型响应。",
+                        "description": "修复格式错误 JSON 并支持 Schema 引导校验/类型转换的 Python 工具，适合 API 负载和大模型响应。",
                         "downloadUrl": "https://pypi.org/project/json-repair/",
                         "offers": {
                             "@type": "Offer",
@@ -68,14 +68,15 @@
         </div>
         <header>
             <p class="eyebrow">开源 · 免费 · 无需注册</p>
-            <h1>JSON 修复器 — 在线修复损坏的 JSON</h1>
-            <p class="lede">粘贴损坏的 JSON（包括大模型输出），即可得到有效、格式化的 JSON，并查看每一步修复日志。</p>
+            <h1>JSON 修复器与 Schema 校验 — 在线修复损坏 JSON</h1>
+            <p class="lede">粘贴损坏的 JSON（包括大模型输出），并可选提供 JSON Schema，即可获得有效、格式化结果与每一步修复日志。</p>
         </header>
         <main>
             <section>
                 <h2>这个演示能做什么</h2>
                 <ul>
                     <li>修复常见错误：拖尾逗号、缺少引号、注释、未完成的对象/数组。</li>
+                    <li>支持 JSON Schema 校验：在提供 Schema 时按字段类型、默认值和结构约束进行引导修复。</li>
                     <li>校验并格式化：输出可直接用于代码或 API 的漂亮 JSON。</li>
                     <li>透明日志：记录每一步修复，方便查看上下文。</li>
                     <li>基于 <a href="https://github.com/mangiucugna/json_repair/" target="_blank" rel="noopener">json_repair</a> Python 包，已发布到 <a href="https://pypi.org/project/json-repair/" target="_blank" rel="noopener">PyPI</a>。</li>
@@ -86,9 +87,19 @@
                 <h2>如何在线修复 JSON</h2>
                 <ol>
                     <li>将损坏的 JSON（来自 webhook、日志或大模型）粘贴到左侧。</li>
+                    <li>可选粘贴 JSON Schema，用于字段校验与类型引导（例如字符串转整数）。</li>
                     <li>我们自动校验、修复并格式化。</li>
                     <li>复制右侧的有效 JSON，或查看“修复日志”用于调试。</li>
                 </ol>
+            </section>
+            <section>
+                <h2>在线 JSON Schema 校验</h2>
+                <p>通过可选 Schema 输入框，你可以在修复 JSON 的同时校验必填字段、类型与结构约束，再将结果用于生产系统。</p>
+                <ul>
+                    <li>适合 API 合同校验、类型化数据管线和大模型结构化输出场景。</li>
+                    <li>支持 Schema 引导的类型转换（例如把 <code>"1"</code> 转为整型 <code>1</code>）。</li>
+                    <li>配合修复日志可追踪每一步变化，方便审计与调试。</li>
+                </ul>
             </section>
             <section class="feature-grid">
                 <div>
@@ -96,7 +107,7 @@
                     <ul>
                         <li>处理大模型常见问题：输出混入文本、错误的 true/false/null、损坏的数组。</li>
                         <li>作为 <code>json.loads()</code> 的韧性替代，防止因格式错误而中断。</li>
-                        <li>适合 webhook 负载、日志管线和提示工程工作流。</li>
+                        <li>适合 webhook 负载、Schema 校验管线和提示工程工作流。</li>
                     </ul>
                 </div>
                 <div>
@@ -132,6 +143,8 @@ python -m json_repair</code></pre>
                 <div class="faq">
                     <h3>能处理 AI / 大模型输出吗？</h3>
                     <p>可以。json_repair 针对混入文本和语法错误的输出进行了优化，尽量保留结构化数据。</p>
+                    <h3>可以在这里做 JSON Schema 校验吗？</h3>
+                    <p>可以。把 JSON Schema 粘贴到可选 Schema 输入框后，修复过程会同时执行 Schema 引导的校验和类型转换。</p>
                     <h3>修复后的 JSON 可靠吗？</h3>
                     <p>每一步修复都有日志，发送到生产系统前可先审核。</p>
                     <h3>需要离线或私有环境？</h3>

@@ -4,22 +4,22 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="google-site-verification" content="8U1Z8NsGTRyRhB9MJqZGREeby67Q4jv1Y82FMtwLjws" /> <!-- pragma: allowlist secret -->
-        <title>JSON Repair — Fix Broken JSON Online (Validator & Formatter)</title>
-        <meta name="description" content="Repair malformed JSON online, clean LLM output, and format JSON with the json_repair demo. Validate and fix missing quotes, trailing commas, and syntax errors.">
-        <meta name="keywords" content="json repair, json fixer, json validator, fix malformed json, json formatter, llm json, json linter">
+        <title>JSON Repair & Schema Validator — Fix Broken JSON Online</title>
+        <meta name="description" content="Repair malformed JSON online, validate with optional JSON Schema, and format output with json_repair. Fix syntax errors and enforce schema-guided types/defaults.">
+        <meta name="keywords" content="json repair, json fixer, json validator, json schema validator, json schema validation, fix malformed json, json formatter, llm json, json linter">
         <meta name="robots" content="index, follow">
         <link rel="canonical" href="https://mangiucugna.github.io/json_repair/">
         <link rel="alternate" hreflang="en" href="https://mangiucugna.github.io/json_repair/">
         <link rel="alternate" hreflang="zh-CN" href="https://mangiucugna.github.io/json_repair/index.zh.html">
         <link rel="alternate" hreflang="x-default" href="https://mangiucugna.github.io/json_repair/">
         <meta property="og:type" content="website">
-        <meta property="og:title" content="JSON Repair — Fix Broken JSON Online">
-        <meta property="og:description" content="Free online JSON repair and validator. Paste malformed JSON (even from LLMs) and instantly get valid, formatted output with a log of fixes.">
+        <meta property="og:title" content="JSON Repair & Schema Validator — Fix Broken JSON Online">
+        <meta property="og:description" content="Free online JSON repair, formatting, and JSON Schema validation. Paste malformed JSON and optionally enforce schema-guided fixes with full logs.">
         <meta property="og:url" content="https://mangiucugna.github.io/json_repair/">
         <meta property="og:image" content="https://raw.githubusercontent.com/mangiucugna/json_repair/main/banner.png">
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="JSON Repair — Fix Broken JSON Online">
-        <meta name="twitter:description" content="Validate, repair, and format malformed JSON directly in your browser.">
+        <meta name="twitter:title" content="JSON Repair & Schema Validator — Fix Broken JSON Online">
+        <meta name="twitter:description" content="Validate malformed JSON with optional JSON Schema, repair it, and format it directly in your browser.">
         <meta name="twitter:image" content="https://raw.githubusercontent.com/mangiucugna/json_repair/main/banner.png">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css">
         <link rel="stylesheet" href="styles.css">
@@ -31,7 +31,7 @@
                         "@type": "WebSite",
                         "name": "JSON Repair Demo",
                         "url": "https://mangiucugna.github.io/json_repair/",
-                        "description": "Free online JSON repair and validation tool powered by the json_repair Python package.",
+                        "description": "Free online JSON repair, formatting, and JSON Schema validation tool powered by the json_repair Python package.",
                         "inLanguage": "en",
                         "potentialAction": {
                             "@type": "SearchAction",
@@ -43,10 +43,10 @@
                         "@type": "SoftwareApplication",
                         "name": "json_repair",
                         "applicationCategory": "DeveloperApplication",
-                        "applicationSubCategory": "JSON validator and fixer",
+                        "applicationSubCategory": "JSON validator, JSON Schema validator, and fixer",
                         "operatingSystem": "Any",
                         "softwareVersion": "0.55.0",
-                        "description": "Python utility to repair malformed JSON strings, perfect for fixing API payloads and LLM responses.",
+                        "description": "Python utility to repair malformed JSON strings and apply schema-guided validation/coercion for API payloads and LLM responses.",
                         "downloadUrl": "https://pypi.org/project/json-repair/",
                         "offers": {
                             "@type": "Offer",
@@ -75,14 +75,15 @@
         </div>
         <header>
             <p class="eyebrow">Open source · Free · No signup</p>
-            <h1>JSON Repair — fix malformed JSON online</h1>
-            <p class="lede">Paste broken JSON (even messy LLM output) and instantly get valid, formatted JSON with a detailed log of every fix.</p>
+            <h1>JSON Repair & Schema Validation — fix malformed JSON online</h1>
+            <p class="lede">Paste broken JSON (even messy LLM output), optionally provide a JSON Schema, and instantly get valid, formatted output with a detailed log of every fix.</p>
         </header>
         <main>
             <section>
                 <h2>What the JSON Repair demo does</h2>
                 <ul>
                     <li>Repairs malformed JSON: fixes trailing commas, missing quotes, stray comments, and incomplete objects.</li>
+                    <li>Validates with JSON Schema: enforce expected types, defaults, and structural constraints when schema guidance is provided.</li>
                     <li>Validates and formats: outputs pretty-printed JSON you can copy straight into your code or API calls.</li>
                     <li>Transparent logging: see every repair step and context so you can trust the output.</li>
                     <li>Built on <a href="https://github.com/mangiucugna/json_repair/" target="_blank" rel="noopener">json_repair</a>, the Python package available on <a href="https://pypi.org/project/json-repair/" target="_blank" rel="noopener">PyPI</a>.</li>
@@ -93,9 +94,19 @@
                 <h2>How to repair JSON online</h2>
                 <ol>
                     <li>Paste malformed JSON (from webhooks, logs, or LLM responses) into the left box.</li>
+                    <li>Optionally paste a JSON Schema to validate/coerce fields (for example string-to-integer conversion).</li>
                     <li>We validate, repair, and format automatically as you type.</li>
                     <li>Copy the valid JSON on the right or review the “repair actions” log for debugging.</li>
                 </ol>
+            </section>
+            <section>
+                <h2>JSON Schema validation online</h2>
+                <p>Use the optional JSON Schema input to validate repaired JSON against required properties, value types, and constraints before you copy results into production systems.</p>
+                <ul>
+                    <li>Useful for API contracts, typed pipelines, and AI extraction workflows.</li>
+                    <li>Supports schema-guided coercion (for example, converting <code>"1"</code> into <code>1</code> for integer fields).</li>
+                    <li>Keeps behavior transparent with repair logs that show what changed and where.</li>
+                </ul>
             </section>
             <section class="feature-grid">
                 <div>
@@ -103,7 +114,7 @@
                     <ul>
                         <li>Handles common AI issues: hallucinated text in JSON, wrong booleans/null, broken arrays.</li>
                         <li>Drop-in replacement for <code>json.loads()</code> when you need resilient parsing.</li>
-                        <li>Ideal for webhook payloads, log pipelines, and prompt engineering workflows.</li>
+                        <li>Ideal for webhook payloads, schema-validated pipelines, and prompt engineering workflows.</li>
                     </ul>
                 </div>
                 <div>
@@ -139,6 +150,8 @@ python -m json_repair</code></pre>
                 <div class="faq">
                     <h3>Does this work for AI/LLM responses?</h3>
                     <p>Yes. json_repair is tuned for messy model output: it removes prose, repairs syntax, and keeps structured data intact.</p>
+                    <h3>Can I validate against a JSON Schema here?</h3>
+                    <p>Yes. Paste a JSON Schema in the optional schema box to apply schema-guided validation and type coercion while repairing malformed JSON.</p>
                     <h3>Can I trust the repaired JSON?</h3>
                     <p>Every action is logged so you can review context before sending payloads to production systems.</p>
                     <h3>What if I need offline or private processing?</h3>
