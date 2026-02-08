@@ -1,0 +1,4 @@
+interface:
+  display_name: "Docs Demo Local Test"
+  short_description: "Validate docs demo locally before deploys"
+  default_prompt: "Run local docs demo API+UI and verify schema behavior against local code."

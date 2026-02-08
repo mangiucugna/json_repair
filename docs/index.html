@@ -124,6 +124,12 @@ python -m json_repair</code></pre>
                     <textarea id="output-json" aria-label="Repaired JSON" readonly placeholder="Formatted JSON will appear here..."></textarea>
                 </div>
             </div>
+            <div class="textarea-container schema-container">
+                <label for="schema-json">Optional JSON Schema (object or boolean)</label>
+                <textarea id="schema-json" aria-label="JSON Schema" placeholder='{"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]}'></textarea>
+                <p class="helper-text">Optional. Provide a JSON Schema to guide coercions, defaults, and validation. Leave empty to use normal repair mode.</p>
+                <p class="schema-note">Schema is optional and included in the page URL so you can share reproducible examples.</p>
+            </div>
             <div class="textarea-container">
                 <label for="log-output">Repair actions performed</label>
                 <textarea id="log-output" aria-label="Repair actions log" readonly placeholder="Logs will appear here..."></textarea>

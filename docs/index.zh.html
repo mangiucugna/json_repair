@@ -117,6 +117,12 @@ python -m json_repair</code></pre>
                     <textarea id="output-json" aria-label="修复后的 JSON" readonly placeholder="格式化后的 JSON 将显示在此..."></textarea>
                 </div>
             </div>
+            <div class="textarea-container schema-container">
+                <label for="schema-json">可选 JSON Schema（对象或布尔值）</label>
+                <textarea id="schema-json" aria-label="JSON Schema" placeholder='{"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]}'></textarea>
+                <p class="helper-text">可选。提供 JSON Schema 可引导类型转换、默认值填充和校验；留空则使用普通修复模式。</p>
+                <p class="schema-note">Schema 为可选项，并会写入页面 URL，方便分享可复现实例。</p>
+            </div>
             <div class="textarea-container">
                 <label for="log-output">修复步骤日志</label>
                 <textarea id="log-output" aria-label="修复日志" readonly placeholder="日志将显示在此..."></textarea>

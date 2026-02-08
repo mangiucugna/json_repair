@@ -134,6 +134,22 @@ textarea:focus {
     margin-top: 6px;
 }
 
+.schema-container {
+    margin-top: 4px;
+}
+
+#schema-json {
+    height: 220px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.schema-note {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-top: 6px;
+    margin-bottom: 0;
+}
+
 #log-output {
     height: 200px;
 }
@@ -158,5 +174,9 @@ footer {
 
     textarea {
         height: 260px;
+    }
+
+    #schema-json {
+        height: 220px;
     }
 }

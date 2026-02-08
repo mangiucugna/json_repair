@@ -25,6 +25,7 @@
 
 ## Docs
 - Keep `README.zh.md` aligned with `README.md` when updating contributor guidance or usage notes.
+- For local docs demo validation (API + UI + network target checks), follow `.agents/skills/docs-demo-local-test/SKILL.md`.
 
 ## Commits
 - Prefer descriptive commit messages with a short summary line and a brief bullet list of key changes.
@@ -44,8 +45,8 @@
 - Utilities:
   - `src/json_repair/utils/json_context.py`, `src/json_repair/utils/string_file_wrapper.py`, `src/json_repair/utils/constants.py`, `src/json_repair/utils/object_comparer.py`
 - Web demo and API:
-  - `docs/app.py` (Flask API `/api/repair-json`, uses CORS, returns repaired JSON + log)
-  - `docs/index.js` (client UI; debounced `processInput`, AbortController, URL param handling)
+  - `docs/app.py` (Flask API `/api/repair-json`, uses CORS, requires `malformedJSON`, accepts optional `schema` as object/boolean with `null` treated as unset, returns repaired JSON + log)
+  - `docs/index.js` (client UI; debounced `processInput`, AbortController, URL param handling for both `json` and optional `schema`, client-side schema validation)
   - `docs/index.html`, `docs/index.zh.html` (localized pages + SEO metadata)
   - `docs/styles.css` (layout and responsive styles)
 - Tests:
