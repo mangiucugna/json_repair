@@ -61,18 +61,30 @@ def test_schema_and_strict_are_mutually_exclusive():
 
 def test_schema_applies_to_valid_json_without_skip_json_loads():
     pytest.importorskip("jsonschema")
-    with pytest.raises(ValueError, match="Expected string"):
-        repair_json("true", schema={"type": "string"}, return_objects=True)
-
     schema = {
         "type": "object",
         "properties": {"value": {"type": "integer"}},
         "required": ["value"],
     }
+    # Fast-path validation fails, then parser+schema fallback repairs.
     assert repair_json('{"value": "1"}', schema=schema, return_objects=True) == {"value": 1}
+    # Fast-path validation fails for a valid scalar and parser fallback returns empty string.
+    assert repair_json("true", schema={"type": "string"}, return_objects=True) == ""
 
     with pytest.raises(ValueError, match="does not match"):
         repair_json('"bbb"', schema={"type": "string", "pattern": "^a+$"}, return_objects=True)
+
+
+def test_schema_valid_fast_path_keeps_logging_empty():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {"value": {"type": "integer"}},
+        "required": ["value"],
+    }
+    repaired, logs = repair_json('{"value": 1}', schema=schema, logging=True)
+    assert repaired == {"value": 1}
+    assert logs == []
 
 
 def test_schema_applies_to_valid_json_fast_path_outputs_and_logging():

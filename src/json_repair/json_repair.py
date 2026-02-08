@@ -101,43 +101,30 @@ def repair_json(
     repairer = SchemaRepairer(schema_obj, parser.logger if logging else None) if schema_obj is not None else None
 
     # Fast path for valid JSON: schema-aware mode still applies repair+validation.
-    if not skip_json_loads:
-        try:
-            loaded_json: JSONReturnType = json.load(json_fd) if json_fd else json.loads(json_str)
-        except json.JSONDecodeError:
-            pass
+    parsed_json: JSONReturnType = None
+    is_valid_json = False
+    try:
+        if not skip_json_loads:
+            parsed_json = json.load(json_fd) if json_fd else json.loads(json_str)
+            if repairer is not None and schema_obj is not None:
+                # Validate here to ensure that we reject values that cannot satisfy the schema and fall back to the more expensive parser+schema repair if needed, instead of just returning the valid but schema-noncompliant JSON.
+                repairer.validate(parsed_json, schema_obj)
+            is_valid_json = True
+    except (json.JSONDecodeError, TypeError, ValueError):
+        pass
+    if not is_valid_json:
+        if repairer is not None and schema_obj is not None:
+            # If schema-guided, we want to attempt repairs even on valid JSON that fails schema validation.
+            parsed_json = parser.parse_with_schema(repairer, schema_obj)
+            repairer.validate(parsed_json, schema_obj)
         else:
-            if repairer is not None:
-                assert schema_obj is not None
-                repaired_json = repairer.repair_value(loaded_json, schema_obj, "$")
-                repairer.validate(repaired_json, schema_obj)
-                if logging:
-                    return repaired_json, parser.logger
-                if return_objects:
-                    return repaired_json
-                if repaired_json == "":
-                    return ""
-                return json.dumps(repaired_json, **json_dumps_args)
-            if logging:
-                return loaded_json, []
-            if return_objects:
-                return loaded_json
-            if loaded_json == "":
-                return ""
-            return json.dumps(loaded_json, **json_dumps_args)
+            # Otherwise, we can skip the more expensive schema-aware parsing and just do a normal parse.
+            parsed_json = parser.parse()
 
-    parsed_json: JSONReturnType
-    if repairer is None:
-        parsed_json = parser.parse()
-    else:
-        assert schema_obj is not None
-        parsed_json = parser.parse_with_schema(repairer, schema_obj)
-        # Post-parse validation ensures we reject values that cannot satisfy the schema.
-        repairer.validate(parsed_json, schema_obj)
     # It's useful to return the actual object instead of the json string,
     # it allows this lib to be a replacement of the json library
     if logging:
-        return parsed_json, parser.logger
+        return parsed_json, parser.logger or []
     if return_objects:
         return parsed_json
     # Avoid returning only a pair of quotes if it's an empty string
