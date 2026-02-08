@@ -110,7 +110,7 @@ repair_json(bad_json_string, strict=True)
 严格模式可与 `skip_json_loads=True` 组合：跳过初始 `json.loads` 检查，但仍执行严格解析规则。
 
 ### Schema 引导修复
-**Alpha 功能（尚未进入稳定版）**：Schema 引导修复目前只在 alpha 版本提供（例如 `0.56.0-alpha.*`），API/行为可能在 alpha 之间发生变化或破坏。
+**Beta 功能**：Schema 引导修复目前处于 beta 阶段，仍可能出现 bug。
 
 可使用 JSON Schema（或 Pydantic v2 模型）指导修复。开启后解析器会：
 
