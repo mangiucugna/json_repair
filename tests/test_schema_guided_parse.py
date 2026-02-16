@@ -34,11 +34,21 @@ def test_schema_guides_missing_value_type_defaults():
     }
 
 
-def test_schema_missing_required_property_raises():
+def test_schema_missing_required_property_with_default_is_filled():
     pytest.importorskip("jsonschema")
     schema = {
         "type": "object",
         "properties": {"required_value": {"type": "integer", "default": 1}},
+        "required": ["required_value"],
+    }
+    assert repair_with_schema("{}", schema) == {"required_value": 1}
+
+
+def test_schema_missing_required_property_without_default_raises():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {"required_value": {"type": "integer"}},
         "required": ["required_value"],
     }
     with pytest.raises(ValueError, match="Missing required properties"):

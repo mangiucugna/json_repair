@@ -42,22 +42,6 @@ def parse_object(
                 additional_properties = schema.get("additionalProperties", None)
                 required = set(schema.get("required", []))
 
-    def finalize_obj() -> dict[str, JSONReturnType]:
-        if schema_repairer is None:
-            return obj
-        schema_repairer_local = schema_repairer
-        # Enforce required fields and insert defaults for optional properties.
-        missing_required = [key for key in required if key not in obj]
-        if missing_required:
-            raise ValueError(f"Missing required properties at {path}: {', '.join(missing_required)}")
-        for key, prop_schema in properties.items():
-            if key in obj or key in required:
-                continue
-            if isinstance(prop_schema, dict) and "default" in prop_schema:
-                obj[key] = schema_repairer_local._copy_json_value(prop_schema["default"], f"{path}.{key}", "default")
-                schema_repairer_local._log("Inserted default value for missing property", f"{path}.{key}")
-        return obj
-
     # Stop when you either find the closing parentheses or you have iterated over the entire string
     while (self.get_char_at() or "}") != "}":
         # This is what we expect to find:
@@ -301,11 +285,11 @@ def parse_object(
 
     self.skip_whitespaces()
     if self.get_char_at() != ",":
-        return finalize_obj()
+        return obj
     self.index += 1
     self.skip_whitespaces()
     if self.get_char_at() not in STRING_DELIMITERS:
-        return finalize_obj()
+        return obj
     if not self.strict:
         self.log(
             "Found a comma and string delimiter after object closing brace, checking for additional key-value pairs",
@@ -314,4 +298,4 @@ def parse_object(
         if isinstance(additional_obj, dict):
             obj.update(additional_obj)
 
-    return finalize_obj()
+    return obj

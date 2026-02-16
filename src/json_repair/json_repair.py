@@ -44,6 +44,8 @@ def repair_json(
     stream_stable: bool = False,
     strict: bool = False,
     schema: Any | None = None,
+    enable_shape_fixes: bool = False,
+    drop_invalid_items: bool = False,
     **json_dumps_args: Any,
 ) -> str: ...
 
@@ -59,6 +61,8 @@ def repair_json(
     stream_stable: bool = False,
     strict: bool = False,
     schema: Any | None = None,
+    enable_shape_fixes: bool = False,
+    drop_invalid_items: bool = False,
     **json_dumps_args: Any,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]: ...
 
@@ -73,6 +77,8 @@ def repair_json(
     stream_stable: bool = False,
     strict: bool = False,
     schema: Any | None = None,
+    enable_shape_fixes: bool = False,
+    drop_invalid_items: bool = False,
     **json_dumps_args: Any,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
     """
@@ -89,6 +95,8 @@ def repair_json(
         stream_stable (bool, optional): When the json to be repaired is the accumulation of streaming json at a certain moment.If this parameter to True will keep the repair results stable.
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
         schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs and validation for both valid and invalid JSON inputs.
+        enable_shape_fixes (bool, optional): When True and a schema is provided, enable structural heuristics such as mapping a list to an object or unwrapping a single-key wrapper dict. Defaults to False.
+        drop_invalid_items (bool, optional): When True and a schema is provided, array items that cannot be repaired to match the items schema are silently dropped instead of raising. Defaults to False.
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON or a tuple with the repaired JSON and repair log when logging is True.
     """
@@ -98,7 +106,7 @@ def repair_json(
 
     parser = JSONParser(json_str, json_fd, logging, chunk_length, stream_stable, strict)
     schema_obj = schema_from_input(schema) if schema is not None else None
-    repairer = SchemaRepairer(schema_obj, parser.logger if logging else None) if schema_obj is not None else None
+    repairer = SchemaRepairer(schema_obj, parser.logger if logging else None, enable_shape_fixes=enable_shape_fixes, drop_invalid_items=drop_invalid_items) if schema_obj is not None else None
 
     # Fast path for valid JSON: schema-aware mode still applies repair+validation.
     parsed_json: JSONReturnType = None
@@ -140,6 +148,8 @@ def loads(
     stream_stable: bool = False,
     strict: bool = False,
     schema: Any | None = None,
+    enable_shape_fixes: bool = False,
+    drop_invalid_items: bool = False,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]] | str:
     """
     This function works like `json.loads()` except that it will fix your JSON in the process.
@@ -151,6 +161,8 @@ def loads(
         logging (bool, optional): If True, return a tuple with the repaired json and a log of all repair actions. Defaults to False.
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
         schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs and validation for both valid and invalid JSON inputs.
+        enable_shape_fixes (bool, optional): When True and a schema is provided, enable structural heuristics. Defaults to False.
+        drop_invalid_items (bool, optional): When True and a schema is provided, drop array items that cannot be repaired. Defaults to False.
 
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]], str]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
@@ -163,6 +175,8 @@ def loads(
         stream_stable=stream_stable,
         strict=strict,
         schema=schema,
+        enable_shape_fixes=enable_shape_fixes,
+        drop_invalid_items=drop_invalid_items,
     )
 
 
@@ -173,6 +187,8 @@ def load(
     chunk_length: int = 0,
     strict: bool = False,
     schema: Any | None = None,
+    enable_shape_fixes: bool = False,
+    drop_invalid_items: bool = False,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
     """
     This function works like `json.load()` except that it will fix your JSON in the process.
@@ -185,6 +201,8 @@ def load(
         chunk_length (int, optional): Size in bytes of the file chunks to read at once. Defaults to 1MB.
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
         schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs and validation for both valid and invalid JSON inputs.
+        enable_shape_fixes (bool, optional): When True and a schema is provided, enable structural heuristics. Defaults to False.
+        drop_invalid_items (bool, optional): When True and a schema is provided, drop array items that cannot be repaired. Defaults to False.
 
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
@@ -197,6 +215,8 @@ def load(
         logging=logging,
         strict=strict,
         schema=schema,
+        enable_shape_fixes=enable_shape_fixes,
+        drop_invalid_items=drop_invalid_items,
     )
 
 
@@ -207,6 +227,8 @@ def from_file(
     chunk_length: int = 0,
     strict: bool = False,
     schema: Any | None = None,
+    enable_shape_fixes: bool = False,
+    drop_invalid_items: bool = False,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
     """
     This function is a wrapper around `load()` so you can pass the filename as string
@@ -218,6 +240,8 @@ def from_file(
         chunk_length (int, optional): Size in bytes of the file chunks to read at once. Defaults to 1MB.
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
         schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs and validation for both valid and invalid JSON inputs.
+        enable_shape_fixes (bool, optional): When True and a schema is provided, enable structural heuristics. Defaults to False.
+        drop_invalid_items (bool, optional): When True and a schema is provided, drop array items that cannot be repaired. Defaults to False.
 
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
@@ -230,6 +254,8 @@ def from_file(
             chunk_length=chunk_length,
             strict=strict,
             schema=schema,
+            enable_shape_fixes=enable_shape_fixes,
+            drop_invalid_items=drop_invalid_items,
         )
 
 
@@ -309,6 +335,16 @@ def cli(inline_args: list[str] | None = None) -> int:
         action="store_true",
         help="Raise on duplicate keys, missing separators, empty keys/values, and other unrecoverable structures instead of repairing them",
     )
+    parser.add_argument(
+        "--enable-shape-fixes",
+        action="store_true",
+        help="Enable structural heuristics (list-to-object mapping, single-key unwrapping) when a schema is provided",
+    )
+    parser.add_argument(
+        "--drop-invalid-items",
+        action="store_true",
+        help="Drop array items that cannot be repaired to match the schema instead of raising an error",
+    )
 
     args = parser.parse_args(inline_args)
 
@@ -346,6 +382,8 @@ def cli(inline_args: list[str] | None = None) -> int:
                 skip_json_loads=args.skip_json_loads,
                 strict=args.strict,
                 schema=schema,
+                enable_shape_fixes=args.enable_shape_fixes,
+                drop_invalid_items=args.drop_invalid_items,
             )
         else:
             data = sys.stdin.read()
@@ -354,6 +392,8 @@ def cli(inline_args: list[str] | None = None) -> int:
                 skip_json_loads=args.skip_json_loads,
                 strict=args.strict,
                 schema=schema,
+                enable_shape_fixes=args.enable_shape_fixes,
+                drop_invalid_items=args.drop_invalid_items,
             )
         if args.inline or args.output:
             with Path(args.output or args.filename).open(mode="w") as fd:

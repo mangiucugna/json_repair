@@ -85,9 +85,17 @@ def schema_from_input(schema: Any) -> dict[str, Any] | bool:
 
 
 class SchemaRepairer:
-    def __init__(self, schema: dict[str, Any] | bool, log: list[dict[str, str]] | None) -> None:
+    def __init__(
+        self,
+        schema: dict[str, Any] | bool,
+        log: list[dict[str, str]] | None,
+        enable_shape_fixes: bool = False,
+        drop_invalid_items: bool = False,
+    ) -> None:
         self.root_schema = schema
         self.log = log
+        self.enable_shape_fixes = enable_shape_fixes
+        self.drop_invalid_items = drop_invalid_items
 
     def _log(self, text: str, path: str) -> None:
         if self.log is not None:
@@ -238,6 +246,14 @@ class SchemaRepairer:
     def _repair_array(self, value: Any, schema: dict[str, Any], path: str) -> JSONReturnType:
         if isinstance(value, list):
             items: list[JSONReturnType] = value
+        elif self.enable_shape_fixes and isinstance(value, dict) and len(value) == 1:
+            sole_value = next(iter(value.values()))
+            if isinstance(sole_value, list):
+                self._log("Unwrapped single-key object to array", path)
+                items = sole_value
+            else:
+                self._log("Wrapped value in array to match schema", path)
+                items = [normalize_missing_values(value)]
         else:
             self._log("Wrapped value in array to match schema", path)
             items = [normalize_missing_values(value)]
@@ -262,7 +278,16 @@ class SchemaRepairer:
                             self._log("Dropped extra array item not covered by schema", f"{path}[{offset}]")
                 items = repaired_items
             else:
-                items = [self.repair_value(item, items_schema, f"{path}[{idx}]") for idx, item in enumerate(items)]
+                if self.drop_invalid_items:
+                    valid_items: list[JSONReturnType] = []
+                    for idx, item in enumerate(items):
+                        try:
+                            valid_items.append(self.repair_value(item, items_schema, f"{path}[{idx}]"))
+                        except ValueError:
+                            self._log("Dropped invalid array item that could not be repaired", f"{path}[{idx}]")
+                    items = valid_items
+                else:
+                    items = [self.repair_value(item, items_schema, f"{path}[{idx}]") for idx, item in enumerate(items)]
         min_items = schema.get("minItems")
         if min_items is not None and len(items) < min_items:
             raise ValueError(f"Array at {path} does not meet minItems.")
@@ -270,7 +295,19 @@ class SchemaRepairer:
 
     def _repair_object(self, value: Any, schema: dict[str, Any], path: str) -> JSONReturnType:
         if not isinstance(value, dict):
-            raise ValueError(f"Expected object at {path}, got {type(value).__name__}.")
+            if self.enable_shape_fixes and isinstance(value, list):
+                mapped = self._map_list_to_object(value, schema, path)
+                if mapped is not None:
+                    value = mapped
+            if not isinstance(value, dict):
+                raise ValueError(f"Expected object at {path}, got {type(value).__name__}.")
+
+        # When shape fixes are enabled, unwrap {"wrapper_key": {...}} to the inner dict
+        # if the outer key isn't a schema property and the inner dict has all required keys.
+        if self.enable_shape_fixes:
+            unwrapped = self._try_unwrap_single_key(value, schema, path)
+            if unwrapped is not None:
+                value = unwrapped
 
         properties = schema.get("properties", {})
         if not isinstance(properties, dict):
@@ -281,7 +318,10 @@ class SchemaRepairer:
             pattern_properties = {}
         additional_properties = schema.get("additionalProperties")
 
-        missing_required = [key for key in required if key not in value]
+        missing_required = [
+            key for key in required
+            if key not in value and not (isinstance(properties.get(key), dict) and "default" in properties[key])
+        ]
         if missing_required:
             raise ValueError(f"Missing required properties at {path}: {', '.join(missing_required)}")
 
@@ -291,7 +331,7 @@ class SchemaRepairer:
             key_path = f"{path}.{key}"
             if key in value:
                 repaired[key] = self.repair_value(value[key], prop_schema, key_path)
-            elif isinstance(prop_schema, dict) and "default" in prop_schema and key not in required:
+            elif isinstance(prop_schema, dict) and "default" in prop_schema:
                 repaired[key] = self._copy_json_value(prop_schema["default"], key_path, "default")
                 self._log("Inserted default value for missing property", key_path)
 
@@ -378,6 +418,13 @@ class SchemaRepairer:
         raise ValueError(f"Cannot infer missing value at {path}.")
 
     def _coerce_scalar(self, value: Any, schema_type: str, path: str) -> JSONReturnType:
+        # Shape fix: unwrap single-key dict when expecting a scalar type
+        if self.enable_shape_fixes and isinstance(value, dict) and len(value) == 1:
+            sole_value = next(iter(value.values()))
+            if not isinstance(sole_value, (dict, list)):
+                self._log("Unwrapped single-key object to scalar value", path)
+                value = sole_value
+
         if schema_type == "string":
             if isinstance(value, str):
                 return value
@@ -433,9 +480,15 @@ class SchemaRepairer:
                 return value
             if isinstance(value, str):
                 lowered = value.lower()
-                if lowered in ("true", "false"):
+                if lowered in ("true", "yes", "1"):
                     self._log("Coerced string to boolean", path)
-                    return lowered == "true"
+                    return True
+                if lowered in ("false", "no", "0"):
+                    self._log("Coerced string to boolean", path)
+                    return False
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                self._log("Coerced number to boolean", path)
+                return bool(value)
             raise ValueError(f"Expected boolean at {path}.")
 
         if schema_type == "null":
@@ -483,6 +536,94 @@ class SchemaRepairer:
                 copied[key] = self._copy_json_value(item, f"{path}.{key}", label)
             return copied
         raise ValueError(f"{label.capitalize()} value at {path} is not JSON compatible.")
+
+    def _map_list_to_object(
+        self, value: list[Any], schema: dict[str, Any], path: str
+    ) -> dict[str, JSONReturnType] | None:
+        """Cautiously map a top-level list into an object when the schema expects one.
+
+        Each list element is matched to a schema property by type. An element is only
+        mapped when exactly one unambiguous candidate property exists. Returns ``None``
+        if no safe mapping can be produced.
+        """
+        properties = schema.get("properties", {})
+        if not isinstance(properties, dict) or not properties:
+            return None
+
+        mapped: dict[str, JSONReturnType] = {}
+        used_props: set[str] = set()
+
+        for element in value:
+            candidates: list[str] = []
+            for pname, pschema in properties.items():
+                if pname in used_props:
+                    continue
+                resolved = self.resolve_schema(pschema)
+                if not isinstance(resolved, dict):
+                    continue
+                if self._element_matches_property(element, resolved):
+                    candidates.append(pname)
+
+            if len(candidates) == 1:
+                pname = candidates[0]
+                mapped[pname] = element
+                used_props.add(pname)
+            else:
+                self._log(
+                    f"List-to-object mapping: {'ambiguous' if candidates else 'no'} match for element",
+                    path,
+                )
+
+        if not mapped:
+            return None
+        self._log("Mapped list to object using schema property types", path)
+        return mapped
+
+    def _element_matches_property(self, element: Any, resolved: dict[str, Any]) -> bool:
+        """Check whether a list element's Python type aligns with a resolved property schema."""
+        if isinstance(element, dict):
+            if not (resolved.get("type") == "object" or self.is_object_schema(resolved)):
+                return False
+            props = resolved.get("properties")
+            expected_keys = set(props.keys()) if isinstance(props, dict) else set()
+            return bool(expected_keys) and set(element.keys()).issubset(expected_keys)
+        if isinstance(element, list):
+            return resolved.get("type") == "array" or self.is_array_schema(resolved)
+        # bool must be checked before int/float because isinstance(True, int) is True
+        if isinstance(element, bool):
+            return resolved.get("type") == "boolean"
+        if isinstance(element, str):
+            return resolved.get("type") == "string"
+        if isinstance(element, (int, float)):
+            return resolved.get("type") in ("number", "integer")
+        return False
+
+    def _try_unwrap_single_key(
+        self, value: dict[str, Any], schema: dict[str, Any], path: str
+    ) -> dict[str, Any] | None:
+        """Unwrap ``{"wrapper": {...}}`` to the inner dict when it better matches the schema.
+
+        Fires only when the outer dict has exactly one key that is NOT a schema property,
+        and the inner value is a dict containing all required keys.
+        """
+        if len(value) != 1:
+            return None
+
+        properties = schema.get("properties", {})
+        if not isinstance(properties, dict):
+            properties = {}
+        required = set(schema.get("required", []))
+
+        outer_key, inner = next(iter(value.items()))
+        if outer_key in properties:
+            return None
+        if not isinstance(inner, dict):
+            return None
+        if required and not required.issubset(set(inner.keys())):
+            return None
+
+        self._log(f"Unwrapped single-key object '{outer_key}' to match flat object schema", path)
+        return inner
 
     def _prepare_schema_for_validation(self, schema: object) -> dict[str, Any]:
         def normalize(node: Any) -> Any:
