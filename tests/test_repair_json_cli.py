@@ -176,3 +176,50 @@ def test_cli_schema_and_schema_model_are_mutually_exclusive(tmp_path, capsys):
     captured = capsys.readouterr()
     assert "schema" in captured.err.lower()
     assert exc.value.code != 0
+
+
+def test_cli_schema_repair_mode_salvage_requires_schema(capsys):
+    with pytest.raises(SystemExit) as exc:
+        cli(inline_args=["--schema-repair-mode", "salvage"])
+    captured = capsys.readouterr()
+    assert "schema-repair-mode" in captured.err.lower()
+    assert exc.value.code != 0
+
+
+def test_cli_schema_repair_mode_salvage_drops_invalid_items(tmp_path, capsys):
+    pytest.importorskip("jsonschema")
+    schema_path = tmp_path / "schema.json"
+    schema = {
+        "type": "object",
+        "properties": {
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "score": {"type": "number"},
+                    },
+                    "required": ["id", "score"],
+                },
+            }
+        },
+        "required": ["items"],
+    }
+    schema_path.write_text(json.dumps(schema))
+    input_path = tmp_path / "input.json"
+    input_path.write_text('{"items":[{"id":1,"score":85.6},{"id":2,"score":"N/A"}]}')
+
+    cli(
+        inline_args=[
+            str(input_path),
+            "--indent",
+            "0",
+            "--schema",
+            str(schema_path),
+            "--schema-repair-mode",
+            "salvage",
+        ]
+    )
+    captured = capsys.readouterr()
+    assert captured.out == '{\n"items": [\n{\n"id": 1,\n"score": 85.6\n}\n]\n}\n'

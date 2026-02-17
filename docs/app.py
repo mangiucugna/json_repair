@@ -21,9 +21,16 @@ def format_json():
         schema = data.get("schema")
         if schema is not None and not isinstance(schema, (dict, bool)):
             raise ValueError("schema must be a JSON object or boolean.")
+        schema_repair_mode = data.get("schemaRepairMode", "standard")
+        if not isinstance(schema_repair_mode, str):
+            raise ValueError("schemaRepairMode must be a string.")
+        if schema_repair_mode not in ("standard", "salvage"):
+            raise ValueError("schemaRepairMode must be 'standard' or 'salvage'.")
+        if schema_repair_mode == "salvage" and schema is None:
+            raise ValueError("schemaRepairMode='salvage' requires schema.")
 
         # Repair the malformed JSON
-        loads_kwargs = {"logging": True}
+        loads_kwargs = {"logging": True, "schema_repair_mode": schema_repair_mode}
         if schema is not None:
             loads_kwargs["schema"] = schema
         parsed_json = loads(malformed_json, **loads_kwargs)

@@ -128,6 +128,16 @@ textarea:focus {
     box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
 }
 
+select {
+    width: 100%;
+    margin-top: 10px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
 .helper-text {
     font-size: 0.9rem;
     color: #4b5563;

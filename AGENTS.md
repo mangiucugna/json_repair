@@ -71,6 +71,9 @@
 - If fast-path loading or schema validation fails, fall back to `parser.parse_with_schema(...)`, then validate the parsed result before returning.
 - Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`; avoid duplicating parser switch logic.
 - `SchemaRepairer.repair_value` enforces a subset of JSON Schema; keep `SchemaRepairer.validate(...)` to enforce unsupported keywords (e.g., `pattern`, `minLength`, `maximum`, formats/combinators not repaired directly).
+- `schema_repair_mode` supports `standard` (default) and `salvage`; `salvage` is opt-in and should only add best-effort repairs (currently array-item dropping + conservative list-to-object mapping).
+- Boolean schema coercion (`#2`) is mode-independent: apply expanded safe tokens (`true/false`, `yes/no`, `y/n`, `on/off`, `1/0`, and numeric `1`/`0`) in both `standard` and `salvage`.
+- `schema_repair_mode="salvage"` without a schema must raise a `ValueError` instead of silently downgrading behavior.
 
 ## Known review pitfalls
 - In `parse_array`, refresh `char` after `skip_whitespaces()` before applying quote-based heuristics; otherwise cases like `[ "a": 1 ]` can be parsed as `["a", 1]` instead of `[{"a": 1}]`.
@@ -78,3 +81,4 @@
 - With `skip_json_loads=True`, top-level scalar inputs (e.g., `true`, `1`, `"abc"`) can parse as `""` because `JSONParser.parse_json` only enters string/number branches when `context` is non-empty.
 - In `repair_json`, keep a single shared output-finalization block (`logging` / `return_objects` / empty-string / `json.dumps`) and avoid duplicating it across fast-path/parser branches; duplicated return trees drift and cause behavior mismatches.
 - With schema enabled and `skip_json_loads=False`, valid scalar JSON that fails schema validation (e.g., `true` with `{"type":"string"}`) falls back to parser+schema and can become `""`; keep this behavior covered by tests.
+- In `schema_repair_mode="salvage"`, only drop array items for data-repair failures; propagate schema-definition errors (e.g., unsupported schema types) instead of silently returning partial output.

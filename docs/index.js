@@ -2,8 +2,12 @@ let timeoutId;
 let controller;
 const DEBOUNCE_MS = 500;
 const API_URL = "https://mangiucugna.pythonanywhere.com/api/repair-json";
+const DEFAULT_SCHEMA_MODE = 'standard';
+const SALVAGE_SCHEMA_MODE = 'salvage';
+const SCHEMA_REPAIR_MODES = new Set([DEFAULT_SCHEMA_MODE, SALVAGE_SCHEMA_MODE]);
 const inputEl = document.getElementById('input-json');
 const schemaEl = document.getElementById('schema-json');
+const modeEl = document.getElementById('schema-repair-mode');
 const outputEl = document.getElementById('output-json');
 const logEl = document.getElementById('log-output');
 const isChinese = (document.documentElement.lang || '').toLowerCase().startsWith('zh');
@@ -15,6 +19,8 @@ const messages = isChinese
         schemaTypeError: "Schema 顶层只能是 JSON 对象或布尔值（true/false）。",
         schemaHint: "请修正 Schema 后重试；当前未向 API 发送请求。",
         schemaClientErrorPrefix: "Schema 输入错误：",
+        schemaModeError: "Schema 修复模式只能是 standard 或 salvage。",
+        schemaModeNeedsSchema: "salvage 模式必须提供 Schema。",
         formatErrorPrefix: "JSON 修复失败：",
         unexpectedResponse: "服务器返回了无法解析的响应。",
         httpErrorPrefix: "请求失败，状态码：",
@@ -27,6 +33,8 @@ const messages = isChinese
         schemaTypeError: "Schema must be a top-level JSON object or boolean (true/false).",
         schemaHint: "Fix the schema and try again; no API request was sent.",
         schemaClientErrorPrefix: "Schema input error: ",
+        schemaModeError: "Schema repair mode must be standard or salvage.",
+        schemaModeNeedsSchema: "salvage mode requires a schema.",
         formatErrorPrefix: "Error formatting JSON: ",
         unexpectedResponse: "The server returned an unreadable response.",
         httpErrorPrefix: "Request failed with status ",
@@ -34,13 +42,18 @@ const messages = isChinese
         messageLabel: "Message",
     };
 
-function updateURL(inputJSON, schemaJSON) {
+function updateURL(inputJSON, schemaJSON, schemaMode) {
     const url = new URL(window.location);
     url.searchParams.set('json', encodeURIComponent(inputJSON));
     if (schemaJSON.trim() === '') {
         url.searchParams.delete('schema');
     } else {
         url.searchParams.set('schema', encodeURIComponent(schemaJSON));
+    }
+    if (schemaMode === DEFAULT_SCHEMA_MODE) {
+        url.searchParams.delete('schema_mode');
+    } else {
+        url.searchParams.set('schema_mode', schemaMode);
     }
     window.history.replaceState({}, '', url);
 }
@@ -88,24 +101,40 @@ function parseSchema(schemaText) {
     return { schema: parsedSchema, error: null };
 }
 
+function parseSchemaRepairMode(modeText) {
+    const trimmedMode = modeText.trim();
+    if (trimmedMode === '') {
+        return { schemaMode: DEFAULT_SCHEMA_MODE, error: null };
+    }
+    if (!SCHEMA_REPAIR_MODES.has(trimmedMode)) {
+        return { schemaMode: DEFAULT_SCHEMA_MODE, error: messages.schemaModeError };
+    }
+    return { schemaMode: trimmedMode, error: null };
+}
+
 function handleInputChange() {
     const inputJSON = inputEl.value;
     const schemaJSON = schemaEl ? schemaEl.value : '';
-    updateURL(inputJSON, schemaJSON);
-    processInput(inputJSON, schemaJSON);
+    const schemaMode = modeEl ? modeEl.value : DEFAULT_SCHEMA_MODE;
+    updateURL(inputJSON, schemaJSON, schemaMode);
+    processInput(inputJSON, schemaJSON, schemaMode);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     const initialJSON = getValueFromURL('json');
     const initialSchema = getValueFromURL('schema');
+    const initialSchemaMode = getValueFromURL('schema_mode');
     if (initialJSON) {
         inputEl.value = initialJSON;
     }
     if (schemaEl && initialSchema) {
         schemaEl.value = initialSchema;
     }
+    if (modeEl && SCHEMA_REPAIR_MODES.has(initialSchemaMode)) {
+        modeEl.value = initialSchemaMode;
+    }
     if (initialJSON) {
-        processInput(initialJSON, initialSchema);
+        processInput(initialJSON, initialSchema, modeEl ? modeEl.value : DEFAULT_SCHEMA_MODE);
     }
 });
 
@@ -113,8 +142,11 @@ inputEl.addEventListener('input', handleInputChange);
 if (schemaEl) {
     schemaEl.addEventListener('input', handleInputChange);
 }
+if (modeEl) {
+    modeEl.addEventListener('change', handleInputChange);
+}
 
-function processInput(inputJSON, schemaJSON = '') {
+function processInput(inputJSON, schemaJSON = '', schemaMode = DEFAULT_SCHEMA_MODE) {
     if (inputJSON.trim() === '') {
         outputEl.value = '';
         logEl.value = '';
@@ -137,6 +169,21 @@ function processInput(inputJSON, schemaJSON = '') {
         );
         return;
     }
+    const { schemaMode: parsedSchemaMode, error: schemaModeError } = parseSchemaRepairMode(schemaMode);
+    if (schemaModeError) {
+        showClientError(
+            `${messages.schemaClientErrorPrefix}${schemaModeError}`,
+            messages.schemaHint
+        );
+        return;
+    }
+    if (parsedSchemaMode === SALVAGE_SCHEMA_MODE && schema === undefined) {
+        showClientError(
+            `${messages.schemaClientErrorPrefix}${messages.schemaModeNeedsSchema}`,
+            messages.schemaHint
+        );
+        return;
+    }
 
     timeoutId = setTimeout(() => {
         controller = new AbortController();
@@ -144,6 +191,7 @@ function processInput(inputJSON, schemaJSON = '') {
         if (schema !== undefined) {
             requestBody.schema = schema;
         }
+        requestBody.schemaRepairMode = parsedSchemaMode;
 
         fetch(API_URL, {
             method: 'POST',

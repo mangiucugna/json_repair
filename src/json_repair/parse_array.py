@@ -29,6 +29,7 @@ def parse_array(
                 schema_repairer = repairer
                 items_schema = schema.get("items")
                 additional_items = schema.get("additionalItems", None)
+    salvage_mode = schema_repairer is not None and schema_repairer.schema_repair_mode == "salvage"
 
     arr: list[JSONReturnType] = []
     self.context.set(ContextValues.ARRAY)
@@ -60,6 +61,9 @@ def parse_array(
                 item_schema = True
 
         item_path = f"{path}[{idx}]"
+        active_schema_repairer = (
+            schema_repairer if schema_repairer is not None and not drop_item and not salvage_mode else None
+        )
 
         if char in STRING_DELIMITERS:
             # A string followed by ':' is often a missing object start; treat it as an object.
@@ -67,25 +71,21 @@ def parse_array(
             i = self.skip_to_character(char, i)
             i = self.scroll_whitespaces(idx=i + 1)
             if self.get_char_at(i) == ":":
-                if schema_repairer is not None and not drop_item:
+                if active_schema_repairer is not None:
                     # Schema-guided object parsing, then enforce schema on the parsed object.
                     value = self.parse_object(item_schema, item_path)
-                    value = schema_repairer.repair_value(value, item_schema, item_path)
+                    value = active_schema_repairer.repair_value(value, item_schema, item_path)
                 else:
                     # No schema (or dropping): still parse to keep the cursor in sync.
                     value = self.parse_object()
             else:
                 value = self.parse_string()
-                if schema_repairer is not None and not drop_item:
+                if active_schema_repairer is not None:
                     # Apply schema constraints/coercions to scalar values when configured.
-                    value = schema_repairer.repair_value(value, item_schema, item_path)
+                    value = active_schema_repairer.repair_value(value, item_schema, item_path)
         else:
-            if schema_repairer is not None and not drop_item:
-                # Use schema-aware parsing to guide nested repairs.
-                value = self.parse_json(item_schema, item_path)
-            else:
-                # Parse normally (or discard) to keep the index aligned.
-                value = self.parse_json()
+            # Use schema-aware parsing to guide nested repairs when configured.
+            value = self.parse_json(item_schema, item_path) if active_schema_repairer is not None else self.parse_json()
 
         if ObjectComparer.is_strictly_empty(value) and self.get_char_at() not in ["]", ","]:
             self.index += 1

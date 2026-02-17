@@ -8,6 +8,7 @@ from src.json_repair.schema_repair import (
     SchemaRepairer,
     load_schema_model,
     normalize_missing_values,
+    normalize_schema_repair_mode,
     schema_from_input,
 )
 from src.json_repair.utils.constants import MISSING_VALUE
@@ -45,6 +46,14 @@ def test_schema_from_input_basic_and_invalid():
     assert schema_from_input(False) is False
     with pytest.raises(ValueError, match="Schema must be a JSON Schema"):
         schema_from_input(1)
+
+
+def test_schema_repair_mode_validation():
+    assert normalize_schema_repair_mode(None) == "standard"
+    assert normalize_schema_repair_mode("standard") == "standard"
+    assert normalize_schema_repair_mode("salvage") == "salvage"
+    with pytest.raises(ValueError, match="schema_repair_mode"):
+        normalize_schema_repair_mode("unknown")
 
 
 def test_schema_from_input_model_defaults_and_required():
@@ -301,6 +310,8 @@ def test_repair_object_and_array_paths():
 
     schema_array_items = {"type": "array", "items": {"type": "integer"}}
     assert repairer.repair_value(["1", 2], schema_array_items, "$") == [1, 2]
+    with pytest.raises(ValueError, match="Expected integer"):
+        repairer.repair_value(["bad"], schema_array_items, "$")
 
     schema_array_wrap = {"type": "array"}
     assert repairer.repair_value("a", schema_array_wrap, "$") == ["a"]
@@ -308,6 +319,37 @@ def test_repair_object_and_array_paths():
     schema_min_items = {"type": "array", "minItems": 1}
     with pytest.raises(ValueError, match="minItems"):
         repairer.repair_value([], schema_min_items, "$")
+
+    schema_tuple_invalid = {"type": "array", "items": [{"type": "integer"}]}
+    with pytest.raises(ValueError, match="Expected integer"):
+        repairer.repair_value(["bad"], schema_tuple_invalid, "$")
+
+    schema_additional_invalid = {
+        "type": "array",
+        "items": [{"type": "integer"}],
+        "additionalItems": {"type": "integer"},
+    }
+    with pytest.raises(ValueError, match="Expected integer"):
+        repairer.repair_value([1, "bad"], schema_additional_invalid, "$")
+
+    salvage_repairer = SchemaRepairer({}, [], schema_repair_mode="salvage")
+    assert salvage_repairer._map_list_to_object([1], {"type": "object"}, "$") is None
+    assert salvage_repairer.repair_value(["bad"], schema_tuple_invalid, "$") == []
+    assert salvage_repairer.repair_value([1, "bad"], schema_additional_invalid, "$") == [1]
+    with pytest.raises(ValueError, match="Unsupported schema type bogus"):
+        salvage_repairer.repair_value([1], {"type": "array", "items": [{"type": "bogus"}]}, "$")
+    with pytest.raises(ValueError, match="Unsupported schema type bogus"):
+        salvage_repairer.repair_value(
+            [1, 2],
+            {
+                "type": "array",
+                "items": [{"type": "integer"}],
+                "additionalItems": {"type": "bogus"},
+            },
+            "$",
+        )
+    with pytest.raises(ValueError, match="Unsupported schema type bogus"):
+        salvage_repairer._map_list_to_object([1], {"type": "object", "properties": {"a": {"type": "bogus"}}}, "$")
 
 
 def test_fill_missing_and_coerce_scalar_paths():
@@ -339,6 +381,18 @@ def test_fill_missing_and_coerce_scalar_paths():
     assert repairer._coerce_scalar("2.5", "number", "$") == 2.5
     assert repairer._coerce_scalar("true", "boolean", "$") is True
     assert repairer._coerce_scalar("false", "boolean", "$") is False
+    assert repairer._coerce_scalar("yes", "boolean", "$") is True
+    assert repairer._coerce_scalar("no", "boolean", "$") is False
+    assert repairer._coerce_scalar("y", "boolean", "$") is True
+    assert repairer._coerce_scalar("n", "boolean", "$") is False
+    assert repairer._coerce_scalar("on", "boolean", "$") is True
+    assert repairer._coerce_scalar("off", "boolean", "$") is False
+    assert repairer._coerce_scalar("1", "boolean", "$") is True
+    assert repairer._coerce_scalar("0", "boolean", "$") is False
+    assert repairer._coerce_scalar(1, "boolean", "$") is True
+    assert repairer._coerce_scalar(0, "boolean", "$") is False
+    assert repairer._coerce_scalar(1.0, "boolean", "$") is True
+    assert repairer._coerce_scalar(0.0, "boolean", "$") is False
     assert repairer._coerce_scalar(None, "null", "$") is None
 
     with pytest.raises(ValueError, match="Expected string"):
@@ -358,7 +412,9 @@ def test_fill_missing_and_coerce_scalar_paths():
     with pytest.raises(ValueError, match="Expected number"):
         repairer._coerce_scalar([], "number", "$")
     with pytest.raises(ValueError, match="Expected boolean"):
-        repairer._coerce_scalar("yes", "boolean", "$")
+        repairer._coerce_scalar("maybe", "boolean", "$")
+    with pytest.raises(ValueError, match="Expected boolean"):
+        repairer._coerce_scalar(2, "boolean", "$")
     with pytest.raises(ValueError, match="Expected null"):
         repairer._coerce_scalar("x", "null", "$")
     with pytest.raises(ValueError, match="Unsupported schema type"):

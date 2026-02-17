@@ -175,13 +175,20 @@ Strict mode still honors `skip_json_loads=True`; combining them lets you skip th
 
 ### Schema-guided repairs
 
-**Beta feature** Schema-guided repairs are currently considered in beta. Bugs are to be expected.
+Schema-guided repairs are currently considered in beta. Bugs are to be expected.
 
 You can guide repairs with a JSON Schema (or a Pydantic v2 model). When enabled, the parser will:
 
 - Fill missing values (defaults, required fields).
-- Coerce scalars where safe (e.g., `"1"` → `1` for integer fields).
+- Coerce scalars where safe (e.g., `"1"` → `1` for integer fields, and `"yes"`/`"no"`/`1`/`0` for booleans).
 - Drop properties/items that the schema disallows.
+
+Schema mode can be selected with `schema_repair_mode`:
+
+- `standard` (default): existing schema-guided behavior.
+- `salvage`: includes `standard` and also:
+  - drops invalid array items when individual items cannot be repaired;
+  - maps arrays to objects by property order when schema/object shape is unambiguous.
 
 This is especially useful when you need deterministic, schema-valid outputs for downstream validation, storage, or typed processing. If the input cannot be repaired to satisfy the schema, `json_repair` raises `ValueError`.
 
@@ -203,6 +210,26 @@ schema = {
 }
 
 repair_json('{"value": "1"}', schema=schema, return_objects=True)
+
+repair_json(
+    '{"items":[{"id":1,"score":85.6},{"id":2,"score":"N/A"}]}',
+    schema={
+        "type": "object",
+        "properties": {
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {"id": {"type": "integer"}, "score": {"type": "number"}},
+                    "required": ["id", "score"],
+                },
+            }
+        },
+        "required": ["items"],
+    },
+    schema_repair_mode="salvage",
+    return_objects=True,
+)
 ```
 
 Pydantic v2 model example:
@@ -244,7 +271,7 @@ to know all options available:
 $ json_repair -h
 usage: json_repair [-h] [-i] [-o TARGET] [--ensure_ascii] [--indent INDENT]
                    [--skip-json-loads] [--schema SCHEMA] [--schema-model MODEL]
-                   [--strict] [filename]
+                   [--strict] [--schema-repair-mode {standard,salvage}] [filename]
 
 Repair and parse JSON files.
 
@@ -262,6 +289,8 @@ options:
   --schema SCHEMA       Path to a JSON Schema file that guides repairs
   --schema-model MODEL  Pydantic v2 model in 'module:ClassName' form that guides repairs
   --strict              Raise on duplicate keys, missing separators, empty keys/values, and similar structural issues instead of repairing them
+  --schema-repair-mode {standard,salvage}
+                        Schema repair mode: standard (default) or salvage (best-effort array/object salvage)
 ```
 
 ## Adding to requirements

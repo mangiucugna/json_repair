@@ -138,6 +138,11 @@ python -m json_repair</code></pre>
             <div class="textarea-container schema-container">
                 <label for="schema-json">Optional JSON Schema (object or boolean)</label>
                 <textarea id="schema-json" aria-label="JSON Schema" placeholder='{"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]}'></textarea>
+                <label for="schema-repair-mode">Schema repair mode</label>
+                <select id="schema-repair-mode" aria-label="Schema repair mode">
+                    <option value="standard" selected>standard (default)</option>
+                    <option value="salvage">salvage (best-effort array/object salvage)</option>
+                </select>
                 <p class="helper-text">Optional. Provide a JSON Schema to guide coercions, defaults, and validation. Leave empty to use normal repair mode.</p>
                 <p class="schema-note">Schema is optional and included in the page URL so you can share reproducible examples.</p>
             </div>

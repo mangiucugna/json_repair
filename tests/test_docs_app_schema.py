@@ -80,3 +80,68 @@ def test_docs_api_schema_validation_error_returns_400(client):
     assert isinstance(payload, dict)
     assert "error" in payload
     assert "does not match" in payload["error"]
+
+
+def test_docs_api_rejects_invalid_schema_repair_mode_type(client):
+    response = client.post(
+        "/api/repair-json",
+        json={"malformedJSON": '{"value": "1"}', "schemaRepairMode": True},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "schemaRepairMode must be a string."}
+
+
+def test_docs_api_rejects_invalid_schema_repair_mode_value(client):
+    response = client.post(
+        "/api/repair-json",
+        json={"malformedJSON": '{"value": "1"}', "schemaRepairMode": "unknown"},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "schemaRepairMode must be 'standard' or 'salvage'."}
+
+
+def test_docs_api_rejects_salvage_mode_without_schema(client):
+    response = client.post(
+        "/api/repair-json",
+        json={"malformedJSON": '{"value": "1"}', "schemaRepairMode": "salvage"},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "schemaRepairMode='salvage' requires schema."}
+
+
+def test_docs_api_salvage_mode_drops_invalid_array_items(client):
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "score": {"type": "number"},
+                    },
+                    "required": ["id", "score"],
+                },
+            }
+        },
+        "required": ["items"],
+    }
+
+    response = client.post(
+        "/api/repair-json",
+        json={
+            "malformedJSON": '{"items":[{"id":1,"score":85.6},{"id":2,"score":"N/A"}]}',
+            "schema": schema,
+            "schemaRepairMode": "salvage",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert isinstance(payload, list)
+    assert payload[0] == {"items": [{"id": 1, "score": 85.6}]}

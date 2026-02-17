@@ -120,3 +120,189 @@ def test_schema_pydantic_v2_defaults():
 
     raw = '{ "evidence_types": }'
     assert repair_with_schema(raw, SchemaModel) == {"evidence_types": []}
+
+
+def test_schema_boolean_coercion_is_mode_independent():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {"flag": {"type": "boolean"}},
+        "required": ["flag"],
+    }
+
+    raw = '{"flag": "yes"}'
+    default_mode = repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True)
+    standard_mode = repair_json(
+        raw,
+        schema=schema,
+        skip_json_loads=True,
+        return_objects=True,
+        schema_repair_mode="standard",
+    )
+    salvage_mode = repair_json(
+        raw,
+        schema=schema,
+        skip_json_loads=True,
+        return_objects=True,
+        schema_repair_mode="salvage",
+    )
+    assert default_mode == {"flag": True}
+    assert standard_mode == {"flag": True}
+    assert salvage_mode == {"flag": True}
+
+
+def test_schema_boolean_coercion_accepts_number_tokens():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {"flag": {"type": "boolean"}},
+        "required": ["flag"],
+    }
+    assert repair_with_schema('{"flag": 1}', schema) == {"flag": True}
+    assert repair_with_schema('{"flag": 0}', schema) == {"flag": False}
+    assert repair_with_schema('{"flag": 1.0}', schema) == {"flag": True}
+    assert repair_with_schema('{"flag": 0.0}', schema) == {"flag": False}
+
+
+def test_schema_salvage_mode_drops_invalid_array_items():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "score": {"type": "number"},
+                    },
+                    "required": ["id", "score"],
+                },
+            }
+        },
+        "required": ["items"],
+    }
+    raw = '{"items":[{"id":1,"score":85.6},{"id":2,"score":"N/A"}]}'
+
+    with pytest.raises(ValueError, match="Expected number"):
+        repair_with_schema(raw, schema)
+
+    repaired = repair_json(
+        raw,
+        schema=schema,
+        skip_json_loads=True,
+        return_objects=True,
+        schema_repair_mode="salvage",
+    )
+    assert repaired == {"items": [{"id": 1, "score": 85.6}]}
+
+    repaired_with_logs, logs = repair_json(
+        raw,
+        schema=schema,
+        skip_json_loads=True,
+        logging=True,
+        schema_repair_mode="salvage",
+    )
+    assert repaired_with_logs == {"items": [{"id": 1, "score": 85.6}]}
+    assert isinstance(logs, list)
+    assert any(log["text"] == "Dropped invalid array item while salvaging" for log in logs)
+
+
+def test_schema_salvage_mode_still_enforces_min_items():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "array",
+        "items": {"type": "integer"},
+        "minItems": 2,
+    }
+    with pytest.raises(ValueError, match="minItems"):
+        repair_json(
+            '["1", "bad"]',
+            schema=schema,
+            skip_json_loads=True,
+            return_objects=True,
+            schema_repair_mode="salvage",
+        )
+
+
+def test_schema_salvage_mode_does_not_hide_schema_definition_errors():
+    pytest.importorskip("jsonschema")
+    schema = {"type": "array", "items": {"type": "bogus"}}
+    with pytest.raises(ValueError, match="Unsupported schema type bogus"):
+        repair_json(
+            "[1]",
+            schema=schema,
+            skip_json_loads=True,
+            return_objects=True,
+            schema_repair_mode="salvage",
+        )
+
+
+def test_schema_salvage_mode_maps_list_to_object_when_unambiguous():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "tags": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["name", "tags"],
+    }
+    raw = '["hello", ["a", "b"]]'
+
+    with pytest.raises(ValueError, match="Expected object"):
+        repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True)
+
+    assert repair_json(
+        raw,
+        schema=schema,
+        skip_json_loads=True,
+        return_objects=True,
+        schema_repair_mode="salvage",
+    ) == {"name": "hello", "tags": ["a", "b"]}
+
+
+def test_schema_salvage_mode_mapping_rejects_length_mismatch():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "tags": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["name", "tags"],
+    }
+    with pytest.raises(ValueError, match="Expected object"):
+        repair_json(
+            '["hello"]',
+            schema=schema,
+            skip_json_loads=True,
+            return_objects=True,
+            schema_repair_mode="salvage",
+        )
+
+
+def test_schema_salvage_mode_mapping_rejects_type_mismatch():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "tags": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["name", "tags"],
+    }
+    with pytest.raises(ValueError, match="Expected object"):
+        repair_json(
+            '[["a", "b"], "hello"]',
+            schema=schema,
+            skip_json_loads=True,
+            return_objects=True,
+            schema_repair_mode="salvage",
+        )
+
+
+def test_schema_salvage_mode_requires_schema():
+    with pytest.raises(ValueError, match="schema_repair_mode"):
+        repair_json("{}", return_objects=True, schema_repair_mode="salvage")

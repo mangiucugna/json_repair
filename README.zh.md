@@ -110,13 +110,20 @@ repair_json(bad_json_string, strict=True)
 严格模式可与 `skip_json_loads=True` 组合：跳过初始 `json.loads` 检查，但仍执行严格解析规则。
 
 ### Schema 引导修复
-**Beta 功能**：Schema 引导修复目前处于 beta 阶段，仍可能出现 bug。
+Schema 引导修复目前处于 beta 阶段，仍可能出现 bug。
 
 可使用 JSON Schema（或 Pydantic v2 模型）指导修复。开启后解析器会：
 
 - 补齐缺失值（默认值、必填字段）
-- 在安全范围内做类型转换（例如 `"1"` → `1`）
+- 在安全范围内做类型转换（例如 `"1"` → `1`，布尔支持 `"yes"`/`"no"`/`1`/`0`）
 - 移除 schema 明确禁止的字段/数组项
+
+可通过 `schema_repair_mode` 选择模式：
+
+- `standard`（默认）：当前 schema 引导行为。
+- `salvage`：包含 `standard`，并额外启用：
+  - 数组项无法修复时按项丢弃（而不是整体失败）；
+  - 当 schema 结构明确时，按属性顺序把数组映射为对象。
 
 适用于需要稳定、可验证输出（下游校验、落库、类型化处理等）的场景。若无法修复到满足 schema，将抛出 `ValueError`。
 
@@ -138,6 +145,26 @@ schema = {
 }
 
 repair_json('{"value": "1"}', schema=schema, return_objects=True)
+
+repair_json(
+    '{"items":[{"id":1,"score":85.6},{"id":2,"score":"N/A"}]}',
+    schema={
+        "type": "object",
+        "properties": {
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {"id": {"type": "integer"}, "score": {"type": "number"}},
+                    "required": ["id", "score"],
+                },
+            }
+        },
+        "required": ["items"],
+    },
+    schema_repair_mode="salvage",
+    return_objects=True,
+)
 ```
 
 Pydantic v2 模型示例：
@@ -176,7 +203,7 @@ pipx install json-repair
 $ json_repair -h
 usage: json_repair [-h] [-i] [-o TARGET] [--ensure_ascii] [--indent INDENT]
                    [--skip-json-loads] [--schema SCHEMA] [--schema-model MODEL]
-                   [--strict] [filename]
+                   [--strict] [--schema-repair-mode {standard,salvage}] [filename]
 
 Repair and parse JSON files.
 
@@ -194,6 +221,8 @@ options:
   --schema SCHEMA       Path to a JSON Schema file that guides repairs
   --schema-model MODEL  Pydantic v2 model in 'module:ClassName' form that guides repairs
   --strict              Raise on duplicate keys, missing separators, empty keys/values, and similar structural issues instead of repairing them
+  --schema-repair-mode {standard,salvage}
+                        Schema 修复模式：standard（默认）或 salvage（尽力返回可用数组/对象）
 ```
 
 ---

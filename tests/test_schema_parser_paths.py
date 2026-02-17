@@ -24,6 +24,14 @@ def parse_array_direct(raw, schema):
     return parser.parse_array(schema, "$")
 
 
+def parse_array_direct_with_mode(raw, schema, mode):
+    parser = JSONParser(raw, None, False, 0, False, False)
+    repairer = SchemaRepairer(schema if isinstance(schema, dict) else {}, None, schema_repair_mode=mode)
+    parser.schema_repairer = repairer
+    parser.index = 1
+    return parser.parse_array(schema, "$")
+
+
 def test_parse_object_schema_true_false_and_non_object():
     assert parse_object_direct("{}", True) == {}
     with pytest.raises(ValueError, match="Schema does not allow"):
@@ -220,3 +228,15 @@ def test_schema_ref_to_true_short_circuits():
     parser.schema_repairer = repairer
     parser.context.set(ContextValues.ARRAY)
     assert parser.parse_json({"$ref": "#/flag"}, "$") == 1
+
+
+def test_parse_array_salvage_mode_parses_even_when_item_schema_would_fail():
+    schema = {"type": "array", "items": {"type": "integer"}}
+    # In salvage mode parse_array should not fail early on schema mismatch.
+    assert parse_array_direct_with_mode('["bad", "2"]', schema, "salvage") == ["bad", "2"]
+
+
+def test_parse_array_salvage_mode_keeps_object_heuristic_values():
+    schema = {"type": "array", "items": {"type": "object", "properties": {"a": {"type": "integer"}}}}
+    # In salvage mode, string+colon heuristic should still parse and keep the object value.
+    assert parse_array_direct_with_mode('["a": 1]', schema, "salvage") == [{"a": 1}]
