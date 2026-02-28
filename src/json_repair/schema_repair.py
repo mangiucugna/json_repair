@@ -320,6 +320,10 @@ class SchemaRepairer:
             mapped = self._map_list_to_object(value, schema, path)
             if mapped is not None:
                 value = mapped
+            elif path == "$" and len(value) == 1 and isinstance(value[0], dict):
+                # Conservatively unwrap the common root wrapper shape: [{...}] -> {...}.
+                value = value[0]
+                self._log("Unwrapped single-item root array to object while salvaging", path)
         if not isinstance(value, dict):
             raise ValueError(f"Expected object at {path}, got {type(value).__name__}.")
 
@@ -331,6 +335,21 @@ class SchemaRepairer:
         if not isinstance(pattern_properties, dict):
             pattern_properties = {}
         additional_properties = schema.get("additionalProperties")
+
+        if self.schema_repair_mode == "salvage" and required:
+            value_with_salvage_fills = dict(value)
+            for key in required:
+                if key in value_with_salvage_fills:
+                    continue
+                prop_schema = properties.get(key)
+                if prop_schema is None:
+                    continue
+                key_path = f"{path}.{key}"
+                filled, filled_value = self._fill_missing_required_for_salvage(prop_schema, key_path)
+                if filled:
+                    value_with_salvage_fills[key] = filled_value
+                    self._log("Filled missing required property while salvaging", key_path)
+            value = value_with_salvage_fills
 
         missing_required = [key for key in required if key not in value]
         if missing_required:
@@ -393,6 +412,32 @@ class SchemaRepairer:
 
         self._log("Mapped array to object by schema property order", path)
         return mapped
+
+    def _fill_missing_required_for_salvage(self, schema: object, path: str) -> tuple[bool, JSONReturnType]:
+        resolved_schema = self.resolve_schema(schema)
+        if not isinstance(resolved_schema, dict):
+            return False, ""
+
+        if "default" in resolved_schema:
+            return True, self._copy_json_value(resolved_schema["default"], path, "default")
+        if "const" in resolved_schema:
+            return True, self._copy_json_value(resolved_schema["const"], path, "const")
+        if "enum" in resolved_schema and resolved_schema["enum"]:
+            return True, self._copy_json_value(resolved_schema["enum"][0], path, "enum")
+
+        expected_type = resolved_schema.get("type")
+        if expected_type is None:
+            if self.is_array_schema(resolved_schema):
+                expected_type = "array"
+            elif self.is_object_schema(resolved_schema):
+                expected_type = "object"
+
+        if expected_type == "array" and not resolved_schema.get("minItems"):
+            return True, []
+        if expected_type == "object" and not resolved_schema.get("minProperties"):
+            return True, {}
+
+        return False, ""
 
     def _fill_missing(self, schema: dict[str, Any], path: str) -> JSONReturnType:
         if "const" in schema:

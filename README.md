@@ -189,6 +189,8 @@ Schema mode can be selected with `schema_repair_mode`:
 - `salvage`: includes `standard` and also:
   - drops invalid array items when individual items cannot be repaired;
   - maps arrays to objects by property order when schema/object shape is unambiguous.
+  - unwraps a root single-item array to an object when the root schema expects an object (`[{...}] -> {...}`);
+  - fills missing required fields only when a safe value can be inferred (`default`, `const`, first `enum`, or empty array/object when allowed by schema constraints).
 
 This is especially useful when you need deterministic, schema-valid outputs for downstream validation, storage, or typed processing. If the input cannot be repaired to satisfy the schema, `json_repair` raises `ValueError`.
 

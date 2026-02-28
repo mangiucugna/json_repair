@@ -1,3 +1,5 @@
+from typing import cast
+
 import pytest
 
 from src.json_repair import repair_json
@@ -298,6 +300,171 @@ def test_schema_salvage_mode_mapping_rejects_type_mismatch():
             '[["a", "b"], "hello"]',
             schema=schema,
             skip_json_loads=True,
+            return_objects=True,
+            schema_repair_mode="salvage",
+        )
+
+
+def test_schema_salvage_mode_unwraps_root_single_item_array_and_fills_required_array():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {
+            "type": {"const": "food_sport_card"},
+            "content": {
+                "type": "object",
+                "required": ["food", "sports"],
+                "properties": {
+                    "food": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
+                    "sports": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
+                },
+            },
+        },
+        "required": ["type", "content"],
+    }
+    raw = """[
+    {
+        "type": "food_sport_card",
+        "content": {
+            "food": [
+                "mantou"
+            ]
+        }
+    }
+"""
+
+    with pytest.raises(ValueError, match=r"Expected object at \$, got list\."):
+        repair_json(
+            raw,
+            schema=schema,
+            return_objects=True,
+            schema_repair_mode="standard",
+        )
+
+    assert repair_json(
+        raw,
+        schema=schema,
+        return_objects=True,
+        schema_repair_mode="salvage",
+    ) == {
+        "type": "food_sport_card",
+        "content": {"food": ["mantou"], "sports": []},
+    }
+
+    repaired_with_logs, logs = cast(
+        tuple[object, list[dict[str, str]]],
+        repair_json(
+            raw,
+            schema=schema,
+            logging=True,
+            schema_repair_mode="salvage",
+        ),
+    )
+    assert repaired_with_logs == {
+        "type": "food_sport_card",
+        "content": {"food": ["mantou"], "sports": []},
+    }
+    assert any(log["text"] == "Unwrapped single-item root array to object while salvaging" for log in logs)
+    assert any(
+        log["text"] == "Filled missing required property while salvaging" and log["context"] == "$.content.sports"
+        for log in logs
+    )
+
+
+def test_schema_salvage_mode_fills_required_with_safe_inference_sources():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {
+            "from_default": {"default": "x"},
+            "from_const": {"const": 7},
+            "from_enum": {"enum": ["first", "second"]},
+            "from_array_shape": {"items": {"type": "integer"}},
+            "from_object_shape": {"properties": {"nested": {"type": "string"}}},
+        },
+        "required": [
+            "from_default",
+            "from_const",
+            "from_enum",
+            "from_array_shape",
+            "from_object_shape",
+        ],
+    }
+    assert repair_json(
+        "{}",
+        schema=schema,
+        return_objects=True,
+        schema_repair_mode="salvage",
+    ) == {
+        "from_default": "x",
+        "from_const": 7,
+        "from_enum": "first",
+        "from_array_shape": [],
+        "from_object_shape": {},
+    }
+
+
+def test_schema_salvage_mode_missing_required_without_property_schema_still_raises():
+    pytest.importorskip("jsonschema")
+    schema = {"type": "object", "properties": {}, "required": ["missing"]}
+    with pytest.raises(ValueError, match="Missing required properties"):
+        repair_json(
+            "{}",
+            schema=schema,
+            return_objects=True,
+            schema_repair_mode="salvage",
+        )
+
+
+def test_schema_salvage_mode_missing_required_boolean_schema_still_raises():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {"payload": True},
+        "required": ["payload"],
+    }
+    with pytest.raises(ValueError, match="Missing required properties"):
+        repair_json(
+            "{}",
+            schema=schema,
+            return_objects=True,
+            schema_repair_mode="salvage",
+        )
+
+
+def test_schema_salvage_mode_root_unwrap_requires_single_item():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {"value": {"type": "integer"}},
+        "required": ["value"],
+    }
+    with pytest.raises(ValueError, match=r"Expected object at \$, got list\."):
+        repair_json(
+            '[{"value": 1}, {"value": 2}]',
+            schema=schema,
+            return_objects=True,
+            schema_repair_mode="salvage",
+        )
+
+
+def test_schema_salvage_mode_missing_required_scalar_still_raises():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {"name": {"type": "string"}},
+        "required": ["name"],
+    }
+    with pytest.raises(ValueError, match="Missing required properties"):
+        repair_json(
+            "[{}]",
+            schema=schema,
             return_objects=True,
             schema_repair_mode="salvage",
         )

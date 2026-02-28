@@ -46,9 +46,10 @@ def parse_object(
         if schema_repairer is None:
             return obj
         schema_repairer_local = schema_repairer
-        # Enforce required fields and insert defaults for optional properties.
+        # In salvage mode defer required-field enforcement to SchemaRepairer._repair_object,
+        # so salvage-only required fills can run in one place.
         missing_required = [key for key in required if key not in obj]
-        if missing_required:
+        if missing_required and schema_repairer_local.schema_repair_mode != "salvage":
             raise ValueError(f"Missing required properties at {path}: {', '.join(missing_required)}")
         for key, prop_schema in properties.items():
             if key in obj or key in required:
