@@ -364,6 +364,12 @@ You will need owner access to this repository
 - Run `python -m build`
 - Create a new release in Github, making sure to tag all the issues solved and contributors. Create the new tag, same as the one in the build configuration
 - Once the release is created, a new Github Actions workflow will start to publish on Pypi, make sure it didn't fail
+
+## Docs demo API deployment (PythonAnywhere)
+- The docs site is deployed by GitHub Pages (`pages-build-deployment`).
+- After a successful Pages deployment on `main`, `.github/workflows/pythonanywhere-sync.yml` uploads `docs/app.py` to PythonAnywhere at `/home/mangiucugna/json_repair/app.py` and reloads `mangiucugna.pythonanywhere.com`.
+- Required repository Actions secret: PythonAnywhere API token (`PYTHONANYWHERE_API_TOKEN`).
+
 ---
 # Repair JSON in other programming languages
 - Typescript: https://github.com/josdejong/jsonrepair

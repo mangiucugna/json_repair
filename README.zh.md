@@ -296,6 +296,11 @@ json_repair==0.*
 - 在 GitHub 创建 Release，标记已解决的 Issue 与贡献者，Tag 与版本一致。
 - Release 创建后会触发 GitHub Actions 发布到 PyPI，确认任务通过。
 
+## 文档演示 API 部署（PythonAnywhere）
+- 文档站点由 GitHub Pages 工作流 `pages-build-deployment` 发布。
+- 当 `main` 上 Pages 发布成功后，`.github/workflows/pythonanywhere-sync.yml` 会把 `docs/app.py` 上传到 PythonAnywhere 的 `/home/mangiucugna/json_repair/app.py`，并重载 `mangiucugna.pythonanywhere.com`。
+- 需要仓库 Actions 密钥：PythonAnywhere API token（`PYTHONANYWHERE_API_TOKEN`）。
+
 ---
 # 其他语言的 JSON 修复
 - Typescript: https://github.com/josdejong/jsonrepair
