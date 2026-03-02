@@ -15,29 +15,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
-      - name: Upload docs/app.py
-        env:
-          PA_API_TOKEN: ${{ secrets.PYTHONANYWHERE_API_TOKEN }}
-          PA_HOST: "www.pythonanywhere.com"
-          PA_PATH: "/home/mangiucugna/json_repair/app.py"
-          PA_USERNAME: "mangiucugna"
-        run: |
-          set -euo pipefail
-          curl --fail-with-body --silent --show-error \
-            -X POST "https://${PA_HOST}/api/v0/user/${PA_USERNAME}/files/path${PA_PATH}" \
-            -H "Authorization: Token ${PA_API_TOKEN}" \
-            -F "content=@docs/app.py"
+    - name: Upload docs/app.py
+      env:
+        PA_API_TOKEN: ${{ secrets.PYTHONANYWHERE_API_TOKEN }}
+        PA_HOST: "www.pythonanywhere.com"
+        PA_PATH: "/home/mangiucugna/json_repair/app.py"
+        PA_USERNAME: "mangiucugna"
+      run: |
+        set -euo pipefail
+        curl --fail-with-body --silent --show-error \
+          -X POST "https://${PA_HOST}/api/v0/user/${PA_USERNAME}/files/path${PA_PATH}" \
+          -H "Authorization: Token ${PA_API_TOKEN}" \
+          -F "content=@docs/app.py"
 
-      - name: Reload PythonAnywhere web app
-        env:
-          PA_API_TOKEN: ${{ secrets.PYTHONANYWHERE_API_TOKEN }}
-          PA_HOST: "www.pythonanywhere.com"
-          PA_USERNAME: "mangiucugna"
-          PA_WEBAPP_DOMAIN: "mangiucugna.pythonanywhere.com"
-        run: |
-          set -euo pipefail
-          curl --fail-with-body --silent --show-error \
-            -X POST "https://${PA_HOST}/api/v0/user/${PA_USERNAME}/webapps/${PA_WEBAPP_DOMAIN}/reload/" \
-            -H "Authorization: Token ${PA_API_TOKEN}"
+    - name: Reload PythonAnywhere web app
+      env:
+        PA_API_TOKEN: ${{ secrets.PYTHONANYWHERE_API_TOKEN }}
+        PA_HOST: "www.pythonanywhere.com"
+        PA_USERNAME: "mangiucugna"
+        PA_WEBAPP_DOMAIN: "mangiucugna.pythonanywhere.com"
+      run: |
+        set -euo pipefail
+        curl --fail-with-body --silent --show-error \
+          -X POST "https://${PA_HOST}/api/v0/user/${PA_USERNAME}/webapps/${PA_WEBAPP_DOMAIN}/reload/" \
+          -H "Authorization: Token ${PA_API_TOKEN}"

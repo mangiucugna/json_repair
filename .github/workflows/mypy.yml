@@ -12,18 +12,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          activate-environment: true
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        activate-environment: true
 
-      - name: Sync dependencies
-        run: uv sync --group typecheck --frozen
+    - name: Sync dependencies
+      run: uv sync --group typecheck --frozen
 
-      - name: Run mypy
-        run: uv run mypy src/
+    - name: Run mypy
+      run: uv run mypy src/
 
-      - name: Run ty
-        run: uv run ty check src/ tests/
+    - name: Run ty
+      run: uv run ty check src/ tests/

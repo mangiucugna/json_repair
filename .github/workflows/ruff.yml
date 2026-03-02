@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
-      - name: Install Ruff
-        uses: astral-sh/ruff-action@v3
+    - name: Install Ruff
+      uses: astral-sh/ruff-action@v3
 
-      - name: Run Ruff Format
-        run: ruff format --check --diff
+    - name: Run Ruff Format
+      run: ruff format --check --diff

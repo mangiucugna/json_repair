@@ -6,9 +6,9 @@ permissions:
 on:
   workflow_dispatch:
   pull_request:
-  push: 
+  push:
     branches:
-      - master
+    - master
 
 jobs:
   pytest:
@@ -16,22 +16,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'  # or match your `.python-version`
+    - uses: actions/checkout@v6
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'    # or match your `.python-version`
 
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          activate-environment: true
-      
-      - name: Sync dependencies
-        run: uv sync --group test --frozen
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        activate-environment: true
 
-      - name: Run pytest
-        run: PYTHONPATH=. uv run coverage run -m pytest
-      
-      - name: Run coverage
-        run: PYTHONPATH=. uv run coverage report -m --fail-under=100
+    - name: Sync dependencies
+      run: uv sync --group test --frozen
+
+    - name: Run pytest
+      run: PYTHONPATH=. uv run coverage run -m pytest
+
+    - name: Run coverage
+      run: PYTHONPATH=. uv run coverage report -m --fail-under=100
