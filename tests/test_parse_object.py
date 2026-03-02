@@ -93,6 +93,10 @@ def test_parse_object_edge_cases():
         == '{"array": [{"key": "value"}], "key2": "value2"}'
     )
     assert repair_json('[{"key":"value"}},{"key":"value"}]') == '[{"key": "value"}, {"key": "value"}]'
+    assert (
+        repair_json("{'key': ['a':{'duplicated_key': 'duplicated_value', 'duplicated_key': 'duplicated_value'}]}")
+        == '{"key": [{"a": {"duplicated_key": "duplicated_value"}}]}'
+    )
 
 
 def test_parse_object_merge_at_the_end():

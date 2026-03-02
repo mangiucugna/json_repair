@@ -78,6 +78,7 @@
 ## Known review pitfalls
 - In `parse_array`, refresh `char` after `skip_whitespaces()` before applying quote-based heuristics; otherwise cases like `[ "a": 1 ]` can be parsed as `["a", 1]` instead of `[{"a": 1}]`.
 - Strict duplicate-key checks should be validated for top-level and nested objects, not only objects parsed under array context.
+- In `parse_object`, keep duplicate-key split/rollback heuristics scoped to objects that started as direct array items; applying that split to nested object values can reshape data instead of deduplicating keys.
 - With `skip_json_loads=True`, top-level scalar inputs (e.g., `true`, `1`, `"abc"`) can parse as `""` because `JSONParser.parse_json` only enters string/number branches when `context` is non-empty.
 - In `repair_json`, keep a single shared output-finalization block (`logging` / `return_objects` / empty-string / `json.dumps`) and avoid duplicating it across fast-path/parser branches; duplicated return trees drift and cause behavior mismatches.
 - With schema enabled and `skip_json_loads=False`, valid scalar JSON that fails schema validation (e.g., `true` with `{"type":"string"}`) falls back to parser+schema and can become `""`; keep this behavior covered by tests.
