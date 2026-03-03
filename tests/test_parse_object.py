@@ -97,6 +97,7 @@ def test_parse_object_edge_cases():
         repair_json("{'key': ['a':{'duplicated_key': 'duplicated_value', 'duplicated_key': 'duplicated_value'}]}")
         == '{"key": [{"a": {"duplicated_key": "duplicated_value"}}]}'
     )
+    assert repair_json('[{"b":"v2","b":"v2"}]', return_objects=True, skip_json_loads=True) == [{"b": "v2"}]
 
 
 def test_parse_object_merge_at_the_end():

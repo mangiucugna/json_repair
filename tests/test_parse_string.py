@@ -102,6 +102,32 @@ def test_leading_trailing_characters():
     )
 
 
+def test_fenced_json_wrapper_matches_plain_for_duplicate_keys():
+    fenced = """
+    ```json
+    {
+    "k": [
+    {
+    "b":"v2",
+    "b":"v2"
+    }
+    ]
+    }
+    ```
+    """
+    plain = """
+    {
+    "k": [
+    {
+    "b":"v2",
+    "b":"v2"
+    }
+    ]
+    }
+    """
+    assert repair_json(fenced, return_objects=True) == repair_json(plain, return_objects=True)
+
+
 def test_string_json_llm_block():
     assert repair_json('{"key": "``"') == '{"key": "``"}'
     assert repair_json('{"key": "```json"') == '{"key": "```json"}'
