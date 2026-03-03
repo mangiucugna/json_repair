@@ -19,6 +19,12 @@
 - Always run pre-commit fully; do not leave it partially completed.
 - For new/untracked files, manually run ruff (`pre-commit run ruff-check --files ...` and `pre-commit run ruff-format --files ...`) because hooks with `pass_filenames: true` won't see them.
 
+## Packaging
+- For slimmer source distributions, keep a `MANIFEST.in` rule `prune tests` so test modules are not shipped in the sdist.
+- In `[tool.setuptools.package-data]`, use the real package key (`json_repair`) rather than placeholders, otherwise typed marker inclusion (`py.typed`) can be brittle.
+- In release publishing, run a metadata sanity check (`uvx twine check dist/*`) after building and before the PyPI publish step.
+- In CI, prefer `uv run --group ... --frozen` for project-aware checks (tests/type-check) and reserve `uvx` for standalone tool invocations.
+
 ## Releases
 - Project version lives in `pyproject.toml` under `[project].version`.
 - Use semantic versioning; patch bumps are appropriate for bug fixes.

@@ -77,7 +77,7 @@ exclude_also = [
     '@(abc\.)?abstractmethod',
 ]
 [tool.setuptools.package-data]
-"pkgname" = ["py.typed"]
+"json_repair" = ["py.typed"]
 [tool.setuptools.packages.find]
 where = ["src"]
 [project.scripts]

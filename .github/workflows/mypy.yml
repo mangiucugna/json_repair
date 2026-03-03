@@ -19,11 +19,8 @@ jobs:
       with:
         activate-environment: true
 
-    - name: Sync dependencies
-      run: uv sync --group typecheck --frozen
-
     - name: Run mypy
-      run: uv run mypy src/
+      run: uv run --group typecheck --frozen mypy src/
 
     - name: Run ty
-      run: uv run ty check src/ tests/
+      run: uv run --group typecheck --frozen ty check src/ tests/

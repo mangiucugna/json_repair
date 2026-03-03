@@ -33,8 +33,6 @@ jobs:
       uses: astral-sh/setup-uv@v7
       with:
         activate-environment: true
-    - name: Sync dependencies
-      run: uv sync --group test --frozen
     - name: Test with pytest
       run: |
-        uv run pytest tests/test_json_repair.py
+        uv run --group test --frozen pytest tests/test_json_repair.py
