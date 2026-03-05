@@ -93,6 +93,21 @@ def test_parse_object_schema_pattern_extra_schemas():
     assert repair_json('{"x1": "2"}', schema=schema, skip_json_loads=True, return_objects=True) == {"x1": 2}
 
 
+def test_parse_object_schema_skips_unsupported_pattern_regex_with_log():
+    schema = {
+        "type": "object",
+        "patternProperties": {"^x[0-9]+$": {"type": "integer"}},
+        "additionalProperties": True,
+    }
+    parser = JSONParser('{"x1": 2}', None, True, 0, False, False)
+    repairer = SchemaRepairer(schema, parser.logger)
+    parser.schema_repairer = repairer
+    parser.index = 1
+
+    assert parser.parse_object(schema, "$") == {"x1": 2}
+    assert any("Skipped unsupported patternProperties regex '^x[0-9]+$'" in entry["text"] for entry in parser.logger)
+
+
 def test_parse_object_schema_drop_property_and_additional_schema():
     schema_drop = {
         "type": "object",

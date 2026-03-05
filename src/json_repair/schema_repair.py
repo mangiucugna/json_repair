@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import copy
 import importlib
-import re
 from types import ModuleType
 from typing import Any, Literal, cast
 
 from .utils.constants import MISSING_VALUE, JSONReturnType, MissingValueType
+from .utils.pattern_properties import match_pattern_properties
 
 SchemaRepairMode = Literal["standard", "salvage"]
 SUPPORTED_SCHEMA_REPAIR_MODES: tuple[SchemaRepairMode, ...] = ("standard", "salvage")
@@ -391,7 +391,9 @@ class SchemaRepairer:
             if key in properties:
                 continue
             key_path = f"{path}.{key}"
-            matched = [prop_schema for pattern, prop_schema in pattern_properties.items() if re.search(pattern, key)]
+            matched, unsupported_patterns = match_pattern_properties(pattern_properties, key)
+            for pattern in unsupported_patterns:
+                self._log(f"Skipped unsupported patternProperties regex '{pattern}'", key_path)
             if matched:
                 repaired_value = self.repair_value(raw_value, matched[0], key_path)
                 for prop_schema in matched[1:]:

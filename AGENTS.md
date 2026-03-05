@@ -59,6 +59,7 @@
 - On the `json.loads/json.load` fast path, validate the loaded value against the schema first.
 - If fast-path loading or schema validation fails, fall back to `parser.parse_with_schema(...)`, then validate the parsed result before returning.
 - Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`; avoid duplicating parser switch logic.
+- `patternProperties` matching uses a safe literal+anchor subset (`token`, `^token`, `token$`, `^token$`) and must not execute user-supplied regex patterns.
 - `SchemaRepairer.repair_value` enforces a subset of JSON Schema; keep `SchemaRepairer.validate(...)` to enforce unsupported keywords (e.g., `pattern`, `minLength`, `maximum`, formats/combinators not repaired directly).
 - `schema_repair_mode` supports `standard` (default) and `salvage`; `salvage` is opt-in and should only add best-effort repairs (currently array-item dropping + conservative list-to-object mapping).
 - Boolean schema coercion is mode-independent: apply expanded safe tokens (`true/false`, `yes/no`, `y/n`, `on/off`, `1/0`, and numeric `1`/`0`) in both `standard` and `salvage`.

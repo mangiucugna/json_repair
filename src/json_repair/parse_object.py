@@ -1,8 +1,8 @@
-import re
 from typing import TYPE_CHECKING, Any
 
 from .utils.constants import MISSING_VALUE, STRING_DELIMITERS, JSONReturnType
 from .utils.json_context import ContextValues
+from .utils.pattern_properties import match_pattern_properties
 
 if TYPE_CHECKING:
     from .json_parser import JSONParser
@@ -228,9 +228,11 @@ def parse_object(
                     raise ValueError("Schema must be an object.")
                 prop_schema = schema_value
             else:
-                matched = [
-                    schema_value for pattern, schema_value in pattern_properties.items() if re.search(pattern, key)
-                ]
+                matched, unsupported_patterns = match_pattern_properties(pattern_properties, key)
+                for pattern in unsupported_patterns:
+                    self.log(
+                        f"Skipped unsupported patternProperties regex '{pattern}' while parsing object key '{key}'",
+                    )
                 if matched:
                     # patternProperties can stack: apply the first schema, then any extras in order.
                     primary_schema = matched[0]

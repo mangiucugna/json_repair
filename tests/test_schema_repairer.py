@@ -464,6 +464,21 @@ def test_fill_missing_and_coerce_scalar_paths():
         repairer.repair_value(1, False, "$")
 
 
+def test_repair_object_skips_unsupported_pattern_regex_with_fallback_and_log():
+    log: list[dict[str, str]] = []
+    repairer = SchemaRepairer({}, log)
+    schema = {
+        "type": "object",
+        "patternProperties": {"^x[0-9]+$": {"type": "integer"}},
+        "additionalProperties": {"type": "string"},
+    }
+
+    repaired = repairer.repair_value({"x1": 2}, schema, "$")
+
+    assert repaired == {"x1": "2"}
+    assert any("Skipped unsupported patternProperties regex '^x[0-9]+$'" in entry["text"] for entry in log)
+
+
 def test_apply_enum_const_mismatch_raises():
     repairer = SchemaRepairer({}, [])
     with pytest.raises(ValueError, match="does not match const"):
