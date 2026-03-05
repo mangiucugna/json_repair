@@ -70,6 +70,8 @@ def test_schema_applies_to_valid_json_without_skip_json_loads():
     }
     # Fast-path validation fails, then parser+schema fallback repairs.
     assert repair_json('{"value": "1"}', schema=schema, return_objects=True) == {"value": 1}
+    # Fast-path validation fails for a scalar, but schema-aware repair can fix it directly.
+    assert repair_json('"1"', schema={"type": "integer"}, return_objects=True) == 1
     # Fast-path validation fails for a valid scalar and parser fallback returns empty string.
     assert repair_json("true", schema={"type": "string"}, return_objects=True) == ""
 
@@ -106,6 +108,13 @@ def test_schema_applies_to_valid_json_fast_path_outputs_and_logging():
 def test_schema_applies_to_valid_empty_string():
     pytest.importorskip("jsonschema")
     assert repair_json('""', schema={"type": "string"}) == ""
+
+
+def test_schema_skip_json_loads_keeps_parser_path_for_scalars():
+    pytest.importorskip("jsonschema")
+    assert repair_json("True", schema={"type": "string"}, skip_json_loads=True, return_objects=True) == ""
+    with pytest.raises(ValueError, match="is not of type"):
+        repair_json('"1"', schema={"type": "integer"}, skip_json_loads=True, return_objects=True)
 
 
 def test_schema_pydantic_v2_defaults():
@@ -303,6 +312,59 @@ def test_schema_salvage_mode_mapping_rejects_type_mismatch():
             return_objects=True,
             schema_repair_mode="salvage",
         )
+
+
+def test_schema_salvage_mode_union_object_array_falls_back_to_valid_array_branch():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": ["object", "array"],
+        "properties": {"name": {"type": "string", "pattern": "^a+$"}},
+        "required": ["name"],
+        "items": {"type": "string"},
+    }
+    raw = '["bbb",]'
+
+    assert repair_json(raw, schema=schema, return_objects=True, schema_repair_mode="standard") == ["bbb"]
+    assert repair_json(raw, schema=schema, return_objects=True, schema_repair_mode="salvage") == ["bbb"]
+
+
+def test_schema_salvage_mode_union_object_array_does_not_remap_valid_array():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": ["object", "array"],
+        "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}},
+        "required": ["x", "y"],
+        "items": {"type": "integer"},
+    }
+    raw = "[1,2]"
+
+    assert repair_json(
+        raw,
+        schema=schema,
+        skip_json_loads=True,
+        return_objects=True,
+        schema_repair_mode="salvage",
+    ) == [1, 2]
+
+    repaired_with_logs, logs = cast(
+        tuple[object, list[dict[str, str]]],
+        repair_json(
+            raw,
+            schema=schema,
+            skip_json_loads=True,
+            logging=True,
+            schema_repair_mode="salvage",
+        ),
+    )
+    assert repaired_with_logs == [1, 2]
+    assert not any(
+        log["text"]
+        in {
+            "Mapped array to object by schema property order",
+            "Unwrapped single-item root array to object while salvaging",
+        }
+        for log in logs
+    )
 
 
 def test_schema_salvage_mode_unwraps_root_single_item_array_and_fills_required_array():

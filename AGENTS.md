@@ -4,7 +4,6 @@
 - Use the uv-managed environment at `.venv`; install dev dependencies with `uv sync --group dev`.
 - Prefer `uv run ...` for Python tooling (use `uv run python -m ...` if `python` is not on PATH).
 - Dependency groups live in `pyproject.toml`; update `uv.lock` when dependencies change.
-- You may see `/Users/s.baccianella/.rvm/scripts/rvm:29: operation not permitted: ps` in shell output; safe to ignore.
 
 ## Tests
 - Run the full test suite with:
@@ -38,28 +37,12 @@
 - When closing issues, start the summary with `Fix #<issue-number>:` so GitHub auto-closes.
 
 ## Code Areas
-- Public API and CLI entry points:
-  - `src/json_repair/json_repair.py` (repair_json plus loads/load/from_file wrappers; strict/logging/stream_stable options)
-  - `src/json_repair/__init__.py` (exports wrapper functions)
-  - `src/json_repair/__main__.py` (CLI; files/stdin, in-place output, formatting flags like `--indent`/`--ensure_ascii`)
-- Parser entrypoint and orchestration:
-  - `src/json_repair/json_parser.py` (JSONParser; parse/parse_json dispatch, stream handling)
-- Core parsers:
-  - `src/json_repair/parse_object.py`, `src/json_repair/parse_array.py`, `src/json_repair/parse_string.py`, `src/json_repair/parse_number.py`, `src/json_repair/parse_comment.py`
-- String helpers:
-  - `src/json_repair/parse_string_helpers/parse_boolean_or_null.py`, `src/json_repair/parse_string_helpers/parse_json_llm_block.py`
-- Utilities:
-  - `src/json_repair/utils/json_context.py`, `src/json_repair/utils/string_file_wrapper.py`, `src/json_repair/utils/constants.py`, `src/json_repair/utils/object_comparer.py`
-- Web demo and API:
-  - `docs/app.py` (Flask API `/api/repair-json`, uses CORS, requires `malformedJSON`, accepts optional `schema` as object/boolean with `null` treated as unset, returns repaired JSON + log)
-  - `docs/index.js` (client UI; debounced `processInput`, AbortController, URL param handling for both `json` and optional `schema`, client-side schema validation)
-  - `docs/index.html`, `docs/index.zh.html` (localized pages + SEO metadata)
-  - `docs/styles.css` (layout and responsive styles)
-- Tests:
-  - Parser tests: `tests/test_parse_*.py`
-  - API/CLI tests: `tests/test_json_repair.py`, `tests/test_repair_json_cli.py`, `tests/test_repair_json_from_file.py`
-  - Strict mode: `tests/test_strict_mode.py`
-  - Performance/benchmarks: `tests/test_performance.py`, `.benchmarks/`
+- API and CLI entry points: `src/json_repair/json_repair.py`, `src/json_repair/__init__.py`, `src/json_repair/__main__.py`.
+- Parser orchestration: `src/json_repair/json_parser.py`.
+- Repair primitives: `src/json_repair/parse_*.py`, `src/json_repair/parse_string_helpers/*`.
+- Schema logic: `src/json_repair/schema_repair.py`.
+- Demo API/UI: `docs/app.py`, `docs/index.js`, `docs/index*.html`, `docs/styles.css`.
+- Tests: parser tests (`tests/test_parse_*.py`), schema tests (`tests/test_schema_*.py`), CLI/API wrappers, strict-mode tests, performance benchmarks.
 
 ## Contributing
 - PRs follow `.github/PULL_REQUEST_TEMPLATE.md` (review `CONTRIBUTING.md`, add tests, and run pre-commit + unit tests).
@@ -71,22 +54,19 @@
 - Add brief docstrings/comments for non-obvious control flow; explain intent, not mechanics.
 - When adding new repair heuristics, emit a `self.log` entry and skip the repair in `strict=True` unless explicitly intended.
 
-## Schema-guided parsing (issue #177)
+## Schema-guided parsing
 - When a schema is provided, apply schema repair+validation for both valid and invalid JSON inputs.
 - On the `json.loads/json.load` fast path, validate the loaded value against the schema first.
 - If fast-path loading or schema validation fails, fall back to `parser.parse_with_schema(...)`, then validate the parsed result before returning.
 - Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`; avoid duplicating parser switch logic.
 - `SchemaRepairer.repair_value` enforces a subset of JSON Schema; keep `SchemaRepairer.validate(...)` to enforce unsupported keywords (e.g., `pattern`, `minLength`, `maximum`, formats/combinators not repaired directly).
 - `schema_repair_mode` supports `standard` (default) and `salvage`; `salvage` is opt-in and should only add best-effort repairs (currently array-item dropping + conservative list-to-object mapping).
-- Boolean schema coercion (`#2`) is mode-independent: apply expanded safe tokens (`true/false`, `yes/no`, `y/n`, `on/off`, `1/0`, and numeric `1`/`0`) in both `standard` and `salvage`.
+- Boolean schema coercion is mode-independent: apply expanded safe tokens (`true/false`, `yes/no`, `y/n`, `on/off`, `1/0`, and numeric `1`/`0`) in both `standard` and `salvage`.
 - `schema_repair_mode="salvage"` without a schema must raise a `ValueError` instead of silently downgrading behavior.
+- Treat `skip_json_loads=True` as an explicit opt-out of JSON loader fast paths; do not add schema-aware scalar fast-repair behavior in that mode.
 
 ## Known review pitfalls
-- In `parse_array`, refresh `char` after `skip_whitespaces()` before applying quote-based heuristics; otherwise cases like `[ "a": 1 ]` can be parsed as `["a", 1]` instead of `[{"a": 1}]`.
-- Strict duplicate-key checks should be validated for top-level and nested objects, not only objects parsed under array context.
-- In `parse_object`, keep duplicate-key split/rollback heuristics scoped to objects that started as direct array items; applying that split to nested object values can reshape data instead of deduplicating keys.
-- In `parse_object`, for direct array items with duplicate keys, keep normal duplicate-key overwrite when the duplicate is comma-separated; reserve split/rollback for malformed key starts (for example quote noise) that imply a missing object boundary.
-- With `skip_json_loads=True`, top-level scalar inputs (e.g., `true`, `1`, `"abc"`) can parse as `""` because `JSONParser.parse_json` only enters string/number branches when `context` is non-empty.
+- In `SchemaRepairer._repair_type_union`, validate each candidate branch before returning so mixed `type` unions (for example `["object", "array"]`) can fall back to a later valid branch instead of failing on the first repaired branch.
+- In salvage mode, keep list-to-object/root-array object salvage heuristics scoped to object-only schemas; when array is also allowed at the same schema level, skip those heuristics to avoid accidental shape changes.
 - In `repair_json`, keep a single shared output-finalization block (`logging` / `return_objects` / empty-string / `json.dumps`) and avoid duplicating it across fast-path/parser branches; duplicated return trees drift and cause behavior mismatches.
-- With schema enabled and `skip_json_loads=False`, valid scalar JSON that fails schema validation (e.g., `true` with `{"type":"string"}`) falls back to parser+schema and can become `""`; keep this behavior covered by tests.
 - In `schema_repair_mode="salvage"`, only drop array items for data-repair failures; propagate schema-definition errors (e.g., unsupported schema types) instead of silently returning partial output.

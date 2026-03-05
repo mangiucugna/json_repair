@@ -253,6 +253,42 @@ def test_repair_value_missing_and_unions():
     assert repairer.repair_value({"a": "1"}, schema_obj_union, "$") == {"a": 1}
 
 
+def test_type_union_validates_branch_before_returning():
+    pytest.importorskip("jsonschema")
+    standard_repairer = SchemaRepairer({}, [])
+    salvage_repairer = SchemaRepairer({}, [], schema_repair_mode="salvage")
+    schema = {
+        "type": ["object", "array"],
+        "properties": {"name": {"type": "string", "pattern": "^a+$"}},
+        "required": ["name"],
+        "items": {"type": "string"},
+    }
+    assert standard_repairer.repair_value(["bbb"], schema, "$") == ["bbb"]
+    assert salvage_repairer.repair_value(["bbb"], schema, "$") == ["bbb"]
+
+
+def test_salvage_skips_object_mapping_for_mixed_object_array_schema():
+    pytest.importorskip("jsonschema")
+    salvage_repairer = SchemaRepairer({}, [], schema_repair_mode="salvage")
+    schema = {
+        "type": ["object", "array"],
+        "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}},
+        "required": ["x", "y"],
+        "items": {"type": "integer"},
+    }
+    assert salvage_repairer.repair_value([1, 2], schema, "$") == [1, 2]
+
+
+def test_can_salvage_list_as_object_requires_object_without_array():
+    repairer = SchemaRepairer({}, [], schema_repair_mode="salvage")
+    assert repairer._can_salvage_list_as_object({"properties": {"a": {"type": "integer"}}}) is True
+    assert repairer._can_salvage_list_as_object({"items": {"type": "integer"}}) is False
+    assert (
+        repairer._can_salvage_list_as_object({"properties": {"a": {"type": "integer"}}, "items": {"type": "integer"}})
+        is False
+    )
+
+
 def test_repair_object_and_array_paths():
     repairer = SchemaRepairer({}, [])
     schema_obj = {

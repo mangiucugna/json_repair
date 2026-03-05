@@ -171,6 +171,20 @@ class SchemaRepairer:
             return True
         return "items" in schema
 
+    def _allows_schema_type(self, schema: dict[str, Any], schema_type: str) -> bool:
+        declared_type = schema.get("type")
+        if isinstance(declared_type, str):
+            return declared_type == schema_type
+        if isinstance(declared_type, list):
+            return schema_type in declared_type
+        if schema_type == "object":
+            return self.is_object_schema(schema)
+        # This helper is only used for object/array checks in _can_salvage_list_as_object.
+        return self.is_array_schema(schema)
+
+    def _can_salvage_list_as_object(self, schema: dict[str, Any]) -> bool:
+        return self._allows_schema_type(schema, "object") and not self._allows_schema_type(schema, "array")
+
     def repair_value(self, value: Any, schema: dict[str, Any] | bool | None, path: str) -> JSONReturnType:
         """Apply schema rules to a parsed value, including unions, coercions, and defaults."""
         schema = self.resolve_schema(schema)
@@ -241,9 +255,13 @@ class SchemaRepairer:
     ) -> JSONReturnType:
         last_error: Exception | None = None
         for schema_type in types:
+            branch_schema = {**schema, "type": schema_type}
             try:
-                candidate = self._repair_by_type(value, schema_type, schema, path)
-                return self._apply_enum_const(candidate, schema, path)
+                # Keep structural schema context for repair heuristics, but validate against the narrowed branch type.
+                candidate = self._repair_by_type(copy.deepcopy(value), schema_type, schema, path)
+                candidate = self._apply_enum_const(candidate, branch_schema, path)
+                self.validate(candidate, branch_schema)
+                return candidate
             except ValueError as exc:
                 last_error = exc
         if last_error:
@@ -316,7 +334,11 @@ class SchemaRepairer:
         return items
 
     def _repair_object(self, value: Any, schema: dict[str, Any], path: str) -> JSONReturnType:
-        if self.schema_repair_mode == "salvage" and isinstance(value, list):
+        if (
+            self.schema_repair_mode == "salvage"
+            and isinstance(value, list)
+            and self._can_salvage_list_as_object(schema)
+        ):
             mapped = self._map_list_to_object(value, schema, path)
             if mapped is not None:
                 value = mapped
