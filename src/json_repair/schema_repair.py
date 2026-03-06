@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 import importlib
-from types import ModuleType
 from typing import Any, Literal, cast
 
 from .utils.constants import MISSING_VALUE, JSONReturnType, MissingValueType
@@ -20,7 +19,7 @@ def normalize_schema_repair_mode(mode: str | None) -> SchemaRepairMode:
     if mode is None:
         return "standard"
     if mode in SUPPORTED_SCHEMA_REPAIR_MODES:
-        return cast(SchemaRepairMode, mode)
+        return cast("SchemaRepairMode", mode)
     expected = ", ".join(SUPPORTED_SCHEMA_REPAIR_MODES)
     raise ValueError(f"schema_repair_mode must be one of: {expected}.")
 
@@ -43,7 +42,7 @@ def load_schema_model(path: str) -> type[Any]:
     if ":" not in path:
         raise ValueError("Schema model must be in the form 'module:ClassName'.")
     module_name, class_name = path.split(":", 1)
-    module: ModuleType = importlib.import_module(module_name)
+    module = importlib.import_module(module_name)
     model: object | None = module.__dict__.get(class_name)
     if model is None or not isinstance(model, type):
         raise ValueError(f"Schema model '{class_name}' not found in module '{module_name}'.")
@@ -239,9 +238,10 @@ class SchemaRepairer:
             try:
                 candidate = self.repair_value(copy.deepcopy(value), subschema, path)
                 self.validate(candidate, subschema)
-                return candidate
             except ValueError as exc:
                 last_error = exc
+            else:
+                return candidate
         if last_error:
             raise ValueError(str(last_error)) from last_error
         raise ValueError("No schema matched the value.")
@@ -261,9 +261,10 @@ class SchemaRepairer:
                 candidate = self._repair_by_type(copy.deepcopy(value), schema_type, schema, path)
                 candidate = self._apply_enum_const(candidate, branch_schema, path)
                 self.validate(candidate, branch_schema)
-                return candidate
             except ValueError as exc:
                 last_error = exc
+            else:
+                return candidate
         if last_error:
             raise ValueError(str(last_error)) from last_error
         raise ValueError("No schema type matched the value.")
@@ -449,8 +450,9 @@ class SchemaRepairer:
             return True, self._copy_json_value(resolved_schema["default"], path, "default")
         if "const" in resolved_schema:
             return True, self._copy_json_value(resolved_schema["const"], path, "const")
-        if "enum" in resolved_schema and resolved_schema["enum"]:
-            return True, self._copy_json_value(resolved_schema["enum"][0], path, "enum")
+        enum_values = resolved_schema.get("enum")
+        if enum_values:
+            return True, self._copy_json_value(enum_values[0], path, "enum")
 
         expected_type = resolved_schema.get("type")
         if expected_type is None:

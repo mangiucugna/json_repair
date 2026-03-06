@@ -37,7 +37,7 @@ def test_strict_rejects_empty_object_with_extra_characters():
 
 
 def test_strict_detects_immediate_doubled_quotes():
-    with pytest.raises(ValueError, match="doubled quotes followed by another quote\\.$"):
+    with pytest.raises(ValueError, match=r"doubled quotes followed by another quote\.$"):
         repair_json('{"key": """"}', strict=True)
 
 

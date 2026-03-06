@@ -55,6 +55,8 @@
 - Add brief docstrings/comments for non-obvious control flow; explain intent, not mechanics.
 - When adding new repair heuristics, emit a `self.log` entry and skip the repair in `strict=True` unless explicitly intended.
 - Do not wrap `importlib.import_module(...)` in an extra `@cache` helper here; Python already caches imported modules, and the extra wrapper adds complexity without measurable benefit in this project.
+- For Ruff config changes, trial candidate rule families with `ruff check --statistics` first, then enable only the specific high-signal codes that fit the repo instead of broad noisy families.
+- For exception-style Ruff rules, prefer targeted control-flow rules like `TRY300` over rules like `TRY004` that would change public exception types unless an API behavior change is explicitly intended.
 
 ## Schema-guided parsing
 - When a schema is provided, apply schema repair+validation for both valid and invalid JSON inputs.

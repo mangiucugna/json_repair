@@ -99,7 +99,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
             # Ok this is not a doubled quote, check if this is an empty string or not
             i = self.scroll_whitespaces(idx=1)
             next_c = self.get_char_at(i)
-            if next_c in STRING_DELIMITERS + ["{", "["]:
+            if next_c in [*STRING_DELIMITERS, "{", "["]:
                 # something fishy is going on here
                 self.log(
                     "While parsing a string, we found a doubled quote but also another quote afterwards, ignoring it",

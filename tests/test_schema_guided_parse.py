@@ -347,7 +347,7 @@ def test_schema_salvage_mode_union_object_array_does_not_remap_valid_array():
     ) == [1, 2]
 
     repaired_with_logs, logs = cast(
-        tuple[object, list[dict[str, str]]],
+        "tuple[object, list[dict[str, str]]]",
         repair_json(
             raw,
             schema=schema,
@@ -420,7 +420,7 @@ def test_schema_salvage_mode_unwraps_root_single_item_array_and_fills_required_a
     }
 
     repaired_with_logs, logs = cast(
-        tuple[object, list[dict[str, str]]],
+        "tuple[object, list[dict[str, str]]]",
         repair_json(
             raw,
             schema=schema,
