@@ -112,18 +112,6 @@ def repair_json(
         else None
     )
 
-    def try_repair_loaded_value(
-        value: JSONReturnType, schema_repairer: SchemaRepairer, resolved_schema: dict[str, Any] | bool
-    ) -> tuple[bool, JSONReturnType]:
-        try:
-            # repair_value may mutate containers in place; if validate fails we still fall back to parser.parse_with_schema,
-            # which fully replaces parsed_json.
-            repaired_value = schema_repairer.repair_value(value, resolved_schema, "$")
-            schema_repairer.validate(repaired_value, resolved_schema)
-            return True, repaired_value
-        except ValueError:
-            return False, None
-
     # Fast path for valid JSON: schema-aware mode still applies repair+validation.
     parsed_json: JSONReturnType = None
     is_valid_json = False
@@ -136,10 +124,15 @@ def repair_json(
                     repairer.validate(parsed_json, schema_obj)
                     is_valid_json = True
                 except ValueError:
-                    repaired, repaired_value = try_repair_loaded_value(parsed_json, repairer, schema_obj)
-                    if repaired:
+                    try:
+                        # repair_value may mutate containers in place; if validate fails we still
+                        # fall back to parser.parse_with_schema, which fully replaces parsed_json.
+                        repaired_value = repairer.repair_value(parsed_json, schema_obj, "$")
+                        repairer.validate(repaired_value, schema_obj)
                         parsed_json = repaired_value
                         is_valid_json = True
+                    except ValueError:
+                        pass
             else:
                 is_valid_json = True
     except (json.JSONDecodeError, TypeError, ValueError):

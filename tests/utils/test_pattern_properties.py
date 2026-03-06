@@ -23,3 +23,9 @@ def test_match_pattern_properties_marks_unsupported_regex_patterns():
 
     assert matched == [{"name": "supported"}]
     assert unsupported == ["^x[0-9]+$"]
+
+
+def test_match_pattern_properties_empty_mapping():
+    matched, unsupported = match_pattern_properties({}, "any-key")
+    assert matched == []
+    assert unsupported == []

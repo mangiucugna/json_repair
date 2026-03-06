@@ -228,7 +228,10 @@ def parse_object(
                     raise ValueError("Schema must be an object.")
                 prop_schema = schema_value
             else:
-                matched, unsupported_patterns = match_pattern_properties(pattern_properties, key)
+                matched: list[Any] = []
+                unsupported_patterns: list[str] = []
+                if pattern_properties:
+                    matched, unsupported_patterns = match_pattern_properties(pattern_properties, key)
                 for pattern in unsupported_patterns:
                     self.log(
                         f"Skipped unsupported patternProperties regex '{pattern}' while parsing object key '{key}'",

@@ -391,7 +391,10 @@ class SchemaRepairer:
             if key in properties:
                 continue
             key_path = f"{path}.{key}"
-            matched, unsupported_patterns = match_pattern_properties(pattern_properties, key)
+            matched: list[Any] = []
+            unsupported_patterns: list[str] = []
+            if pattern_properties:
+                matched, unsupported_patterns = match_pattern_properties(pattern_properties, key)
             for pattern in unsupported_patterns:
                 self._log(f"Skipped unsupported patternProperties regex '{pattern}'", key_path)
             if matched:

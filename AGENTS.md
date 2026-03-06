@@ -9,6 +9,7 @@
 - Run the full test suite with:
   - `uv run pytest`
 - Performance benchmarks in `tests/test_performance.py` are timing-sensitive and may fail on slower machines.
+- Keep schema-based performance coverage in `tests/test_performance.py` for both fast-path (`skip_json_loads=False`) and parser-path (`skip_json_loads=True`) scenarios.
 
 ## Pre-commit
 - Run all hooks without activating a venv:
@@ -53,6 +54,7 @@
 - JSONParser.parse should return only JSON; use `parser.logger` for logs instead of tuple returns.
 - Add brief docstrings/comments for non-obvious control flow; explain intent, not mechanics.
 - When adding new repair heuristics, emit a `self.log` entry and skip the repair in `strict=True` unless explicitly intended.
+- Do not wrap `importlib.import_module(...)` in an extra `@cache` helper here; Python already caches imported modules, and the extra wrapper adds complexity without measurable benefit in this project.
 
 ## Schema-guided parsing
 - When a schema is provided, apply schema repair+validation for both valid and invalid JSON inputs.

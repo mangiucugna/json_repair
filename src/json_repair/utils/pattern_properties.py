@@ -20,6 +20,9 @@ def match_pattern_properties(
     The caller can log unsupported patterns using the returned list.
     """
 
+    if not pattern_properties:
+        return [], []
+
     matched_schemas: list[Any] = []
     unsupported_patterns: list[str] = []
 
