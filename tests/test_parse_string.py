@@ -1,4 +1,9 @@
+from io import StringIO
+
+from src.json_repair.json_parser import JSONParser
 from src.json_repair.json_repair import repair_json
+from src.json_repair.parse_string import _try_parse_simple_quoted_string
+from src.json_repair.utils.string_file_wrapper import StringFileWrapper
 
 
 def test_parse_string():
@@ -138,6 +143,12 @@ def test_string_json_llm_block():
     assert repair_json('{"response": "```json{}"') == '{"response": "```json{}"}'
 
 
+def test_parse_string_logs_invalid_code_fences():
+    repaired, logs = repair_json('{"key": "```json nope\\n"}', skip_json_loads=True, return_objects=True, logging=True)
+    assert repaired == {"key": "```json nope"}
+    assert any("did not enclose valid JSON" in log["text"] for log in logs)
+
+
 def test_parse_boolean_or_null():
     assert repair_json("True", return_objects=True) == ""
     assert repair_json("False", return_objects=True) == ""
@@ -147,3 +158,39 @@ def test_parse_boolean_or_null():
     assert repair_json("null", return_objects=True) is None
     assert repair_json('  {"key": true, "key2": false, "key3": null}') == '{"key": true, "key2": false, "key3": null}'
     assert repair_json('{"key": TRUE, "key2": FALSE, "key3": Null}   ') == '{"key": true, "key2": false, "key3": null}'
+
+
+def test_parse_string_fast_path_keeps_clean_values_log_free():
+    repaired, logs = repair_json('{"key": "value", "items": ["alpha", "beta"]}', return_objects=True, logging=True)
+    assert repaired == {"key": "value", "items": ["alpha", "beta"]}
+    assert logs == []
+
+
+def test_parse_string_fast_path_falls_back_for_escapes_with_logs():
+    repaired, logs = repair_json(
+        '{"key": "\\u0076\\u0061\\u006C\\u0075\\u0065"}',
+        skip_json_loads=True,
+        return_objects=True,
+        logging=True,
+    )
+    assert repaired == {"key": "value"}
+    assert any(log["text"] == "Found a unicode escape sequence, normalizing it" for log in logs)
+
+
+def test_parse_string_fast_path_rejects_ambiguous_top_level_trailing_text():
+    parser = JSONParser('"value" trailing', None, False)
+    assert _try_parse_simple_quoted_string(parser) is None
+
+
+def test_parse_string_fast_path_string_wrapper_fallbacks():
+    escaped_parser = JSONParser("", None, False)
+    escaped_parser.json_str = StringFileWrapper(StringIO('"va\\lue"'), 2)
+    assert _try_parse_simple_quoted_string(escaped_parser) is None
+
+    unterminated_parser = JSONParser("", None, False)
+    unterminated_parser.json_str = StringFileWrapper(StringIO('"value'), 2)
+    assert _try_parse_simple_quoted_string(unterminated_parser) is None
+
+
+def test_parse_string_empty_single_quoted_key():
+    assert repair_json("{'': 1}") == '{"": 1}'

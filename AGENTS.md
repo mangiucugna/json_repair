@@ -53,6 +53,7 @@
 - For JSONParser logging, prefer the inline no-op lambda over a module-level `_noop` helper.
 - JSONParser.parse should return only JSON; use `parser.logger` for logs instead of tuple returns.
 - Add brief docstrings/comments for non-obvious control flow; explain intent, not mechanics.
+- Parser fast paths must work for both plain strings and `StringFileWrapper`; do not assume `str`-only helpers such as `.find()` inside parse helpers.
 - When adding new repair heuristics, emit a `self.log` entry and skip the repair in `strict=True` unless explicitly intended.
 - Do not wrap `importlib.import_module(...)` in an extra `@cache` helper here; Python already caches imported modules, and the extra wrapper adds complexity without measurable benefit in this project.
 - For Ruff config changes, trial candidate rule families with `ruff check --statistics` first, then enable only the specific high-signal codes that fit the repo instead of broad noisy families.
@@ -61,6 +62,7 @@
 ## Schema-guided parsing
 - When a schema is provided, apply schema repair+validation for both valid and invalid JSON inputs.
 - On the `json.loads/json.load` fast path, validate the loaded value against the schema first.
+- On speculative schema checks in the `json.loads/json.load` fast path, prefer a boolean validity probe (`is_valid`) over full error materialization; reserve `validate(...)` for the final error-reporting path.
 - If fast-path loading or schema validation fails, fall back to `parser.parse_with_schema(...)`, then validate the parsed result before returning.
 - Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`; avoid duplicating parser switch logic.
 - `patternProperties` matching uses a safe literal+anchor subset (`token`, `^token`, `token$`, `^token$`) and must not execute user-supplied regex patterns.

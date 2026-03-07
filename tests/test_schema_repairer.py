@@ -142,10 +142,14 @@ def test_schema_from_input_requires_pydantic_v2(monkeypatch):
 def test_schema_repairer_validate_and_prepare():
     pytest.importorskip("jsonschema")
     repairer = SchemaRepairer({}, [])
+    assert repairer.is_valid(1, True) is True
+    assert repairer.is_valid(1, False) is False
     repairer.validate(1, True)
     with pytest.raises(ValueError, match="Schema does not allow"):
         repairer.validate(1, False)
-    repairer.validate(1, {"type": "integer"})
+    integer_schema = {"type": "integer"}
+    repairer.validate(1, integer_schema)
+    assert repairer._get_validator(integer_schema) is repairer._get_validator(integer_schema)
     with pytest.raises(ValueError, match="is not of type"):
         repairer.validate("x", {"type": "integer"})
 

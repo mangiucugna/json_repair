@@ -9,6 +9,56 @@ if TYPE_CHECKING:
     from .json_parser import JSONParser
 
 
+def _try_parse_simple_quoted_string(self: "JSONParser") -> str | None:
+    if self.get_char_at() != '"':
+        return None
+
+    start = self.index + 1
+    json_str = self.json_str
+    if isinstance(json_str, str):
+        end = json_str.find('"', start)
+        if end == -1:
+            return None
+        value = json_str[start:end]
+        if "\\" in value or "\n" in value or "\r" in value:
+            return None
+    else:
+        end = start
+        limit = len(json_str)
+        while end < limit:
+            char = json_str[end]
+            if char == '"':
+                break
+            if char in {"\\", "\n", "\r"}:
+                return None
+            end += 1
+        if end >= limit:
+            return None
+        value = json_str[start:end]
+
+    next_index = end + 1
+    limit = len(json_str)
+    while next_index < limit and self.json_str[next_index].isspace():
+        next_index += 1
+    next_char = self.json_str[next_index] if next_index < limit else None
+
+    current_context = self.context.current
+    if current_context == ContextValues.OBJECT_KEY:
+        if next_char != ":":
+            return None
+    elif current_context == ContextValues.OBJECT_VALUE:
+        if next_char not in {",", "}", None}:
+            return None
+    elif current_context == ContextValues.ARRAY:
+        if next_char not in {",", "]", None}:
+            return None
+    elif next_char is not None:
+        return None
+
+    self.index = end + 1
+    return value
+
+
 def parse_string(self: "JSONParser") -> JSONReturnType:
     # Utility function to append a character to the accumulator and update the index
     def _append_literal_char(acc: str, current_char: str) -> tuple[str, str | None]:
@@ -37,6 +87,12 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
     if not char:
         # This is an empty string
         return ""
+
+    # Most benchmark strings are ordinary quoted values; keep a narrow fast path for them
+    # and let the slower repair logic handle anything ambiguous or escaped.
+    fast_path_value = _try_parse_simple_quoted_string(self)
+    if fast_path_value is not None:
+        return fast_path_value
 
     # Ensuring we use the right delimiter
     if char == "'":
