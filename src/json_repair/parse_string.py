@@ -531,8 +531,9 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
     else:
         self.index += 1
 
-    if not self.stream_stable and (missing_quotes or (string_acc and string_acc[-1] == "\n")):
-        # Clean the whitespaces for some corner cases
+    if not self.stream_stable and (missing_quotes or (string_acc and string_acc[-1] == "\n" and string_acc.strip())):
+        # Clean the whitespaces for some corner cases, but only when the string has non-whitespace content
+        # (whitespace-only strings like "\n" or " " are valid JSON string values and must be preserved)
         string_acc = string_acc.rstrip()
 
     return string_acc

@@ -81,6 +81,18 @@ def test_escaping():
     assert repair_json('{\'key\': "{\\"key\\": 1, \\"key2\\": 1}"}') == '{"key": "{\\"key\\": 1, \\"key2\\": 1}"}'
 
 
+def test_whitespace_only_strings():
+    # Whitespace-only string values must be preserved as-is (valid JSON content)
+    assert repair_json('{"test": "\n"}') == '{"test": "\\n"}'
+    assert repair_json('{"test": "\t"}') == '{"test": "\\t"}'
+    assert repair_json('{"test": " "}') == '{"test": " "}'
+    assert repair_json('{"test": "  \n\t  "}') == '{"test": "  \\n\\t  "}'
+    # Mixed content with leading/trailing whitespace must also be preserved
+    assert repair_json('{"test": "\n-"}') == '{"test": "\\n-"}'
+    # Keys with trailing newlines are still repaired (stripped) as before
+    assert repair_json('{"key_1\n": "value"}') == '{"key_1": "value"}'
+
+
 def test_markdown():
     assert (
         repair_json('{ "content": "[LINK]("https://google.com")" }')
