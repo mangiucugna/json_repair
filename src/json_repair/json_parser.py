@@ -84,7 +84,7 @@ class JSONParser:
         # may not be desirable in some use cases and the user would prefer json_repair to return an exception.
         # So strict mode was added to disable some of those heuristics.
         self.strict = strict
-        # When True (default), trailing whitespace is stripped from string values (existing behaviour).
+        # When True (default), trailing whitespace is stripped from string values.
         # Set to False to preserve whitespace in string values.
         # Keys are always stripped regardless of this setting.
         self.remove_string_whitespace = remove_string_whitespace
