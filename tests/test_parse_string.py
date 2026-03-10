@@ -81,6 +81,35 @@ def test_escaping():
     assert repair_json('{\'key\': "{\\"key\\": 1, \\"key2\\": 1}"}') == '{"key": "{\\"key\\": 1, \\"key2\\": 1}"}'
 
 
+def test_whitespace_only_strings():
+    # By default trailing whitespace in values is stripped
+    assert repair_json('{"test": "\n"}') == '{"test": ""}'
+    assert repair_json('{"test": "hello\n"}') == '{"test": "hello"}'
+    # With remove_string_whitespace=False, whitespace-only string values are preserved
+    assert repair_json('{"test": "\n"}', remove_string_whitespace=False) == '{"test": "\\n"}'
+    assert repair_json('{"test": "\t"}', remove_string_whitespace=False) == '{"test": "\\t"}'
+    assert repair_json('{"test": " "}', remove_string_whitespace=False) == '{"test": " "}'
+    assert repair_json('{"test": "  \n\t  "}', remove_string_whitespace=False) == '{"test": "  \\n\\t  "}'
+    # Mixed content with leading/trailing whitespace is also preserved when opting out
+    assert repair_json('{"test": "\n-"}', remove_string_whitespace=False) == '{"test": "\\n-"}'
+    # Keys with trailing newlines are always stripped regardless of the parameter
+    assert repair_json('{"key_1\n": "value"}') == '{"key_1": "value"}'
+    assert repair_json('{"key_1\n": "value"}', remove_string_whitespace=False) == '{"key_1": "value"}'
+
+
+def test_remove_string_whitespace():
+    # remove_string_whitespace=True (default) strips trailing whitespace from values
+    assert repair_json('{"test": "\n"}', remove_string_whitespace=True) == '{"test": ""}'
+    assert repair_json('{"test": "hello\n"}', remove_string_whitespace=True) == '{"test": "hello"}'
+    # A value that ends with \n (after other whitespace) is also stripped
+    assert repair_json('{"test": "hello \n"}', remove_string_whitespace=True) == '{"test": "hello"}'
+    # Values not ending with \n are unaffected (stripping only applies to a trailing newline)
+    assert repair_json('{"test": "  \n\t  "}', remove_string_whitespace=True) == '{"test": "  \\n\\t  "}'
+    # remove_string_whitespace=False preserves trailing whitespace in values
+    assert repair_json('{"test": "\n"}', remove_string_whitespace=False) == '{"test": "\\n"}'
+    assert repair_json('{"test": "hello\n"}', remove_string_whitespace=False) == '{"test": "hello\\n"}'
+
+
 def test_markdown():
     assert (
         repair_json('{ "content": "[LINK]("https://google.com")" }')
@@ -145,8 +174,18 @@ def test_string_json_llm_block():
 
 def test_parse_string_logs_invalid_code_fences():
     repaired, logs = repair_json('{"key": "```json nope\\n"}', skip_json_loads=True, return_objects=True, logging=True)
+    # By default trailing \n is stripped (remove_string_whitespace=True)
     assert repaired == {"key": "```json nope"}
     assert any("did not enclose valid JSON" in log["text"] for log in logs)
+    # With remove_string_whitespace=False the trailing \n is preserved
+    repaired_kept, _ = repair_json(
+        '{"key": "```json nope\\n"}',
+        skip_json_loads=True,
+        return_objects=True,
+        logging=True,
+        remove_string_whitespace=False,
+    )
+    assert repaired_kept == {"key": "```json nope\n"}
 
 
 def test_parse_boolean_or_null():
