@@ -48,7 +48,7 @@ class JSONParser:
         json_fd_chunk_length: int = 0,
         stream_stable: bool = False,
         strict: bool = False,
-        remove_string_whitespace: bool = False,
+        remove_string_whitespace: bool = True,
     ) -> None:
         # The string to parse
         self.json_str: str | StringFileWrapper = json_str
@@ -84,7 +84,8 @@ class JSONParser:
         # may not be desirable in some use cases and the user would prefer json_repair to return an exception.
         # So strict mode was added to disable some of those heuristics.
         self.strict = strict
-        # When True, trailing whitespace is stripped from string values (restores pre-fix behaviour).
+        # When True (default), trailing whitespace is stripped from string values (existing behaviour).
+        # Set to False to preserve whitespace in string values.
         # Keys are always stripped regardless of this setting.
         self.remove_string_whitespace = remove_string_whitespace
         self.schema_repairer: SchemaRepairer | None = None

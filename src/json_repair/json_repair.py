@@ -45,7 +45,7 @@ def repair_json(
     strict: bool = False,
     schema: Any | None = None,
     schema_repair_mode: Literal["standard", "salvage"] = "standard",
-    remove_string_whitespace: bool = False,
+    remove_string_whitespace: bool = True,
     **json_dumps_args: Any,
 ) -> tuple[JSONReturnType, list[dict[str, str]]]: ...
 
@@ -62,7 +62,7 @@ def repair_json(
     strict: bool = False,
     schema: Any | None = None,
     schema_repair_mode: Literal["standard", "salvage"] = "standard",
-    remove_string_whitespace: bool = False,
+    remove_string_whitespace: bool = True,
     **json_dumps_args: Any,
 ) -> str: ...
 
@@ -79,7 +79,7 @@ def repair_json(
     strict: bool = False,
     schema: Any | None = None,
     schema_repair_mode: Literal["standard", "salvage"] = "standard",
-    remove_string_whitespace: bool = False,
+    remove_string_whitespace: bool = True,
     **json_dumps_args: Any,
 ) -> JSONReturnType: ...
 
@@ -96,7 +96,7 @@ def repair_json(
     strict: bool = False,
     schema: Any | None = None,
     schema_repair_mode: Literal["standard", "salvage"] = "standard",
-    remove_string_whitespace: bool = False,
+    remove_string_whitespace: bool = True,
     **json_dumps_args: Any,
 ) -> str | JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]: ...
 
@@ -112,7 +112,7 @@ def repair_json(
     strict: bool = False,
     schema: Any | None = None,
     schema_repair_mode: Literal["standard", "salvage"] = "standard",
-    remove_string_whitespace: bool = False,
+    remove_string_whitespace: bool = True,
     **json_dumps_args: Any,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
     """
@@ -130,7 +130,7 @@ def repair_json(
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
         schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs and validation for both valid and invalid JSON inputs.
         schema_repair_mode (Literal["standard", "salvage"], optional): Schema repair mode. "standard" keeps default schema behavior; "salvage" enables best-effort schema salvage heuristics for arrays/objects.
-        remove_string_whitespace (bool, optional): If True, trailing whitespace is stripped from string values (restores the pre-0.8 behaviour). Object keys are always stripped regardless of this setting. Defaults to False.
+        remove_string_whitespace (bool, optional): If True (default), trailing whitespace is stripped from string values (existing behaviour). Set to False to preserve whitespace in string values. Object keys are always stripped regardless of this setting.
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON or a tuple with the repaired JSON and repair log when logging is True.
     """
@@ -203,7 +203,7 @@ def loads(
     strict: bool = False,
     schema: Any | None = None,
     schema_repair_mode: Literal["standard", "salvage"] = "standard",
-    remove_string_whitespace: bool = False,
+    remove_string_whitespace: bool = True,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]] | str:
     """
     This function works like `json.loads()` except that it will fix your JSON in the process.
@@ -216,7 +216,7 @@ def loads(
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
         schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs and validation for both valid and invalid JSON inputs.
         schema_repair_mode (Literal["standard", "salvage"], optional): Schema repair mode. "salvage" requires schema.
-        remove_string_whitespace (bool, optional): If True, trailing whitespace is stripped from string values. Keys are always stripped. Defaults to False.
+        remove_string_whitespace (bool, optional): If True (default), trailing whitespace is stripped from string values. Set to False to preserve whitespace in string values. Keys are always stripped.
 
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]], str]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
@@ -242,7 +242,7 @@ def load(
     strict: bool = False,
     schema: Any | None = None,
     schema_repair_mode: Literal["standard", "salvage"] = "standard",
-    remove_string_whitespace: bool = False,
+    remove_string_whitespace: bool = True,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
     """
     This function works like `json.load()` except that it will fix your JSON in the process.
@@ -256,7 +256,7 @@ def load(
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
         schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs and validation for both valid and invalid JSON inputs.
         schema_repair_mode (Literal["standard", "salvage"], optional): Schema repair mode. "salvage" requires schema.
-        remove_string_whitespace (bool, optional): If True, trailing whitespace is stripped from string values. Keys are always stripped. Defaults to False.
+        remove_string_whitespace (bool, optional): If True (default), trailing whitespace is stripped from string values. Set to False to preserve whitespace in string values. Keys are always stripped.
 
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
@@ -282,7 +282,7 @@ def from_file(
     strict: bool = False,
     schema: Any | None = None,
     schema_repair_mode: Literal["standard", "salvage"] = "standard",
-    remove_string_whitespace: bool = False,
+    remove_string_whitespace: bool = True,
 ) -> JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]:
     """
     This function is a wrapper around `load()` so you can pass the filename as string
@@ -295,7 +295,7 @@ def from_file(
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
         schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs and validation for both valid and invalid JSON inputs.
         schema_repair_mode (Literal["standard", "salvage"], optional): Schema repair mode. "salvage" requires schema.
-        remove_string_whitespace (bool, optional): If True, trailing whitespace is stripped from string values. Keys are always stripped. Defaults to False.
+        remove_string_whitespace (bool, optional): If True (default), trailing whitespace is stripped from string values. Set to False to preserve whitespace in string values. Keys are always stripped.
 
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
@@ -328,7 +328,7 @@ def cli(inline_args: list[str] | None = None) -> int:
             - --schema SCHEMA (str): Path to a JSON Schema file that guides repairs.
             - --schema-model MODEL (str): Pydantic v2 model in 'module:ClassName' form that guides repairs.
             - --strict (bool): Raise on duplicate keys, missing separators, empty keys/values, and other unrecoverable structures instead of repairing them.
-            - --remove-string-whitespace (bool): Strip trailing whitespace from string values (restores pre-fix behaviour). Keys are always stripped regardless of this flag.
+            - --keep-string-whitespace (bool): Preserve trailing whitespace in string values instead of stripping it. Keys are always stripped regardless of this flag.
 
     Returns:
         int: Exit code of the CLI operation.
@@ -397,9 +397,10 @@ def cli(inline_args: list[str] | None = None) -> int:
         help="Schema repair mode: 'standard' (default) or 'salvage' (best-effort array/object salvage).",
     )
     parser.add_argument(
-        "--remove-string-whitespace",
-        action="store_true",
-        help="Strip trailing whitespace from string values (restores pre-fix behaviour). Keys are always stripped.",
+        "--keep-string-whitespace",
+        action="store_false",
+        dest="remove_string_whitespace",
+        help="Preserve trailing whitespace in string values instead of stripping it. Keys are always stripped.",
     )
 
     args = parser.parse_args(inline_args)
