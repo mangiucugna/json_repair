@@ -178,7 +178,13 @@ def test_parse_string_logs_invalid_code_fences():
     assert repaired == {"key": "```json nope"}
     assert any("did not enclose valid JSON" in log["text"] for log in logs)
     # With remove_string_whitespace=False the trailing \n is preserved
-    repaired_kept, _ = repair_json('{"key": "```json nope\\n"}', skip_json_loads=True, return_objects=True, logging=True, remove_string_whitespace=False)
+    repaired_kept, _ = repair_json(
+        '{"key": "```json nope\\n"}',
+        skip_json_loads=True,
+        return_objects=True,
+        logging=True,
+        remove_string_whitespace=False,
+    )
     assert repaired_kept == {"key": "```json nope\n"}
 
 
