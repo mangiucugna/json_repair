@@ -82,7 +82,7 @@ def test_escaping():
 
 
 def test_whitespace_only_strings():
-    # By default trailing whitespace in values is stripped (existing behaviour)
+    # By default trailing whitespace in values is stripped
     assert repair_json('{"test": "\n"}') == '{"test": ""}'
     assert repair_json('{"test": "hello\n"}') == '{"test": "hello"}'
     # With remove_string_whitespace=False, whitespace-only string values are preserved
@@ -174,7 +174,7 @@ def test_string_json_llm_block():
 
 def test_parse_string_logs_invalid_code_fences():
     repaired, logs = repair_json('{"key": "```json nope\\n"}', skip_json_loads=True, return_objects=True, logging=True)
-    # By default trailing \n is stripped (existing behaviour, remove_string_whitespace=True)
+    # By default trailing \n is stripped (remove_string_whitespace=True)
     assert repaired == {"key": "```json nope"}
     assert any("did not enclose valid JSON" in log["text"] for log in logs)
     # With remove_string_whitespace=False the trailing \n is preserved
