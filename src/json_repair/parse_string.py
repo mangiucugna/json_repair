@@ -521,20 +521,27 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
 
     # A fallout of the previous special case in the while loop,
     # we need to update the index only if we had a closing quote
+    is_key = self.context.current == ContextValues.OBJECT_KEY
     if char != rstring_delimiter:
         # if stream_stable = True, unclosed strings do not trim trailing whitespace characters
         if not self.stream_stable:
             self.log(
                 "While parsing a string, we missed the closing quote, ignoring",
             )
+            # A missing closing quote means the JSON is malformed; always strip trailing whitespace.
             string_acc = string_acc.rstrip()
     else:
         self.index += 1
 
-    if not self.stream_stable and (missing_quotes or (string_acc and string_acc[-1] == "\n" and string_acc.strip())):
-        # Clean the whitespaces for some corner cases, but only when the string has non-whitespace content
-        # (whitespace-only strings like "\n" or " " are valid JSON string values and must be preserved)
-        string_acc = string_acc.rstrip()
+    if not self.stream_stable:
+        # Unquoted strings (missing_quotes) always have their trailing whitespace stripped —
+        # it is structural (separating JSON tokens), not intended content.
+        should_strip_unquoted = missing_quotes
+        # Properly-closed quoted strings: strip trailing \n only for keys (always) or for values
+        # when the caller opts in via remove_string_whitespace.
+        should_strip_quoted = (is_key or self.remove_string_whitespace) and bool(string_acc) and string_acc[-1] == "\n"
+        if should_strip_unquoted or should_strip_quoted:
+            string_acc = string_acc.rstrip()
 
     return string_acc
 
