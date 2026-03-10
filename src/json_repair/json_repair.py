@@ -130,7 +130,7 @@ def repair_json(
         strict (bool, optional): If True, surface structural problems (duplicate keys, missing separators, empty keys/values, etc.) as ValueError instead of repairing them.
         schema (Any, optional): JSON Schema dict, boolean schema, or pydantic v2 model used to guide repairs and validation for both valid and invalid JSON inputs.
         schema_repair_mode (Literal["standard", "salvage"], optional): Schema repair mode. "standard" keeps default schema behavior; "salvage" enables best-effort schema salvage heuristics for arrays/objects.
-        remove_string_whitespace (bool, optional): If True (default), trailing whitespace is stripped from string values (existing behaviour). Set to False to preserve whitespace in string values. Object keys are always stripped regardless of this setting.
+        remove_string_whitespace (bool, optional): If True (default), trailing whitespace is stripped from string values. Set to False to preserve whitespace in string values. Object keys are always stripped regardless of this setting.
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON or a tuple with the repaired JSON and repair log when logging is True.
     """
