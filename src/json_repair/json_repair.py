@@ -38,7 +38,7 @@ def repair_json(
     json_str: str = "",
     return_objects: bool = False,
     skip_json_loads: bool = False,
-    logging: Literal[True] = True,
+    logging: Literal[True] = ...,
     json_fd: TextIO | None = None,
     chunk_length: int = 0,
     stream_stable: bool = False,
@@ -68,7 +68,7 @@ def repair_json(
 @overload
 def repair_json(
     json_str: str = "",
-    return_objects: Literal[True] = True,
+    return_objects: Literal[True] = ...,
     skip_json_loads: bool = False,
     logging: Literal[False] = False,
     json_fd: TextIO | None = None,
