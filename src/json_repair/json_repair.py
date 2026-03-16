@@ -36,22 +36,6 @@ from .utils.constants import JSONReturnType
 @overload
 def repair_json(
     json_str: str = "",
-    return_objects: bool = False,
-    skip_json_loads: bool = False,
-    logging: Literal[True] = True,
-    json_fd: TextIO | None = None,
-    chunk_length: int = 0,
-    stream_stable: bool = False,
-    strict: bool = False,
-    schema: Any | None = None,
-    schema_repair_mode: Literal["standard", "salvage"] = "standard",
-    **json_dumps_args: Any,
-) -> tuple[JSONReturnType, list[dict[str, str]]]: ...
-
-
-@overload
-def repair_json(
-    json_str: str = "",
     return_objects: Literal[False] = False,
     skip_json_loads: bool = False,
     logging: Literal[False] = False,
@@ -79,6 +63,22 @@ def repair_json(
     schema_repair_mode: Literal["standard", "salvage"] = "standard",
     **json_dumps_args: Any,
 ) -> JSONReturnType: ...
+
+
+@overload
+def repair_json(
+    json_str: str = "",
+    return_objects: bool = False,
+    skip_json_loads: bool = False,
+    logging: Literal[True] = True,
+    json_fd: TextIO | None = None,
+    chunk_length: int = 0,
+    stream_stable: bool = False,
+    strict: bool = False,
+    schema: Any | None = None,
+    schema_repair_mode: Literal["standard", "salvage"] = "standard",
+    **json_dumps_args: Any,
+) -> tuple[JSONReturnType, list[dict[str, str]]]: ...
 
 
 @overload

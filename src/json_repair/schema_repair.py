@@ -464,7 +464,13 @@ class SchemaRepairer:
         if not isinstance(properties, dict) or not properties:
             return None
 
-        keys = list(properties.keys())
+        typed_properties: dict[str, Any] = {}
+        for key, prop_schema in properties.items():
+            if not isinstance(key, str):
+                raise SchemaDefinitionError("Schema object property names must be strings.")
+            typed_properties[key] = prop_schema
+
+        keys = list(typed_properties.keys())
         if len(value) != len(keys):
             return None
 
@@ -472,7 +478,7 @@ class SchemaRepairer:
         for idx, key in enumerate(keys):
             key_path = f"{path}.{key}"
             try:
-                mapped[key] = self.repair_value(value[idx], properties[key], key_path)
+                mapped[key] = self.repair_value(value[idx], typed_properties[key], key_path)
             except SchemaDefinitionError:
                 raise
             except ValueError:
