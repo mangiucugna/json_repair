@@ -390,6 +390,8 @@ def test_repair_object_and_array_paths():
         )
     with pytest.raises(ValueError, match="Unsupported schema type bogus"):
         salvage_repairer._map_list_to_object([1], {"type": "object", "properties": {"a": {"type": "bogus"}}}, "$")
+    with pytest.raises(ValueError, match="property names must be strings"):
+        salvage_repairer._map_list_to_object([1], {"type": "object", "properties": {1: {"type": "integer"}}}, "$")
 
 
 def test_fill_missing_and_coerce_scalar_paths():
