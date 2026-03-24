@@ -89,7 +89,19 @@ Some users of this library adopt the following pattern:
         obj = json_repair.loads(string)
         ...
 
-This is wasteful because `json_repair` will already verify for you if the JSON is valid, if you still want to do that then add `skip_json_loads=True` to the call as explained the section below.
+This is wasteful because `json_repair` already does that strict `json.loads()` check for you by default. The normal flow is:
+
+- try the built-in `json.loads()` / `json.load()` first
+- if that succeeds, return the decoded object
+- if that fails, run the repair parser
+
+Use the default call unless you explicitly want to skip that initial validation step:
+
+```python
+import json_repair
+
+decoded_object = json_repair.loads(json_string)
+```
 
 ### Read json from a file or file descriptor
 
@@ -143,18 +155,59 @@ will return
 More in general, `repair_json` will accept all parameters that `json.dumps` accepts and just pass them through (for example indent)
 
 ### Performance considerations
-If you find this library too slow because is using `json.loads()` you can skip that by passing `skip_json_loads=True` to `repair_json`. Like:
+By default, `json_repair` first tries the standard-library JSON loader and only falls back to the repair parser when strict JSON parsing fails.
+
+If you already know the input is invalid JSON and want to skip that initial validation step, pass `skip_json_loads=True`:
 
     from json_repair import repair_json
 
     good_json_string = repair_json(bad_json_string, skip_json_loads=True)
 
-I made a choice of not using any fast json library to avoid having any external dependency, so that anybody can use it regardless of their stack.
+This is an explicit tradeoff:
+
+- default behavior: validate with stdlib JSON first, then repair only if needed
+- `skip_json_loads=True`: skip the validation fast path and go straight to the repair parser
+
+`json_repair` intentionally keeps the validation path on the standard library. It does not auto-detect or auto-use third-party JSON libraries, which keeps behavior predictable and avoids extra overhead on the common path.
 
 Some rules of thumb to use:
 - Setting `return_objects=True` will always be faster because the parser returns an object already and it doesn't have serialize that object to JSON
-- `skip_json_loads` is faster only if you 100% know that the string is not a valid JSON
+- `skip_json_loads=True` is faster only if you 100% know that the string is not a valid JSON
 - If you are having issues with escaping pass the string as **raw** string like: `r"string with escaping\""`
+
+### When to use your own JSON library
+
+If you want non-stdlib JSON semantics or a different performance profile, use your preferred JSON library yourself instead of expecting `json_repair` to switch parsers automatically. `orjson` is a common example people ask about, and the same pattern applies to any other JSON library.
+
+Recommended patterns:
+
+Strict JSON first, repair only if needed:
+
+```python
+import json_repair
+
+decoded_object = json_repair.loads(json_string)
+```
+
+Known-bad input, so skip the validation step:
+
+```python
+from json_repair import repair_json
+
+decoded_object = repair_json(bad_json_string, return_objects=True, skip_json_loads=True)
+```
+
+`orjson` first, `json_repair` only as a fallback:
+
+```python
+import json_repair
+import orjson
+
+try:
+    decoded_object = orjson.loads(json_string)
+except orjson.JSONDecodeError:
+    decoded_object = json_repair.loads(json_string, skip_json_loads=True)
+```
 
 ### Strict mode
 

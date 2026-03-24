@@ -69,7 +69,23 @@ decoded_object = json_repair.repair_json(json_string, return_objects=True)
 ```
 
 ### 避免反模式
-不需要先 `json.loads()` 失败再调用 json_repair；如果确定输入损坏，直接传 `skip_json_loads=True`：
+有些用户会先手动调用一次 `json.loads()`，失败后再回退到 `json_repair`。这通常是重复工作，因为 `json_repair` 默认就会先做一次严格的 `json.loads()` / `json.load()` 检查。它的正常流程是：
+
+- 先尝试标准库 `json.loads()` / `json.load()`
+- 如果成功，直接返回解析结果
+- 如果失败，再进入修复解析器
+
+默认推荐直接这样调用：
+
+```python
+import json_repair
+
+obj = json_repair.loads(json_string)
+```
+
+只有在你明确想跳过这一步验证时，才使用 `skip_json_loads=True`。
+
+如果确定输入损坏，直接传 `skip_json_loads=True`：
 ```python
 obj = repair_json(bad_json_string, skip_json_loads=True)
 ```
@@ -94,10 +110,52 @@ repair_json("{'test_chinese_ascii':'统一码'}", ensure_ascii=False)
 `repair_json` 支持并透传 `json.dumps` 的参数（如 `indent`）。
 
 ### 性能提示
+- 默认情况下，`json_repair` 会先尝试标准库 JSON 解析，只有严格解析失败时才会进入修复解析器。
+- 如果你已经确定输入不是有效 JSON，可以传 `skip_json_loads=True`，直接跳过这一步验证。
 - `return_objects=True` 更快，因为直接返回对象。
-- 只有在确定输入不是有效 JSON 时才用 `skip_json_loads=True`。
+- `skip_json_loads=True` 只适合你 100% 确定输入不是有效 JSON 的场景。
 - 如有转义问题，传入原始字符串（如 `r"string with escaping\""`）。
-- 不依赖第三方加速库，便于在任意环境使用。
+
+这是一个明确的取舍：
+
+- 默认行为：先走标准库 JSON 校验路径，失败后再修复
+- `skip_json_loads=True`：直接跳过校验路径，进入修复解析器
+
+`json_repair` 故意保持标准库 JSON 作为默认验证路径，不会自动探测或切换到第三方 JSON 库。这样可以避免常见路径上的额外开销，也能让行为更可预测。
+
+### 什么时候自己使用其他 JSON 库
+
+如果你需要标准库之外的 JSON 语义，或者想自己控制性能取舍，请显式使用你偏好的 JSON 库，而不是期待 `json_repair` 自动切换解析器。很多人会问到 `orjson`，它也是同样的用法。
+
+推荐模式：
+
+严格 JSON 优先，只有失败时才修复：
+
+```python
+import json_repair
+
+obj = json_repair.loads(json_string)
+```
+
+已知输入损坏，直接跳过验证：
+
+```python
+from json_repair import repair_json
+
+obj = repair_json(bad_json_string, return_objects=True, skip_json_loads=True)
+```
+
+先用 `orjson`，失败后再回退到 `json_repair`：
+
+```python
+import json_repair
+import orjson
+
+try:
+    obj = orjson.loads(json_string)
+except orjson.JSONDecodeError:
+    obj = json_repair.loads(json_string, skip_json_loads=True)
+```
 
 ### 严格模式
 默认尽量修复；若需要严格校验而非修复，可传 `strict=True`：
