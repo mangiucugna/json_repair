@@ -36,6 +36,11 @@ def test_strict_rejects_empty_object_with_extra_characters():
         repair_json('{"dangling"}', strict=True)
 
 
+def test_strict_rejects_empty_escaped_object_with_extra_characters():
+    with pytest.raises(ValueError, match="Parsed object is empty"):
+        repair_json('{\\"key\\": \\"value\\"}', strict=True, skip_json_loads=True)
+
+
 def test_strict_detects_immediate_doubled_quotes():
     with pytest.raises(ValueError, match=r"doubled quotes followed by another quote\.$"):
         repair_json('{"key": """"}', strict=True)

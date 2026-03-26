@@ -98,6 +98,40 @@ def test_parse_object_edge_cases():
         == '{"key": [{"a": {"duplicated_key": "duplicated_value"}}]}'
     )
     assert repair_json('[{"b":"v2","b":"v2"}]', return_objects=True, skip_json_loads=True) == [{"b": "v2"}]
+    assert repair_json("{'item1', 'item2', 'item3'}", return_objects=True, skip_json_loads=True) == [
+        "item1",
+        "item2",
+        "item3",
+    ]
+
+
+def test_parse_object_preserves_backslash_escaped_keys():
+    raw = '{\\"key\\": \\"value\\"}'
+
+    repaired, logs = repair_json(raw, return_objects=True, skip_json_loads=True, logging=True)
+
+    assert repaired == {"key": "value"}
+    assert any("reparsing it as an object" in entry["text"] for entry in logs)
+    assert repair_json(raw, skip_json_loads=True) == '{"key": "value"}'
+
+
+def test_parse_object_empty_object_classifier_keeps_objectish_inputs():
+    repaired, logs = repair_json("{:}", return_objects=True, skip_json_loads=True, logging=True)
+
+    assert repaired == {}
+    assert any("object-style separator" in entry["text"] for entry in logs)
+
+    repaired, logs = repair_json("{   }", return_objects=True, skip_json_loads=True, logging=True)
+
+    assert repaired == {}
+    assert logs == []
+
+
+def test_parse_object_empty_object_classifier_keeps_array_fallback_for_backslash_noise():
+    repaired, logs = repair_json(r"{foo\bar}", return_objects=True, skip_json_loads=True, logging=True)
+
+    assert isinstance(repaired, list)
+    assert any("try to parse this as an array instead" in entry["text"] for entry in logs)
 
 
 def test_parse_object_merge_at_the_end():

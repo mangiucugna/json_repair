@@ -274,6 +274,93 @@ def test_schema_salvage_mode_maps_list_to_object_when_unambiguous():
     ) == {"name": "hello", "tags": ["a", "b"]}
 
 
+def test_schema_salvage_mode_maps_set_like_object_members_to_null_valued_keys():
+    pytest.importorskip("jsonschema")
+    schema = {"type": "object"}
+    raw = '{"a", "b"}'
+
+    with pytest.raises(ValueError, match="Expected object"):
+        repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True, schema_repair_mode="standard")
+
+    assert repair_json(
+        raw,
+        schema=schema,
+        skip_json_loads=True,
+        return_objects=True,
+        schema_repair_mode="salvage",
+    ) == {"a": None, "b": None}
+    assert (
+        repair_json(
+            raw,
+            schema=schema,
+            skip_json_loads=True,
+            schema_repair_mode="salvage",
+        )
+        == '{"a": null, "b": null}'
+    )
+
+    repaired_with_logs, logs = cast(
+        "tuple[object, list[dict[str, str]]]",
+        repair_json(
+            raw,
+            schema=schema,
+            skip_json_loads=True,
+            logging=True,
+            schema_repair_mode="salvage",
+        ),
+    )
+    assert repaired_with_logs == {"a": None, "b": None}
+    assert any("set-like members as null-valued object keys" in log["text"] for log in logs)
+
+
+def test_schema_salvage_mode_set_like_members_do_not_override_mixed_object_array_schema():
+    pytest.importorskip("jsonschema")
+    schema = {"type": ["object", "array"], "items": {"type": "string"}}
+    raw = '{"a", "b"}'
+
+    assert repair_json(
+        raw,
+        schema=schema,
+        skip_json_loads=True,
+        return_objects=True,
+        schema_repair_mode="salvage",
+    ) == ["a", "b"]
+
+
+def test_schema_salvage_mode_set_like_members_still_fail_incompatible_object_schema():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {"count": {"type": "integer"}},
+        "required": ["count"],
+    }
+    raw = '{"a", "b"}'
+
+    with pytest.raises(ValueError, match="Missing required properties"):
+        repair_json(
+            raw,
+            schema=schema,
+            skip_json_loads=True,
+            return_objects=True,
+            schema_repair_mode="salvage",
+        )
+
+
+def test_schema_salvage_mode_set_like_members_require_string_keys():
+    pytest.importorskip("jsonschema")
+    schema = {"type": "object"}
+    raw = "{1, 2}"
+
+    with pytest.raises(ValueError, match="Expected object"):
+        repair_json(
+            raw,
+            schema=schema,
+            skip_json_loads=True,
+            return_objects=True,
+            schema_repair_mode="salvage",
+        )
+
+
 def test_schema_salvage_mode_mapping_rejects_length_mismatch():
     pytest.importorskip("jsonschema")
     schema = {

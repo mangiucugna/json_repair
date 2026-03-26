@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from .utils.constants import MISSING_VALUE, STRING_DELIMITERS, JSONReturnType
 from .utils.json_context import ContextValues
@@ -59,6 +59,47 @@ def parse_object(
                 obj[key] = schema_repairer_local._copy_json_value(prop_schema["default"], f"{path}.{key}", "default")
                 schema_repairer_local._log("Inserted default value for missing property", f"{path}.{key}")
         return obj
+
+    def classify_empty_object_repair() -> tuple[str, str | None]:
+        attempted_object = self.json_str[start_index - 1 : self.index + 1]
+        body = attempted_object[1:]
+        body = body.removesuffix("}")
+        body = body.lstrip()
+        if not body:
+            return "keep", None
+        if (body.startswith('\\"') and '\\":' in body) or (body.startswith("\\'") and "\\':" in body):
+            normalized_object = attempted_object.replace('\\"', '"').replace("\\'", "'")
+            self.log(
+                "Parsed object is empty but the input starts like an escaped object key, normalizing and reparsing it as an object",
+            )
+            return "object", normalized_object
+
+        in_quote: str | None = None
+        backslashes = 0
+        for char in body:
+            if char == "\\":
+                backslashes += 1
+                continue
+            if in_quote is not None:
+                if char == in_quote and backslashes % 2 == 0:
+                    in_quote = None
+            elif char in STRING_DELIMITERS and backslashes % 2 == 0:
+                in_quote = char
+            elif char == ":" and backslashes % 2 == 0:
+                self.log(
+                    "Parsed object is empty but the input still contains an object-style separator, keeping object repair",
+                )
+                return "keep", None
+            backslashes = 0
+        if (
+            schema_repairer is not None
+            and schema_repairer.schema_repair_mode == "salvage"
+            and isinstance(schema, dict)
+            and schema_repairer.is_object_schema(schema)
+            and not schema_repairer.is_array_schema(schema)
+        ):
+            return "schema_set_object", None
+        return "array", None
 
     # Stop when you either find the closing parentheses or you have iterated over the entire string
     while (self.get_char_at() or "}") != "}":
@@ -307,9 +348,27 @@ def parse_object(
                 "Parsed object is empty but contains extra characters in strict mode, raising an error",
             )
             raise ValueError("Parsed object is empty but contains extra characters in strict mode.")
-        self.log("Parsed object is empty, we will try to parse this as an array instead")
-        self.index = start_index
-        return self.parse_array()
+        empty_object_repair, normalized_object = classify_empty_object_repair()
+        if empty_object_repair == "object" and normalized_object is not None:
+            end_index = self.index + 1
+            self.json_str = self.json_str[: start_index - 1] + normalized_object + self.json_str[end_index:]
+            self.index = start_index
+            return self.parse_object(schema, path)
+        if empty_object_repair == "schema_set_object":
+            self.log(
+                "Parsed object is empty but salvage schema expects an object, reparsing set-like members as null-valued object keys",
+            )
+            self.index = start_index
+            set_items = self.parse_array()
+            if isinstance(set_items, list):
+                key_candidates: list[str] = [item for item in set_items if isinstance(item, str) and item]
+                if len(key_candidates) == len(set_items):
+                    return cast("JSONReturnType", dict.fromkeys(key_candidates))
+            return set_items
+        if empty_object_repair == "array":
+            self.log("Parsed object is empty, we will try to parse this as an array instead")
+            self.index = start_index
+            return self.parse_array()
 
     # Check if there are more key-value pairs after the closing brace
     # This handles cases like '{"key": "value"}, "key2": "value2"}'

@@ -16,6 +16,16 @@ def parse_object_direct(raw, schema, *, strict=False, context=None):
     return parser.parse_object(schema, "$")
 
 
+def parse_object_direct_with_mode(raw, schema, mode, *, strict=False, context=None):
+    parser = JSONParser(raw, None, False, 0, False, strict)
+    repairer = SchemaRepairer(schema if isinstance(schema, dict) else {}, None, schema_repair_mode=mode)
+    parser.schema_repairer = repairer
+    if context is not None:
+        parser.context.set(context)
+    parser.index = 1
+    return parser.parse_object(schema, "$")
+
+
 def parse_array_direct(raw, schema):
     parser = JSONParser(raw, None, False, 0, False, False)
     repairer = SchemaRepairer(schema if isinstance(schema, dict) else {}, None)
@@ -148,6 +158,11 @@ def test_parse_object_schema_closing_array_bracket_and_extra_brace():
 def test_parse_object_schema_empty_object_falls_back_to_array():
     schema = {"type": "object", "additionalProperties": True}
     assert parse_object_direct("{,,}", schema) == []
+
+
+def test_parse_object_schema_salvage_set_literal_keeps_non_string_members_as_array():
+    schema = {"type": "object"}
+    assert parse_object_direct_with_mode("{1, 2}", schema, "salvage") == [1, 2]
 
 
 def test_parse_array_schema_true_false_and_non_array():
