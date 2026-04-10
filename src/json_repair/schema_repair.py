@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import importlib
-from typing import Any, Literal, cast
+from typing import Any, Literal
 
 from .utils.constants import MISSING_VALUE, JSONReturnType, MissingValueType
 from .utils.pattern_properties import match_pattern_properties
@@ -18,8 +18,10 @@ class SchemaDefinitionError(ValueError):
 def normalize_schema_repair_mode(mode: str | None) -> SchemaRepairMode:
     if mode is None:
         return "standard"
-    if mode in SUPPORTED_SCHEMA_REPAIR_MODES:
-        return cast("SchemaRepairMode", mode)
+    if mode == "standard":
+        return "standard"
+    if mode == "salvage":
+        return "salvage"
     expected = ", ".join(SUPPORTED_SCHEMA_REPAIR_MODES)
     raise ValueError(f"schema_repair_mode must be one of: {expected}.")
 
