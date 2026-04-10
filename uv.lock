@@ -221,10 +221,12 @@ dev = [
     { name = "pytest-benchmark" },
     { name = "ty" },
 ]
-test = [
-    { name = "coverage" },
+schema = [
     { name = "jsonschema" },
     { name = "pydantic" },
+]
+test = [
+    { name = "coverage" },
     { name = "pytest" },
     { name = "pytest-benchmark" },
 ]
@@ -251,10 +253,12 @@ dev = [
     { name = "pytest-benchmark" },
     { name = "ty" },
 ]
-test = [
-    { name = "coverage" },
+schema = [
     { name = "jsonschema" },
     { name = "pydantic" },
+]
+test = [
+    { name = "coverage" },
     { name = "pytest" },
     { name = "pytest-benchmark" },
 ]

@@ -20,7 +20,7 @@ jobs:
         activate-environment: true
 
     - name: Run mypy
-      run: uv run --group typecheck --frozen mypy src/
+      run: uv run --no-default-groups --group typecheck --frozen mypy src/
 
     - name: Run ty
-      run: uv run --group typecheck --frozen ty check src/ tests/
+      run: uv run --no-default-groups --group typecheck --frozen ty check src/ tests/

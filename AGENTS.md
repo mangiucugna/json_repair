@@ -11,12 +11,14 @@
 - `tests/test_performance.py` is timing-sensitive and can fail on slower machines.
 - Keep schema performance coverage in `tests/test_performance.py` for both fast-path (`skip_json_loads=False`) and parser-path (`skip_json_loads=True`) scenarios.
 - The `uv-lock-upgrade` hook can rewrite `uv.lock`, including the local `json-repair` package version, so restage it before committing after version bumps or dependency changes.
+- Keep schema-only dependencies in their own `schema` group; CI jobs that only exercise core parser paths should use `--no-default-groups` and omit `schema` so Python prerelease jobs are not blocked on upstream PyO3 wheels.
 
 ## Release / Packaging
 - Project version lives in `pyproject.toml` under `[project].version`; use semantic versioning, with patch bumps for bug fixes.
 - Keep `MANIFEST.in` pruning `tests` so test modules are not shipped in the sdist.
 - In `[tool.setuptools.package-data]`, use the real package key `json_repair` so `py.typed` stays included reliably.
 - Run `uvx twine check dist/*` after building and before publishing.
+- Gate optional schema dependencies with `python_full_version` markers during new Python prerelease cycles so core installs and non-schema tests can still run before upstream PyO3 wheels are available.
 
 ## Docs
 - Keep `README.zh.md` aligned with `README.md` when contributor guidance or usage behavior changes.

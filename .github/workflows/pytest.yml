@@ -28,7 +28,7 @@ jobs:
         activate-environment: true
 
     - name: Run pytest
-      run: PYTHONPATH=. uv run --group test --frozen coverage run -m pytest
+      run: PYTHONPATH=. uv run --no-default-groups --group test --group schema --frozen coverage run -m pytest
 
     - name: Run coverage
-      run: PYTHONPATH=. uv run --group test --frozen coverage report -m --fail-under=100
+      run: PYTHONPATH=. uv run --no-default-groups --group test --group schema --frozen coverage report -m --fail-under=100

@@ -35,4 +35,4 @@ jobs:
         activate-environment: true
     - name: Test with pytest
       run: |
-        uv run --group test --frozen pytest tests/test_json_repair.py
+        uv run --no-default-groups --group test --frozen pytest tests/test_json_repair.py

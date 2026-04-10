@@ -22,25 +22,24 @@ classifiers = [
 "Bug Tracker" = "https://github.com/mangiucugna/json_repair/issues"
 "Live demo" = "https://mangiucugna.github.io/json_repair/"
 [project.optional-dependencies]
+# Skip Rust-backed schema extras on Python 3.15 prereleases until upstream wheels land.
 schema = [
-  "jsonschema>=4.21",
-  "pydantic>=2",
+  "jsonschema>=4.21; python_full_version < '3.15.0a0' or python_full_version >= '3.15.0'",
+  "pydantic>=2; python_full_version < '3.15.0a0' or python_full_version >= '3.15.0'",
 ]
 [dependency-groups]
 dev = [
-    "coverage",
-    "jsonschema",
-    "mypy",
-    "pydantic",
+    { include-group = "schema" },
+    { include-group = "test" },
+    { include-group = "typecheck" },
     "pre-commit",
-    "pytest",
-    "pytest-benchmark",
-    "ty",
+]
+schema = [
+    "jsonschema",
+    "pydantic",
 ]
 test = [
     "coverage",
-    "jsonschema",
-    "pydantic",
     "pytest",
     "pytest-benchmark",
 ]
