@@ -13,6 +13,7 @@ def parse_array(
     self: "JSONParser",
     schema: dict[str, Any] | bool | None = None,
     path: str = "$",
+    closing_delimiter: str = "]",
 ) -> list[JSONReturnType]:
     # <array> ::= '[' [ <json> *(', ' <json>) ] ']' ; A sequence of JSON values separated by commas
     # Only activate schema-guided parsing if a repairer is available and schema looks array-like.
@@ -36,7 +37,7 @@ def parse_array(
     self.skip_whitespaces()
     char = self.get_char_at()
     idx = 0
-    while char and char not in ["]", "}"]:
+    while char and char not in [closing_delimiter, "}"]:
         # Resolve per-item schema (tuple schemas + additionalItems) when schema guidance is active.
         item_schema: dict[str, Any] | bool | None = None
         drop_item = False
@@ -87,7 +88,7 @@ def parse_array(
             # Use schema-aware parsing to guide nested repairs when configured.
             value = self.parse_json(item_schema, item_path) if active_schema_repairer is not None else self.parse_json()
 
-        if ObjectComparer.is_strictly_empty(value) and self.get_char_at() not in ["]", ","]:
+        if ObjectComparer.is_strictly_empty(value) and self.get_char_at() not in [closing_delimiter, ","]:
             self.index += 1
         elif value == "..." and self.get_char_at(-1) == ".":
             self.log(
@@ -101,13 +102,13 @@ def parse_array(
 
         idx += 1
         char = self.get_char_at()
-        while char and char != "]" and (char.isspace() or char == ","):
+        while char and char != closing_delimiter and (char.isspace() or char == ","):
             self.index += 1
             char = self.get_char_at()
 
-    if char != "]":
+    if char != closing_delimiter:
         self.log(
-            "While parsing an array we missed the closing ], ignoring it",
+            f"While parsing an array we missed the closing {closing_delimiter}, ignoring it",
         )
 
     self.index += 1

@@ -21,8 +21,9 @@ class JSONParser:
         self,
         schema: dict[str, Any] | bool | None = None,
         path: str = "$",
+        closing_delimiter: str = "]",
     ) -> list[JSONReturnType]:
-        return _parse_array(self, schema, path)
+        return _parse_array(self, schema, path, closing_delimiter)
 
     def parse_comment(self) -> JSONReturnType:
         return _parse_comment(self)
@@ -163,6 +164,10 @@ class JSONParser:
                 self.index += 1
                 value = self.parse_array(schema, path) if repairer else self.parse_array()
                 return repairer.repair_value(value, schema, path) if repairer else value
+            # Python tuple literals and grouped values start with '('
+            if char == "(":
+                value = self.parse_parenthesized(schema, path) if repairer else self.parse_parenthesized()
+                return repairer.repair_value(value, schema, path) if repairer else value
             # <string> starts with a quote
             if not self.context.empty and (char in STRING_DELIMITERS or char.isalpha()):
                 value = self.parse_string()
@@ -237,6 +242,90 @@ class JSONParser:
 
         # not found; return distance to end
         return n - self.index
+
+    def parenthesized_is_explicit_tuple(self) -> bool:
+        """
+        Return True when the current '(' starts an explicit Python tuple literal.
+
+        Empty parentheses count as a tuple. A single grouped value like ``(1)`` does not.
+        """
+        i = self.index + 1
+        n = len(self.json_str)
+        nested_parentheses = 0
+        square_brackets = 0
+        braces = 0
+        in_quote: str | None = None
+        backslashes = 0
+        saw_top_level_content = False
+
+        while i < n:
+            ch = self.json_str[i]
+
+            if ch == "\\":
+                backslashes += 1
+                i += 1
+                continue
+
+            if in_quote is not None:
+                if ch == in_quote and backslashes % 2 == 0:
+                    in_quote = None
+                backslashes = 0
+                i += 1
+                continue
+
+            if ch in STRING_DELIMITERS and backslashes % 2 == 0:
+                in_quote = ch
+                saw_top_level_content = saw_top_level_content or (
+                    nested_parentheses == 0 and square_brackets == 0 and braces == 0
+                )
+                backslashes = 0
+                i += 1
+                continue
+
+            backslashes = 0
+
+            if (
+                not ch.isspace()
+                and ch not in [",", ")"]
+                and nested_parentheses == 0
+                and square_brackets == 0
+                and braces == 0
+            ):
+                saw_top_level_content = True
+
+            if ch == "(":
+                nested_parentheses += 1
+            elif ch == ")":
+                if nested_parentheses == 0 and square_brackets == 0 and braces == 0:
+                    return not saw_top_level_content
+                if nested_parentheses > 0:
+                    nested_parentheses -= 1
+            elif ch == "[":
+                square_brackets += 1
+            elif ch == "]" and square_brackets > 0:
+                square_brackets -= 1
+            elif ch == "{":
+                braces += 1
+            elif ch == "}" and braces > 0:
+                braces -= 1
+            elif ch == "," and nested_parentheses == 0 and square_brackets == 0 and braces == 0:
+                return True
+
+            i += 1
+
+        return not saw_top_level_content
+
+    def parse_parenthesized(
+        self,
+        schema: dict[str, Any] | bool | None = None,
+        path: str = "$",
+    ) -> JSONReturnType:
+        explicit_tuple = self.parenthesized_is_explicit_tuple()
+        self.index += 1
+        values = self.parse_array(schema, path, closing_delimiter=")")
+        if explicit_tuple or len(values) != 1:
+            return values
+        return values[0]
 
     def _log(self, text: str) -> None:
         window: int = 10

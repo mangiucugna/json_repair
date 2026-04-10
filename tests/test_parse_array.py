@@ -1,3 +1,4 @@
+from src.json_repair.json_parser import JSONParser
 from src.json_repair.json_repair import repair_json
 
 
@@ -47,6 +48,35 @@ def test_parse_array_edge_cases():
     assert repair_json('[ "key":"value"]') == '[{"key": "value"}]'
     assert repair_json('[{"key": "value", "key') == '[{"key": "value"}, ["key"]]'
     assert repair_json("{'key1', 'key2'}") == '["key1", "key2"]'
+
+
+def test_parse_array_python_tuple_literals():
+    assert repair_json('("a", "b", "c")', return_objects=True) == ["a", "b", "c"]
+    assert repair_json("((1, 2), (3, 4))", return_objects=True) == [[1, 2], [3, 4]]
+    assert repair_json('{"coords": (1, 2), "ok": true}', return_objects=True) == {"coords": [1, 2], "ok": True}
+    assert repair_json('{"empty": ()}', return_objects=True) == {"empty": []}
+
+
+def test_parse_array_parenthesized_scalar_keeps_scalar_shape():
+    assert repair_json("(1)", return_objects=True) == 1
+    assert repair_json('("x")', return_objects=True) == "x"
+    assert repair_json('{"scalar_group": (1)}', return_objects=True) == {"scalar_group": 1}
+    assert repair_json('{"string_group": ("x")}', return_objects=True) == {"string_group": "x"}
+
+
+def test_parse_array_mismatched_parenthesis_still_logs_missing_bracket():
+    repaired, logs = repair_json("[1, 2)", return_objects=True, logging=True)
+
+    assert repaired == [1, 2]
+    assert any("closing ]" in entry["text"] for entry in logs)
+
+
+def test_parenthesized_tuple_classifier_handles_nested_delimiters_and_missing_close():
+    parser = JSONParser('({"text": "a\\\\b", "items": [1]})', None, False)
+    assert parser.parenthesized_is_explicit_tuple() is False
+
+    parser = JSONParser("(1", None, False)
+    assert parser.parenthesized_is_explicit_tuple() is False
 
 
 def test_parse_array_missing_quotes():
