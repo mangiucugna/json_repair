@@ -28,6 +28,53 @@ def test_multiple_jsons():
     assert repair_json('[{"key":"value"}][{"key":"value_after"}]') == '[{"key": "value_after"}]'
 
 
+def test_parenthesized_prose_does_not_hijack_fenced_json():
+    assert (
+        repair_json(
+            """
+         **Decision**: bla, bla (some clarification):
+
+        ```json
+        {
+          "key": "value"
+        }
+        ```
+        """
+        )
+        == '{"key": "value"}'
+    )
+
+
+def test_numbered_prose_line_does_not_hijack_fenced_json():
+    assert (
+        repair_json(
+            """
+        (1) Keep this note in the explanation.
+
+        ```json
+        {
+          "key": "value"
+        }
+        ```
+        """
+        )
+        == '{"key": "value"}'
+    )
+
+
+def test_parenthesized_tuple_still_parses_when_it_is_the_fenced_json_payload():
+    assert repair_json(
+        """
+        Here is the tuple payload:
+
+        ```json
+        (1, 2)
+        ```
+        """,
+        return_objects=True,
+    ) == [1, 2]
+
+
 def test_repair_json_with_objects():
     # Test with valid JSON strings
     assert repair_json("[]", return_objects=True) == []

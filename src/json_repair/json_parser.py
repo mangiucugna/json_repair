@@ -166,8 +166,13 @@ class JSONParser:
                 return repairer.repair_value(value, schema, path) if repairer else value
             # Python tuple literals and grouped values start with '('
             if char == "(":
-                value = self.parse_parenthesized(schema, path) if repairer else self.parse_parenthesized()
-                return repairer.repair_value(value, schema, path) if repairer else value
+                # Keep top-level tuple detection conservative so inline prose like
+                # "note (clarification):" does not hijack later JSON blocks.
+                if not self.context.empty or self.top_level_parenthesized_can_start_value():
+                    value = self.parse_parenthesized(schema, path) if repairer else self.parse_parenthesized()
+                    return repairer.repair_value(value, schema, path) if repairer else value
+                self.index += 1
+                continue
             # <string> starts with a quote
             if not self.context.empty and (char in STRING_DELIMITERS or char.isalpha()):
                 value = self.parse_string()
@@ -314,6 +319,94 @@ class JSONParser:
             i += 1
 
         return not saw_top_level_content
+
+    def top_level_parenthesized_can_start_value(self) -> bool:
+        """
+        Return True when a top-level '(' looks like a standalone value rather than inline prose.
+
+        This keeps tuple support available for direct inputs and fenced blocks while avoiding
+        regressions on surrounding explanatory text like ``foo (clarification): {...}``.
+        """
+        i = self.index - 1
+        while i >= 0:
+            ch = self.json_str[i]
+            if ch in "\n\r":
+                break
+            if not ch.isspace():
+                return False
+            i -= 1
+
+        idx = self.scroll_whitespaces(idx=1)
+        first_inner_char = self.get_char_at(idx)
+        if first_inner_char is None:
+            return False
+
+        if (
+            first_inner_char not in [")", "{", "[", "(", *STRING_DELIMITERS]
+            and not first_inner_char.isdigit()
+            and first_inner_char not in ["-", "."]
+            and self.json_str[self.index + idx : self.index + idx + 4] not in ["true", "null"]
+            and self.json_str[self.index + idx : self.index + idx + 5] != "false"
+        ):
+            return False
+
+        i = self.index + 1
+        n = len(self.json_str)
+        nested_parentheses = 0
+        square_brackets = 0
+        braces = 0
+        in_quote: str | None = None
+        backslashes = 0
+
+        while i < n:
+            ch = self.json_str[i]
+
+            if ch == "\\":
+                backslashes += 1
+                i += 1
+                continue
+
+            if in_quote is not None:
+                if ch == in_quote and backslashes % 2 == 0:
+                    in_quote = None
+                backslashes = 0
+                i += 1
+                continue
+
+            if ch in STRING_DELIMITERS and backslashes % 2 == 0:
+                in_quote = ch
+                backslashes = 0
+                i += 1
+                continue
+
+            backslashes = 0
+
+            if ch == "(":
+                nested_parentheses += 1
+            elif ch == ")":
+                if nested_parentheses == 0 and square_brackets == 0 and braces == 0:
+                    i += 1
+                    while i < n:
+                        trailer = self.json_str[i]
+                        if trailer in "\n\r":
+                            return True
+                        if not trailer.isspace():
+                            return False
+                        i += 1
+                    return True
+                nested_parentheses -= 1
+            elif ch == "[":
+                square_brackets += 1
+            elif ch == "]" and square_brackets > 0:
+                square_brackets -= 1
+            elif ch == "{":
+                braces += 1
+            elif ch == "}" and braces > 0:
+                braces -= 1
+
+            i += 1
+
+        return True
 
     def parse_parenthesized(
         self,

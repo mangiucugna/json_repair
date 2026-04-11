@@ -79,6 +79,20 @@ def test_parenthesized_tuple_classifier_handles_nested_delimiters_and_missing_cl
     assert parser.parenthesized_is_explicit_tuple() is False
 
 
+def test_top_level_parenthesized_value_gate_rejects_prose_and_accepts_standalone_jsonish_values():
+    parser = JSONParser("(", None, False)
+    assert parser.top_level_parenthesized_can_start_value() is False
+
+    parser = JSONParser('(note)\n{"key": 1}', None, False)
+    assert parser.top_level_parenthesized_can_start_value() is False
+
+    parser = JSONParser("(1", None, False)
+    assert parser.top_level_parenthesized_can_start_value() is True
+
+    parser = JSONParser('(["a\\\\b"], {"k": 1})\n', None, False)
+    assert parser.top_level_parenthesized_can_start_value() is True
+
+
 def test_parse_array_missing_quotes():
     assert repair_json('["value1" value2", "value3"]') == '["value1", "value2", "value3"]'
     assert (
