@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+from .parse_string_helpers.object_value_context import classify_object_value_comma, update_inline_container_stack
 from .parse_string_helpers.parse_boolean_or_null import parse_boolean_or_null
 from .parse_string_helpers.parse_json_llm_block import parse_json_llm_block
 from .utils.constants import STRING_DELIMITERS, JSONReturnType
@@ -183,6 +184,8 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
     # * If we are fixing missing quotes in an object, when it finds the special terminators
     char = self.get_char_at()
     unmatched_delimiter = False
+    pending_inline_container = False
+    inline_container_stack: list[str] = []
     while char and char != rstring_delimiter:
         if missing_quotes:
             if self.context.current == ContextValues.OBJECT_KEY and (char == ":" or char.isspace()):
@@ -195,14 +198,31 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
                     "While parsing a string missing the left delimiter in array context, we found a ] or ,, stopping here",
                 )
                 break
+        if not self.stream_stable and self.context.current == ContextValues.OBJECT_VALUE and char == ",":
+            comma_classification = classify_object_value_comma(self)
+            if comma_classification == "member":
+                self.log(
+                    "While parsing a string missing the right delimiter in object value context, we found a comma that starts the next object member. Stopping here",
+                )
+                break
+            pending_inline_container = comma_classification == "container"
+            self.log(
+                "While parsing a string in object value context, we found a comma that belongs to the string, keeping it",
+            )
+            string_acc, char = _append_literal_char(string_acc, char)
+            continue
+        pending_inline_container, keep_inline_container_char = update_inline_container_stack(
+            char,
+            pending_inline_container,
+            inline_container_stack,
+        )
+        if keep_inline_container_char:
+            string_acc, char = _append_literal_char(string_acc, char)
+            continue
         if (
             not self.stream_stable
             and self.context.current == ContextValues.OBJECT_VALUE
-            and char
-            in [
-                ",",
-                "}",
-            ]
+            and char == "}"
             and (not string_acc or string_acc[-1] != rstring_delimiter)
         ):
             rstring_delimiter_missing = True

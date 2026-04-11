@@ -182,6 +182,43 @@ def test_parse_string_fast_path_rejects_ambiguous_top_level_trailing_text():
     assert _try_parse_simple_quoted_string(parser) is None
 
 
+def test_parse_string_keeps_inline_object_literal_after_comma():
+    raw = '{"x": "However, the provided user answer is {"blank_1": "music"}, which is not a plain string"}'
+    expected = '{"x": "However, the provided user answer is {\\"blank_1\\": \\"music\\"}, which is not a plain string"}'
+
+    assert repair_json(raw) == expected
+    assert repair_json(raw, skip_json_loads=True) == expected
+
+
+def test_parse_string_keeps_inline_object_literal_before_next_member():
+    cases = [
+        (
+            '{"x": "a, {"k": 1}, "y": 2}',
+            '{"x": "a, {\\"k\\": 1}", "y": 2}',
+        ),
+        (
+            '{"x": "a, {"k": {"n": 1}}, "y": 2}',
+            '{"x": "a, {\\"k\\": {\\"n\\": 1}}", "y": 2}',
+        ),
+    ]
+
+    for raw, expected in cases:
+        assert repair_json(raw) == expected
+        assert repair_json(raw, skip_json_loads=True) == expected
+
+
+def test_parse_string_object_value_brace_heuristics():
+    cases = [
+        ('{"key": "value}\\\\\\"more"}', {"key": 'value}"more'}),
+        ('{"key": "value} "tail}', {"key": "value} "}),
+        ('{"key": "value} "tail" more}', {"key": 'value} "tail" more'}),
+        ('{"key": "value} key2: value2}', {"key": "value"}),
+    ]
+
+    for raw, expected in cases:
+        assert repair_json(raw, return_objects=True, skip_json_loads=True) == expected
+
+
 def test_parse_string_fast_path_string_wrapper_fallbacks():
     escaped_parser = JSONParser("", None, False)
     escaped_parser.json_str = StringFileWrapper(StringIO('"va\\lue"'), 2)
