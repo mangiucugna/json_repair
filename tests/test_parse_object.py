@@ -134,6 +134,10 @@ def test_parse_object_empty_object_classifier_keeps_array_fallback_for_backslash
     assert any("try to parse this as an array instead" in entry["text"] for entry in logs)
 
 
+def test_parse_object_empty_object_array_fallback_preserves_legacy_key_context():
+    assert repair_json("[{5}s ", return_objects=True, skip_json_loads=True) == [[5]]
+
+
 def test_parse_object_merge_at_the_end():
     assert repair_json('{"key": "value"}, "key2": "value2"}') == '{"key": "value", "key2": "value2"}'
     assert repair_json('{"key": "value"}, "key2": }') == '{"key": "value", "key2": ""}'

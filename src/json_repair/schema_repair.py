@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import copy
 import importlib
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
+from .parser_schema import array_schema_config, object_schema_config
 from .utils.constants import MISSING_VALUE, JSONReturnType, MissingValueType
 from .utils.pattern_properties import match_pattern_properties
 
@@ -325,6 +326,7 @@ class SchemaRepairer:
             self._log("Wrapped value in array to match schema", path)
             items = [normalize_missing_values(value)]
         salvage_mode = self.schema_repair_mode == "salvage"
+        schema_config = array_schema_config(schema)
 
         def repair_or_drop(raw_item: Any, item_schema: Any, item_path: str) -> tuple[bool, JSONReturnType]:
             try:
@@ -337,37 +339,35 @@ class SchemaRepairer:
                 self._log("Dropped invalid array item while salvaging", item_path)
                 return False, None
 
-        items_schema = schema.get("items")
-        if items_schema is not None:
-            if isinstance(items_schema, list):
+        if schema_config.items_schema is not None:
+            if isinstance(schema_config.items_schema, list):
                 repaired_items: list[JSONReturnType] = []
-                for idx, item_schema in enumerate(items_schema):
+                for idx, item_schema in enumerate(schema_config.items_schema):
                     if idx >= len(items):
                         break
                     item_path = f"{path}[{idx}]"
                     keep_item, repaired_value = repair_or_drop(items[idx], item_schema, item_path)
                     if keep_item:
                         repaired_items.append(repaired_value)
-                additional_items = schema.get("additionalItems")
-                if len(items) > len(items_schema):
-                    tail = items[len(items_schema) :]
-                    if isinstance(additional_items, dict):
-                        for offset, item in enumerate(tail, start=len(items_schema)):
+                if len(items) > len(schema_config.items_schema):
+                    tail = items[len(schema_config.items_schema) :]
+                    if isinstance(schema_config.additional_items, dict):
+                        for offset, item in enumerate(tail, start=len(schema_config.items_schema)):
                             item_path = f"{path}[{offset}]"
-                            keep_item, repaired_value = repair_or_drop(item, additional_items, item_path)
+                            keep_item, repaired_value = repair_or_drop(item, schema_config.additional_items, item_path)
                             if keep_item:
                                 repaired_items.append(repaired_value)
-                    elif additional_items is True or additional_items is None:
+                    elif schema_config.additional_items is True or schema_config.additional_items is None:
                         repaired_items.extend(normalize_missing_values(item) for item in tail)
                     else:
-                        for offset, _item in enumerate(tail, start=len(items_schema)):
+                        for offset, _item in enumerate(tail, start=len(schema_config.items_schema)):
                             self._log("Dropped extra array item not covered by schema", f"{path}[{offset}]")
                 items = repaired_items
             else:
                 repaired_items = []
                 for idx, item in enumerate(items):
                     item_path = f"{path}[{idx}]"
-                    keep_item, repaired_value = repair_or_drop(item, items_schema, item_path)
+                    keep_item, repaired_value = repair_or_drop(item, schema_config.items_schema, item_path)
                     if keep_item:
                         repaired_items.append(repaired_value)
                 items = repaired_items
@@ -392,21 +392,14 @@ class SchemaRepairer:
         if not isinstance(value, dict):
             raise ValueError(f"Expected object at {path}, got {type(value).__name__}.")
 
-        properties = schema.get("properties", {})
-        if not isinstance(properties, dict):
-            properties = {}
-        required = set(schema.get("required", []))
-        pattern_properties = schema.get("patternProperties", {})
-        if not isinstance(pattern_properties, dict):
-            pattern_properties = {}
-        additional_properties = schema.get("additionalProperties")
+        schema_config = object_schema_config(schema)
 
-        if self.schema_repair_mode == "salvage" and required:
+        if self.schema_repair_mode == "salvage" and schema_config.required:
             value_with_salvage_fills = dict(value)
-            for key in required:
+            for key in schema_config.required:
                 if key in value_with_salvage_fills:
                     continue
-                prop_schema = properties.get(key)
+                prop_schema = schema_config.properties.get(key)
                 if prop_schema is None:
                     continue
                 key_path = f"{path}.{key}"
@@ -416,28 +409,28 @@ class SchemaRepairer:
                     self._log("Filled missing required property while salvaging", key_path)
             value = value_with_salvage_fills
 
-        missing_required = [key for key in required if key not in value]
+        missing_required = [key for key in schema_config.required if key not in value]
         if missing_required:
             raise ValueError(f"Missing required properties at {path}: {', '.join(missing_required)}")
 
         repaired: dict[str, JSONReturnType] = {}
 
-        for key, prop_schema in properties.items():
+        for key, prop_schema in schema_config.properties.items():
             key_path = f"{path}.{key}"
             if key in value:
                 repaired[key] = self.repair_value(value[key], prop_schema, key_path)
-            elif isinstance(prop_schema, dict) and "default" in prop_schema and key not in required:
+            elif isinstance(prop_schema, dict) and "default" in prop_schema and key not in schema_config.required:
                 repaired[key] = self._copy_json_value(prop_schema["default"], key_path, "default")
                 self._log("Inserted default value for missing property", key_path)
 
         for key, raw_value in value.items():
-            if key in properties:
+            if key in schema_config.properties:
                 continue
             key_path = f"{path}.{key}"
             matched: list[Any] = []
             unsupported_patterns: list[str] = []
-            if pattern_properties:
-                matched, unsupported_patterns = match_pattern_properties(pattern_properties, key)
+            if schema_config.pattern_properties:
+                matched, unsupported_patterns = match_pattern_properties(schema_config.pattern_properties, key)
             for pattern in unsupported_patterns:
                 self._log(f"Skipped unsupported patternProperties regex '{pattern}'", key_path)
             if matched:
@@ -446,10 +439,14 @@ class SchemaRepairer:
                     repaired_value = self.repair_value(repaired_value, prop_schema, key_path)
                 repaired[key] = repaired_value
                 continue
-            if isinstance(additional_properties, dict):
-                repaired[key] = self.repair_value(raw_value, additional_properties, key_path)
+            if isinstance(schema_config.additional_properties, dict):
+                repaired[key] = self.repair_value(
+                    raw_value,
+                    cast("dict[str, Any]", schema_config.additional_properties),
+                    key_path,
+                )
                 continue
-            if additional_properties is True or additional_properties is None:
+            if schema_config.additional_properties is True or schema_config.additional_properties is None:
                 repaired[key] = normalize_missing_values(raw_value)
                 continue
             self._log("Dropped extra property not covered by schema", key_path)

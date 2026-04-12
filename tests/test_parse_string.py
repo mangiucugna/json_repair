@@ -219,6 +219,10 @@ def test_parse_string_object_value_brace_heuristics():
         assert repair_json(raw, return_objects=True, skip_json_loads=True) == expected
 
 
+def test_parse_string_missing_quotes_object_value_stops_at_quote_fragment():
+    assert repair_json('{0:a"0"', return_objects=True, skip_json_loads=True) == {"0": "a"}
+
+
 def test_parse_string_fast_path_string_wrapper_fallbacks():
     escaped_parser = JSONParser("", None, False)
     escaped_parser.json_str = StringFileWrapper(StringIO('"va\\lue"'), 2)

@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from contextlib import ExitStack
 from typing import TYPE_CHECKING, Any, TextIO
 
 from .parse_array import parse_array as _parse_array
@@ -6,8 +7,9 @@ from .parse_comment import parse_comment as _parse_comment
 from .parse_number import parse_number as _parse_number
 from .parse_object import parse_object as _parse_object
 from .parse_string import parse_string as _parse_string
+from .parser_parenthesized import parenthesized_is_explicit_tuple, top_level_parenthesized_can_start_value
 from .utils.constants import STRING_DELIMITERS, JSONReturnType
-from .utils.json_context import JsonContext
+from .utils.json_context import ContextValues, JsonContext
 from .utils.object_comparer import ObjectComparer
 from .utils.string_file_wrapper import StringFileWrapper
 
@@ -60,6 +62,7 @@ class JSONParser:
         self.index: int = 0
         # This is used in the object member parsing to manage the special cases of missing quotes in key or value
         self.context = JsonContext()
+        self.deferred_contexts: list[ContextValues] = []
         # Use this to log the activity, but only if logging is active
 
         # This is a trick but a beautiful one. We call self.log in the code over and over even if it's not needed.
@@ -110,7 +113,8 @@ class JSONParser:
             )
             json = [json]
             while self.index < len(self.json_str):
-                self.context.reset()
+                self.context.clear()
+                self.deferred_contexts.clear()
                 j = parse_element()
                 if j:
                     if ObjectComparer.is_same_object(json[-1], j):
@@ -140,14 +144,14 @@ class JSONParser:
         path: str = "$",
     ) -> JSONReturnType:
         """Parse the next JSON value and, when configured, enforce schema constraints."""
-        repairer = self.schema_repairer if self.schema_repairer is not None and schema not in (None, True) else None
-        if repairer is not None:
-            # Resolve references once and decide whether schema-guided repairs are needed.
-            schema = repairer.resolve_schema(schema)
-            if schema is True:
-                repairer = None
-            elif schema is False:
-                raise ValueError("Schema does not allow any values.")
+        if self.deferred_contexts:
+            deferred_contexts, self.deferred_contexts = self.deferred_contexts, []
+            with ExitStack() as stack:
+                for context_value in deferred_contexts:
+                    stack.enter_context(self.context.enter(context_value))
+                return self.parse_json(schema, path)
+
+        repairer, schema = self._resolve_schema_for_parse(schema)
 
         while True:
             char = self.get_char_at()
@@ -158,34 +162,60 @@ class JSONParser:
             if char == "{":
                 self.index += 1
                 value = self.parse_object(schema, path) if repairer else self.parse_object()
-                return repairer.repair_value(value, schema, path) if repairer else value
+                return self._finalize_parsed_value(value, repairer, schema, path)
             # <array> starts with '['
             if char == "[":
                 self.index += 1
                 value = self.parse_array(schema, path) if repairer else self.parse_array()
-                return repairer.repair_value(value, schema, path) if repairer else value
+                return self._finalize_parsed_value(value, repairer, schema, path)
             # Python tuple literals and grouped values start with '('
             if char == "(":
                 # Keep top-level tuple detection conservative so inline prose like
                 # "note (clarification):" does not hijack later JSON blocks.
                 if not self.context.empty or self.top_level_parenthesized_can_start_value():
                     value = self.parse_parenthesized(schema, path) if repairer else self.parse_parenthesized()
-                    return repairer.repair_value(value, schema, path) if repairer else value
+                    return self._finalize_parsed_value(value, repairer, schema, path)
                 self.index += 1
                 continue
             # <string> starts with a quote
             if not self.context.empty and (char in STRING_DELIMITERS or char.isalpha()):
                 value = self.parse_string()
-                return repairer.repair_value(value, schema, path) if repairer else value
+                return self._finalize_parsed_value(value, repairer, schema, path)
             # <number> starts with [0-9] or minus
             if not self.context.empty and (char.isdigit() or char == "-" or char == "."):
                 value = self.parse_number()
-                return repairer.repair_value(value, schema, path) if repairer else value
+                return self._finalize_parsed_value(value, repairer, schema, path)
             if char in ["#", "/"]:
                 value = self.parse_comment()
-                return repairer.repair_value(value, schema, path) if repairer else value
+                return self._finalize_parsed_value(value, repairer, schema, path)
             # If everything else fails, we just ignore and move on
             self.index += 1
+
+    def _resolve_schema_for_parse(
+        self,
+        schema: dict[str, Any] | bool | None,
+    ) -> tuple["SchemaRepairer | None", dict[str, Any] | bool | None]:
+        repairer = self.schema_repairer if self.schema_repairer is not None and schema not in (None, True) else None
+        if repairer is None:
+            return None, schema
+
+        schema = repairer.resolve_schema(schema)
+        if schema is True:
+            return None, schema
+        if schema is False:
+            raise ValueError("Schema does not allow any values.")
+        return repairer, schema
+
+    @staticmethod
+    def _finalize_parsed_value(
+        value: JSONReturnType,
+        repairer: "SchemaRepairer | None",
+        schema: dict[str, Any] | bool | None,
+        path: str,
+    ) -> JSONReturnType:
+        if repairer is None:
+            return value
+        return repairer.repair_value(value, schema, path)
 
     def get_char_at(self, count: int = 0) -> str | None:
         # Why not use something simpler? Because try/except in python is a faster alternative to an "if" statement that is often True
@@ -249,164 +279,10 @@ class JSONParser:
         return n - self.index
 
     def parenthesized_is_explicit_tuple(self) -> bool:
-        """
-        Return True when the current '(' starts an explicit Python tuple literal.
-
-        Empty parentheses count as a tuple. A single grouped value like ``(1)`` does not.
-        """
-        i = self.index + 1
-        n = len(self.json_str)
-        nested_parentheses = 0
-        square_brackets = 0
-        braces = 0
-        in_quote: str | None = None
-        backslashes = 0
-        saw_top_level_content = False
-
-        while i < n:
-            ch = self.json_str[i]
-
-            if ch == "\\":
-                backslashes += 1
-                i += 1
-                continue
-
-            if in_quote is not None:
-                if ch == in_quote and backslashes % 2 == 0:
-                    in_quote = None
-                backslashes = 0
-                i += 1
-                continue
-
-            if ch in STRING_DELIMITERS and backslashes % 2 == 0:
-                in_quote = ch
-                saw_top_level_content = saw_top_level_content or (
-                    nested_parentheses == 0 and square_brackets == 0 and braces == 0
-                )
-                backslashes = 0
-                i += 1
-                continue
-
-            backslashes = 0
-
-            if (
-                not ch.isspace()
-                and ch not in [",", ")"]
-                and nested_parentheses == 0
-                and square_brackets == 0
-                and braces == 0
-            ):
-                saw_top_level_content = True
-
-            if ch == "(":
-                nested_parentheses += 1
-            elif ch == ")":
-                if nested_parentheses == 0 and square_brackets == 0 and braces == 0:
-                    return not saw_top_level_content
-                if nested_parentheses > 0:
-                    nested_parentheses -= 1
-            elif ch == "[":
-                square_brackets += 1
-            elif ch == "]" and square_brackets > 0:
-                square_brackets -= 1
-            elif ch == "{":
-                braces += 1
-            elif ch == "}" and braces > 0:
-                braces -= 1
-            elif ch == "," and nested_parentheses == 0 and square_brackets == 0 and braces == 0:
-                return True
-
-            i += 1
-
-        return not saw_top_level_content
+        return parenthesized_is_explicit_tuple(self)
 
     def top_level_parenthesized_can_start_value(self) -> bool:
-        """
-        Return True when a top-level '(' looks like a standalone value rather than inline prose.
-
-        This keeps tuple support available for direct inputs and fenced blocks while avoiding
-        regressions on surrounding explanatory text like ``foo (clarification): {...}``.
-        """
-        i = self.index - 1
-        while i >= 0:
-            ch = self.json_str[i]
-            if ch in "\n\r":
-                break
-            if not ch.isspace():
-                return False
-            i -= 1
-
-        idx = self.scroll_whitespaces(idx=1)
-        first_inner_char = self.get_char_at(idx)
-        if first_inner_char is None:
-            return False
-
-        if (
-            first_inner_char not in [")", "{", "[", "(", *STRING_DELIMITERS]
-            and not first_inner_char.isdigit()
-            and first_inner_char not in ["-", "."]
-            and self.json_str[self.index + idx : self.index + idx + 4] not in ["true", "null"]
-            and self.json_str[self.index + idx : self.index + idx + 5] != "false"
-        ):
-            return False
-
-        i = self.index + 1
-        n = len(self.json_str)
-        nested_parentheses = 0
-        square_brackets = 0
-        braces = 0
-        in_quote: str | None = None
-        backslashes = 0
-
-        while i < n:
-            ch = self.json_str[i]
-
-            if ch == "\\":
-                backslashes += 1
-                i += 1
-                continue
-
-            if in_quote is not None:
-                if ch == in_quote and backslashes % 2 == 0:
-                    in_quote = None
-                backslashes = 0
-                i += 1
-                continue
-
-            if ch in STRING_DELIMITERS and backslashes % 2 == 0:
-                in_quote = ch
-                backslashes = 0
-                i += 1
-                continue
-
-            backslashes = 0
-
-            if ch == "(":
-                nested_parentheses += 1
-            elif ch == ")":
-                if nested_parentheses == 0 and square_brackets == 0 and braces == 0:
-                    i += 1
-                    while i < n:
-                        trailer = self.json_str[i]
-                        if trailer in "\n\r":
-                            return True
-                        if not trailer.isspace():
-                            return False
-                        i += 1
-                    return True
-                nested_parentheses -= 1
-            elif ch == "[":
-                square_brackets += 1
-            elif ch == "]" and square_brackets > 0:
-                square_brackets -= 1
-            elif ch == "{":
-                braces += 1
-            elif ch == "}" and braces > 0:
-                braces -= 1
-
-            i += 1
-
-        return True
+        return top_level_parenthesized_can_start_value(self)
 
     def parse_parenthesized(
         self,

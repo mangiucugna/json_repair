@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+from contextlib import contextmanager
 from enum import Enum, auto
 
 
@@ -12,6 +14,14 @@ class JsonContext:
         self.context: list[ContextValues] = []
         self.current: ContextValues | None = None
         self.empty: bool = True
+
+    @contextmanager
+    def enter(self, value: ContextValues) -> Iterator[None]:
+        self.set(value)
+        try:
+            yield
+        finally:
+            self.reset()
 
     def set(self, value: ContextValues) -> None:
         """
@@ -40,3 +50,14 @@ class JsonContext:
         except IndexError:
             self.current = None
             self.empty = True
+
+    def clear(self) -> None:
+        """
+        Remove all context values.
+
+        Returns:
+            None
+        """
+        self.context.clear()
+        self.current = None
+        self.empty = True
