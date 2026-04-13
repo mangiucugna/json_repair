@@ -169,13 +169,16 @@ def repair_json(
     except (json.JSONDecodeError, TypeError, ValueError):
         pass
     if not is_valid_json:
-        if repairer is not None and schema_obj is not None:
-            # If schema-guided, we want to attempt repairs even on valid JSON that fails schema validation.
-            parsed_json = parser.parse_with_schema(repairer, schema_obj)
-            repairer.validate(parsed_json, schema_obj)
-        else:
-            # Otherwise, we can skip the more expensive schema-aware parsing and just do a normal parse.
-            parsed_json = parser.parse()
+        try:
+            if repairer is not None and schema_obj is not None:
+                # If schema-guided, we want to attempt repairs even on valid JSON that fails schema validation.
+                parsed_json = parser.parse_with_schema(repairer, schema_obj)
+                repairer.validate(parsed_json, schema_obj)
+            else:
+                # Otherwise, we can skip the more expensive schema-aware parsing and just do a normal parse.
+                parsed_json = parser.parse()
+        except RecursionError as exc:
+            raise ValueError("Input nesting exceeds the supported parser recursion depth.") from exc
 
     # It's useful to return the actual object instead of the json string,
     # it allows this lib to be a replacement of the json library

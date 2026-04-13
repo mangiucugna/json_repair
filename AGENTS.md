@@ -52,6 +52,7 @@
 - In `schema_repair_mode="salvage"`, only drop array items for data-repair failures; propagate schema-definition errors.
 - In `parse_object`, keep the empty-object-to-array fallback gated by object-shape detection; escaped object keys or object-style `:` separators must stay on the object-repair path instead of being reclassified as set literals.
 - Parser refactors are sensitive to context lifetimes and heuristic branch ordering; preserve malformed-input behavior when restructuring `parse_string` and `parse_object`.
+- Normalize `RecursionError` from the top-level repair parser entry point into `ValueError`; downstream callers commonly handle parse failures but not raw recursion exceptions.
 - Parenthesized Python syntax must distinguish explicit tuples like `()` and `(1,)` from grouped scalars like `(1)`, and array repair must preserve the expected closing delimiter so `[` inputs still log a missing `]` when they end with `)`.
 - Top-level `(` scanning must stay more conservative than nested tuple parsing; inline prose or numbered headings can contain parentheses before the real JSON block, so only standalone parenthesized values should start a top-level parse.
 - Top-level comment skipping currently bounces between `parse_json` and `parse_comment`; prefer iterative re-entry when touching that flow because comment-heavy inputs can hit `RecursionError` after a few hundred comments.

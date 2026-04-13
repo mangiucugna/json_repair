@@ -1,3 +1,8 @@
+import sys
+
+import pytest
+
+from src.json_repair.json_parser import JSONParser
 from src.json_repair.json_repair import loads, repair_json
 
 
@@ -184,6 +189,32 @@ def test_repair_json_skip_json_loads():
         "key2": False,
         "key3": "",
     }
+
+
+def _nested_repair_payload(depth: int) -> str:
+    return ("{a: [" * depth) + "1" + ("]}" * depth)
+
+
+def _find_real_recursion_payload() -> str:
+    depth = 1
+    recursion_limit = sys.getrecursionlimit()
+
+    while depth <= recursion_limit:
+        payload = _nested_repair_payload(depth)
+        try:
+            JSONParser(payload, None, False).parse()
+        except RecursionError:
+            return payload
+        depth *= 2
+
+    pytest.skip("Could not reproduce parser recursion on this runtime.")
+
+
+def test_repair_json_normalizes_real_parser_recursion_error():
+    payload = _find_real_recursion_payload()
+
+    with pytest.raises(ValueError, match="supported parser recursion depth"):
+        repair_json(payload, return_objects=True)
 
 
 def test_ensure_ascii():
