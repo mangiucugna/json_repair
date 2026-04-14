@@ -224,7 +224,90 @@ def _brace_before_code_fence_belongs_to_string(
         return False
 
     after_quote_idx = self.scroll_whitespaces(idx=quote_idx + 1)
-    return self.get_char_at(after_quote_idx) in [",", "}", "]", None]
+    after_quote = self.get_char_at(after_quote_idx)
+    if after_quote in [",", "}", "]", None]:
+        return True
+    if after_quote != state.rstring_delimiter:
+        return False
+
+    after_second_quote_idx = self.scroll_whitespaces(idx=after_quote_idx + 1)
+    return self.get_char_at(after_second_quote_idx) in [",", "}", "]", None]
+
+
+def _matching_string_delimiter(delimiter: str) -> str:
+    return "”" if delimiter == "“" else delimiter
+
+
+def _scroll_comment_prefixed_member_start(
+    self: "JSONParser",
+    idx: int,
+) -> int:
+    idx = self.scroll_whitespaces(idx=idx)
+    while True:
+        char = self.get_char_at(idx)
+        if char == "#":
+            while char and char not in ["\n", "\r"]:
+                idx += 1
+                char = self.get_char_at(idx)
+            idx = self.scroll_whitespaces(idx=idx)
+            continue
+        if char == "/":
+            next_char = self.get_char_at(idx + 1)
+            if next_char == "/":
+                idx += 2
+                char = self.get_char_at(idx)
+                while char and char not in ["\n", "\r"]:
+                    idx += 1
+                    char = self.get_char_at(idx)
+                idx = self.scroll_whitespaces(idx=idx)
+                continue
+            if next_char == "*":
+                idx += 2
+                while True:
+                    char = self.get_char_at(idx)
+                    if not char:
+                        return idx
+                    if char == "*" and self.get_char_at(idx + 1) == "/":
+                        idx += 2
+                        break
+                    idx += 1
+                idx = self.scroll_whitespaces(idx=idx)
+                continue
+        return idx
+
+
+def _quoted_object_member_follows(
+    self: "JSONParser",
+    quote_idx: int,
+) -> bool:
+    comma_idx = self.scroll_whitespaces(idx=quote_idx + 1)
+    if self.get_char_at(comma_idx) != ",":
+        return False
+
+    next_member_idx = _scroll_comment_prefixed_member_start(self, comma_idx + 1)
+    if self.get_char_at(next_member_idx) in ["}", None]:
+        return False
+
+    next_member = self.get_char_at(next_member_idx)
+    if next_member in STRING_DELIMITERS:
+        key_end_delimiter = _matching_string_delimiter(next_member)
+        key_end_idx = self.skip_to_character(character=key_end_delimiter, idx=next_member_idx + 1)
+        if self.get_char_at(key_end_idx) != key_end_delimiter:
+            return False
+        after_key_idx = self.scroll_whitespaces(idx=key_end_idx + 1)
+        return self.get_char_at(after_key_idx) == ":"
+
+    if next_member and (next_member.isalnum() or next_member == "_"):
+        key_end_idx = next_member_idx
+        while True:
+            key_char = self.get_char_at(key_end_idx)
+            if not key_char or not (key_char.isalnum() or key_char in ["_", "-"]):
+                break
+            key_end_idx += 1
+        key_end_idx = self.scroll_whitespaces(idx=key_end_idx)
+        return self.get_char_at(key_end_idx) == ":"
+
+    return False
 
 
 def _handle_right_delimiter_candidate(
@@ -295,23 +378,17 @@ def _handle_right_delimiter_candidate(
             next_char = _append_literal_char(self, state, char)
             return True, next_char, False
     elif next_c == state.rstring_delimiter and self.get_char_at(i - 1) != "\\":
-        if _only_whitespace_until(self, i):
+        if _only_whitespace_until(self, i) and not (
+            self.context.current == ContextValues.OBJECT_VALUE and _quoted_object_member_follows(self, i)
+        ):
             return False, char, True
         if self.context.current == ContextValues.OBJECT_VALUE:
-            i = self.scroll_whitespaces(idx=i + 1)
-            if self.get_char_at(i) == ",":
-                i = self.skip_to_character(character=state.lstring_delimiter, idx=i + 1)
-                i += 1
-                i = self.skip_to_character(character=state.rstring_delimiter, idx=i + 1)
-                i += 1
-                i = self.scroll_whitespaces(idx=i)
-                next_c = self.get_char_at(i)
-                if next_c == ":":
-                    self.log(
-                        "While parsing a string, we found a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
-                    )
-                    next_char = _append_literal_char(self, state, char)
-                    return True, next_char, False
+            if _quoted_object_member_follows(self, i):
+                self.log(
+                    "While parsing a string, we found a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
+                )
+                next_char = _append_literal_char(self, state, char)
+                return True, next_char, False
             i = self.skip_to_character(character=state.rstring_delimiter, idx=i + 1)
             i += 1
             next_c = self.get_char_at(i)

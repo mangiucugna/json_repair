@@ -38,6 +38,7 @@
 - When adding repair heuristics, emit a `self.log` entry and keep `strict=True` conservative unless the relaxed behavior is explicitly intended.
 - In `parse_string` object-value context, comma heuristics should stop only for plausible next members; commas followed by prose or inline raw containers like `{"blank_1": ...}` belong to the string.
 - In `parse_string` object-value context, brace heuristics for `}` before triple backticks must not truncate quoted multiline strings that contain literal fenced snippets like ````{}````.
+- In `parse_string` object-value context, do not let `quote + whitespace + quote` short-circuit before misplaced-quote recovery when a next member follows; malformed multiline strings can place a stray quote on its own line before the real terminator, and that next key may be quoted, comment-prefixed, or bare, but `,}` and trailing commas at EOF must still terminate the value instead of being treated as another member, and generic comma classification must stay conservative about multiline curly-quoted prose inside strings.
 - When a schema is provided, apply schema repair and validation for both valid and invalid JSON inputs.
 - Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`; avoid duplicating parser switch logic.
 - `patternProperties` matching is intentionally limited to a safe literal-plus-anchor subset; do not execute user-supplied regexes.

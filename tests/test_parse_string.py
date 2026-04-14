@@ -2,7 +2,12 @@ from io import StringIO
 
 from src.json_repair.json_parser import JSONParser
 from src.json_repair.json_repair import repair_json
-from src.json_repair.parse_string import _try_parse_simple_quoted_string
+from src.json_repair.parse_string import (
+    StringParseState,
+    _brace_before_code_fence_belongs_to_string,
+    _quoted_object_member_follows,
+    _try_parse_simple_quoted_string,
+)
 from src.json_repair.utils.string_file_wrapper import StringFileWrapper
 
 
@@ -157,6 +162,62 @@ def test_parse_string_keeps_literal_fenced_snippet_in_multiline_object_value():
     assert repair_json(raw, skip_json_loads=True, return_objects=True) == expected
 
 
+def test_parse_string_keeps_literal_fenced_snippet_before_stray_quote_line():
+    raw = '{\n"a": "\n```{}```\n"\n",\n"b": "x",\n}'
+    expected = {"a": '\n```{}```\n"', "b": "x"}
+
+    assert repair_json(raw, return_objects=True) == expected
+    assert repair_json(raw, skip_json_loads=True, return_objects=True) == expected
+
+
+def test_parse_string_keeps_literal_fenced_snippet_before_stray_quote_line_with_single_quoted_key():
+    raw = '{\n"a": "\n```{}```\n"\n",\n\'b\': "x",\n}'
+    expected = {"a": '\n```{}```\n"', "b": "x"}
+
+    assert repair_json(raw, return_objects=True) == expected
+    assert repair_json(raw, skip_json_loads=True, return_objects=True) == expected
+
+
+def test_parse_string_keeps_literal_fenced_snippet_before_stray_quote_line_with_comment_before_key():
+    raw = '{\n"a": "\n```{}```\n"\n", // c\n"b": "x",\n}'
+    expected = {"a": '\n```{}```\n"', "b": "x"}
+
+    assert repair_json(raw, return_objects=True) == expected
+    assert repair_json(raw, skip_json_loads=True, return_objects=True) == expected
+
+
+def test_parse_string_keeps_literal_fenced_snippet_before_stray_quote_line_with_bare_key():
+    raw = '{\n"a": "\n```{}```\n"\n",\n b: "x",\n}'
+    expected = {"a": '\n```{}```\n"', "b": "x"}
+
+    assert repair_json(raw, return_objects=True) == expected
+    assert repair_json(raw, skip_json_loads=True, return_objects=True) == expected
+
+
+def test_parse_string_stray_quote_line_before_trailing_comma_drops_stray_quote():
+    raw = '{"a": "hello\n"\n",}'
+    expected = {"a": "hello"}
+
+    assert repair_json(raw, return_objects=True) == expected
+    assert repair_json(raw, skip_json_loads=True, return_objects=True) == expected
+
+
+def test_parse_string_stray_quote_line_before_trailing_comma_at_eof_drops_stray_quote():
+    raw = '{"a": "hello\n"\n",'
+    expected = {"a": "hello"}
+
+    assert repair_json(raw, return_objects=True) == expected
+    assert repair_json(raw, skip_json_loads=True, return_objects=True) == expected
+
+
+def test_parse_string_keeps_multiline_curly_quoted_prose_after_comma():
+    raw = '{"x": "a,\n “term”: explanation", "y": 2}'
+    expected = {"x": "a,\n “term”: explanation", "y": 2}
+
+    assert repair_json(raw, return_objects=True) == expected
+    assert repair_json(raw, skip_json_loads=True, return_objects=True) == expected
+
+
 def test_parse_boolean_or_null():
     assert repair_json("True", return_objects=True) == ""
     assert repair_json("False", return_objects=True) == ""
@@ -239,6 +300,71 @@ def test_parse_string_fast_path_string_wrapper_fallbacks():
     unterminated_parser = JSONParser("", None, False)
     unterminated_parser.json_str = StringFileWrapper(StringIO('"value'), 2)
     assert _try_parse_simple_quoted_string(unterminated_parser) is None
+
+
+def test_brace_before_code_fence_helper_rejects_non_delimiter_after_quote():
+    parser = JSONParser('}```"oops', None, False)
+    assert not _brace_before_code_fence_belongs_to_string(parser, StringParseState(), 1)
+
+
+def test_quoted_object_member_follows_rejects_unquoted_next_key():
+    parser = JSONParser('"\n", bare', None, False)
+    assert not _quoted_object_member_follows(parser, 2)
+
+
+def test_quoted_object_member_follows_rejects_unterminated_next_key():
+    parser = JSONParser('"\n", "unterminated', None, False)
+    assert not _quoted_object_member_follows(parser, 2)
+
+
+def test_quoted_object_member_follows_accepts_single_quoted_next_key():
+    parser = JSONParser("\"\n\", 'b': 1", None, False)
+    assert _quoted_object_member_follows(parser, 2)
+
+
+def test_quoted_object_member_follows_accepts_curly_quoted_next_key():
+    parser = JSONParser('"\n", “b”: 1', None, False)
+    assert _quoted_object_member_follows(parser, 2)
+
+
+def test_quoted_object_member_follows_accepts_comment_before_next_key():
+    parser = JSONParser('"\n", // c\n"b": 1', None, False)
+    assert _quoted_object_member_follows(parser, 2)
+
+
+def test_quoted_object_member_follows_accepts_hash_comment_before_next_key():
+    parser = JSONParser('"\n", # c\n"b": 1', None, False)
+    assert _quoted_object_member_follows(parser, 2)
+
+
+def test_quoted_object_member_follows_accepts_block_comment_before_next_key():
+    parser = JSONParser('"\n", /* c */ "b": 1', None, False)
+    assert _quoted_object_member_follows(parser, 2)
+
+
+def test_quoted_object_member_follows_accepts_comment_before_bare_next_key():
+    parser = JSONParser('"\n", // c\n b: 1', None, False)
+    assert _quoted_object_member_follows(parser, 2)
+
+
+def test_quoted_object_member_follows_accepts_bare_next_key():
+    parser = JSONParser('"\n",\n b: 1', None, False)
+    assert _quoted_object_member_follows(parser, 2)
+
+
+def test_quoted_object_member_follows_rejects_trailing_comma_endings():
+    assert not _quoted_object_member_follows(JSONParser('"\n",}', None, False), 2)
+    assert not _quoted_object_member_follows(JSONParser('"\n",', None, False), 2)
+
+
+def test_quoted_object_member_follows_rejects_unclosed_block_comment_before_next_key():
+    parser = JSONParser('"\n", /* c', None, False)
+    assert not _quoted_object_member_follows(parser, 2)
+
+
+def test_quoted_object_member_follows_rejects_array_after_comment():
+    parser = JSONParser('"\n", /* c */ [1, 2]', None, False)
+    assert not _quoted_object_member_follows(parser, 2)
 
 
 def test_parse_string_empty_single_quoted_key():
