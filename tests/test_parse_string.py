@@ -149,6 +149,14 @@ def test_parse_string_logs_invalid_code_fences():
     assert any("did not enclose valid JSON" in log["text"] for log in logs)
 
 
+def test_parse_string_keeps_literal_fenced_snippet_in_multiline_object_value():
+    raw = '{\n"a": "\n```{}```\n",\n"b": "x",\n}'
+    expected = {"a": "\n```{}```", "b": "x"}
+
+    assert repair_json(raw, return_objects=True) == expected
+    assert repair_json(raw, skip_json_loads=True, return_objects=True) == expected
+
+
 def test_parse_boolean_or_null():
     assert repair_json("True", return_objects=True) == ""
     assert repair_json("False", return_objects=True) == ""

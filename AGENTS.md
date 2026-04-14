@@ -37,6 +37,7 @@
 - Parser fast paths must work for both plain strings and `StringFileWrapper`; do not rely on `str`-only helpers inside parse helpers.
 - When adding repair heuristics, emit a `self.log` entry and keep `strict=True` conservative unless the relaxed behavior is explicitly intended.
 - In `parse_string` object-value context, comma heuristics should stop only for plausible next members; commas followed by prose or inline raw containers like `{"blank_1": ...}` belong to the string.
+- In `parse_string` object-value context, brace heuristics for `}` before triple backticks must not truncate quoted multiline strings that contain literal fenced snippets like ````{}````.
 - When a schema is provided, apply schema repair and validation for both valid and invalid JSON inputs.
 - Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`; avoid duplicating parser switch logic.
 - `patternProperties` matching is intentionally limited to a safe literal-plus-anchor subset; do not execute user-supplied regexes.

@@ -133,6 +133,25 @@ def test_schema_pydantic_v2_defaults():
     assert repair_with_schema(raw, SchemaModel) == {"evidence_types": []}
 
 
+def test_schema_pydantic_model_keeps_literal_fenced_snippet_in_multiline_string():
+    pytest.importorskip("jsonschema")
+    pydantic = pytest.importorskip("pydantic")
+    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
+    if int(version.split(".")[0]) < 2:
+        pytest.skip("pydantic v2 required")
+
+    class SchemaModel(pydantic.BaseModel):
+        a: str
+        b: str
+
+    raw = '{\n"a": "\n```{}```\n",\n"b": "x",\n}'
+    expected = {"a": "\n```{}```", "b": "x"}
+    schema = SchemaModel.model_json_schema()
+
+    assert repair_json(raw, schema=schema, return_objects=True) == expected
+    assert repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True) == expected
+
+
 def test_schema_boolean_coercion_is_mode_independent():
     pytest.importorskip("jsonschema")
     schema = {

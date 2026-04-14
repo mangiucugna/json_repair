@@ -213,6 +213,20 @@ def _normalize_escape_sequence(
     return False, char
 
 
+def _brace_before_code_fence_belongs_to_string(
+    self: "JSONParser",
+    state: StringParseState,
+    fence_idx: int,
+) -> bool:
+    # Distinguish trailing wrapper fences from literal fenced snippets inside the current string.
+    quote_idx = self.skip_to_character(character=state.rstring_delimiter, idx=fence_idx + 3)
+    if self.get_char_at(quote_idx) != state.rstring_delimiter:
+        return False
+
+    after_quote_idx = self.scroll_whitespaces(idx=quote_idx + 1)
+    return self.get_char_at(after_quote_idx) in [",", "}", "]", None]
+
+
 def _handle_right_delimiter_candidate(
     self: "JSONParser",
     state: StringParseState,
@@ -439,6 +453,12 @@ def _scan_string_body(
             i = self.scroll_whitespaces(idx=1)
             next_c = self.get_char_at(i)
             if next_c == "`" and self.get_char_at(i + 1) == "`" and self.get_char_at(i + 2) == "`":
+                if _brace_before_code_fence_belongs_to_string(self, state, i):
+                    self.log(
+                        "While parsing a string in object value context, we found a literal fenced snippet after }, keeping it in the string",
+                    )
+                    char = _append_literal_char(self, state, char)
+                    continue
                 self.log(
                     "While parsing a string in object value context, we found a } that closes the object before code fences, stopping here",
                 )
