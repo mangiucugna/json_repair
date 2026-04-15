@@ -23,6 +23,7 @@
 ## Docs
 - Keep `README.zh.md` aligned with `README.md` when contributor guidance or usage behavior changes.
 - For local docs demo validation, follow `.agents/skills/docs-demo-local-test/SKILL.md`.
+- Keep docs demo share state in the URL hash, not query params; large `json`/`schema` permalinks can hit static-host URI limits, so read legacy query-param links but write compressed hash URLs.
 
 ## Code Areas
 - API and CLI entry points: `src/json_repair/json_repair.py`, `src/json_repair/__init__.py`, `src/json_repair/__main__.py`.
