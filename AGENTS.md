@@ -23,6 +23,7 @@
 ## Docs
 - Keep `README.zh.md` aligned with `README.md` when contributor guidance or usage behavior changes.
 - For local docs demo validation, follow `.agents/skills/docs-demo-local-test/SKILL.md`.
+- Use `.agents/specs/docs-demo-ui/SPEC.md` to decide whether the docs demo needs no UI test, a smoke test, or a comprehensive Chrome MCP run; keep the spec current when demo behavior or test expectations change.
 - Keep docs demo share state in the URL hash, not query params; large `json`/`schema` permalinks can hit static-host URI limits, so read legacy query-param links but write compressed hash URLs.
 
 ## Code Areas
