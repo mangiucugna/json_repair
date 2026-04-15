@@ -201,7 +201,7 @@ wheels = [
 
 [[package]]
 name = "json-repair"
-version = "0.59.3"
+version = "0.59.4"
 source = { editable = "." }
 
 [package.optional-dependencies]
