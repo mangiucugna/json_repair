@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 
 
 NO_DIRECT_RESULT = object()
+INLINE_CONTAINER_CLOSING_DELIMITERS = {"[": "]", "{": "}", "(": ")"}
+INLINE_CONTAINER_OPENERS = tuple(INLINE_CONTAINER_CLOSING_DELIMITERS)
 
 
 @dataclass
@@ -219,23 +221,125 @@ def _brace_before_code_fence_belongs_to_string(
     fence_idx: int,
 ) -> bool:
     # Distinguish trailing wrapper fences from literal fenced snippets inside the current string.
-    quote_idx = self.skip_to_character(character=state.rstring_delimiter, idx=fence_idx + 3)
-    if self.get_char_at(quote_idx) != state.rstring_delimiter:
-        return False
+    quote_search_idx = fence_idx + 3
+    next_content_idx = _scroll_comment_prefixed_member_start(self, quote_search_idx)
+    keep_post_fence_container = False
+    if self.get_char_at(next_content_idx) in INLINE_CONTAINER_OPENERS:
+        container_end_idx = _skip_inline_container(self, next_content_idx)
+        if container_end_idx is not None:
+            if _post_fence_container_starts_next_member(self, container_end_idx):
+                return False
+            keep_post_fence_container = True
+            quote_search_idx = container_end_idx
 
-    after_quote_idx = self.scroll_whitespaces(idx=quote_idx + 1)
-    after_quote = self.get_char_at(after_quote_idx)
-    if after_quote in [",", "}", "]", None]:
-        return True
-    if after_quote != state.rstring_delimiter:
-        return False
-
-    after_second_quote_idx = self.scroll_whitespaces(idx=after_quote_idx + 1)
-    return self.get_char_at(after_second_quote_idx) in [",", "}", "]", None]
+    quote_idx = self.skip_to_character(character=state.rstring_delimiter, idx=quote_search_idx)
+    while self.get_char_at(quote_idx) == state.rstring_delimiter:
+        after_quote_idx = self.scroll_whitespaces(idx=quote_idx + 1)
+        after_quote = self.get_char_at(after_quote_idx)
+        if after_quote in [",", "}", "]", None]:
+            if keep_post_fence_container:
+                state.pending_inline_container = True
+            return True
+        quote_idx = self.skip_to_character(character=state.rstring_delimiter, idx=quote_idx + 1)
+    return False
 
 
 def _matching_string_delimiter(delimiter: str) -> str:
     return "”" if delimiter == "“" else delimiter
+
+
+def _bare_key_is_followed_by_colon(
+    self: "JSONParser",
+    key_idx: int,
+) -> bool:
+    key_char = self.get_char_at(key_idx)
+    if not key_char or not (key_char.isalnum() or key_char == "_"):
+        return False
+
+    while True:
+        key_char = self.get_char_at(key_idx)
+        if not key_char or not (key_char.isalnum() or key_char in ["_", "-"]):
+            break
+        key_idx += 1
+
+    key_idx = self.scroll_whitespaces(idx=key_idx)
+    return self.get_char_at(key_idx) == ":"
+
+
+def _post_fence_container_starts_next_member(
+    self: "JSONParser",
+    container_end_idx: int,
+) -> bool:
+    after_container_idx = self.scroll_whitespaces(idx=container_end_idx)
+    after_container = self.get_char_at(after_container_idx)
+    if after_container in ["}", None]:
+        return True
+    if after_container != ",":
+        return False
+
+    next_member_idx = _scroll_comment_prefixed_member_start(self, after_container_idx + 1)
+    return self.get_char_at(next_member_idx) in ["}", None] or _object_member_starts_at(self, next_member_idx)
+
+
+def _starts_nested_inline_container(
+    self: "JSONParser",
+    idx: int,
+) -> bool:
+    opening_delimiter = self.get_char_at(idx)
+    prev_idx = idx - 1
+    while prev_idx >= 0:
+        prev_char = self.get_char_at(prev_idx)
+        if prev_char is None:
+            return True
+        if not prev_char.isspace():
+            if prev_char in INLINE_CONTAINER_OPENERS:
+                return True
+            if prev_char not in [",", ":"]:
+                return False
+
+            next_idx = self.scroll_whitespaces(idx=idx + 1)
+            next_char = self.get_char_at(next_idx)
+            if opening_delimiter in ["[", "("]:
+                return next_char in ["]", ")", *STRING_DELIMITERS, "-", *INLINE_CONTAINER_OPENERS, "t", "f", "n"] or (
+                    next_char is not None and next_char.isdigit()
+                )
+            if opening_delimiter != "{":
+                return False
+            if next_char in ["}", *STRING_DELIMITERS]:
+                return True
+            return prev_char == ":" and _bare_key_is_followed_by_colon(self, next_idx)
+        prev_idx -= 1
+    return True
+
+
+def _skip_inline_container(
+    self: "JSONParser",
+    idx: int,
+) -> int | None:
+    opening_delimiter = self.get_char_at(idx)
+    if opening_delimiter not in INLINE_CONTAINER_CLOSING_DELIMITERS:
+        return idx
+
+    stack = [INLINE_CONTAINER_CLOSING_DELIMITERS[opening_delimiter]]
+    i = idx + 1
+    while stack:
+        char = self.get_char_at(i)
+        if not char:
+            return None
+        if char in STRING_DELIMITERS:
+            end_delimiter = _matching_string_delimiter(char)
+            i = self.skip_to_character(character=end_delimiter, idx=i + 1)
+            if self.get_char_at(i) != end_delimiter:
+                return None
+        elif char in INLINE_CONTAINER_CLOSING_DELIMITERS and _starts_nested_inline_container(self, i):
+            stack.append(INLINE_CONTAINER_CLOSING_DELIMITERS[char])
+        elif char == stack[-1]:
+            stack.pop()
+            if not stack:
+                return i + 1
+        i += 1
+
+    return None  # pragma: no cover
 
 
 def _scroll_comment_prefixed_member_start(
@@ -285,6 +389,13 @@ def _quoted_object_member_follows(
         return False
 
     next_member_idx = _scroll_comment_prefixed_member_start(self, comma_idx + 1)
+    return _object_member_starts_at(self, next_member_idx)
+
+
+def _object_member_starts_at(
+    self: "JSONParser",
+    next_member_idx: int,
+) -> bool:
     if self.get_char_at(next_member_idx) in ["}", None]:
         return False
 
@@ -298,14 +409,7 @@ def _quoted_object_member_follows(
         return self.get_char_at(after_key_idx) == ":"
 
     if next_member and (next_member.isalnum() or next_member == "_"):
-        key_end_idx = next_member_idx
-        while True:
-            key_char = self.get_char_at(key_end_idx)
-            if not key_char or not (key_char.isalnum() or key_char in ["_", "-"]):
-                break
-            key_end_idx += 1
-        key_end_idx = self.scroll_whitespaces(idx=key_end_idx)
-        return self.get_char_at(key_end_idx) == ":"
+        return _bare_key_is_followed_by_colon(self, next_member_idx)
 
     return False
 
@@ -449,7 +553,25 @@ def _scan_string_body(
                     "While parsing a string missing the left delimiter in array context, we found a ] or ,, stopping here",
                 )
                 break
-        if not self.stream_stable and self.context.current == ContextValues.OBJECT_VALUE and char == ",":
+        if state.pending_inline_container and char in INLINE_CONTAINER_OPENERS:
+            container_end_idx = _skip_inline_container(self, 0)
+            if container_end_idx is not None:
+                self.log(
+                    "While parsing a string in object value context, we found a balanced inline container that belongs to the string, keeping it",
+                )
+                state.pending_inline_container = False
+                state.inline_container_stack.clear()
+                state.string_acc += self.json_str[self.index : self.index + container_end_idx]
+                self.index += container_end_idx
+                char = self.get_char_at()
+                continue
+        if (
+            not self.stream_stable
+            and self.context.current == ContextValues.OBJECT_VALUE
+            and char == ","
+            and not state.pending_inline_container
+            and not state.inline_container_stack
+        ):
             comma_classification = classify_object_value_comma(self)
             if comma_classification == "member":
                 self.log(

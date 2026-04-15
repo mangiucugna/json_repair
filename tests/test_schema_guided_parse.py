@@ -9,6 +9,26 @@ def repair_with_schema(raw, schema, **kwargs):
     return repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True, **kwargs)
 
 
+def _two_string_schema() -> dict:
+    pytest.importorskip("jsonschema")
+    pydantic = pytest.importorskip("pydantic")
+    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
+    if int(version.split(".")[0]) < 2:
+        pytest.skip("pydantic v2 required")
+
+    class SchemaModel(pydantic.BaseModel):
+        a: str
+        b: str
+
+    return cast("dict", SchemaModel.model_json_schema())
+
+
+def _assert_two_string_schema_repairs(raw: str, expected: dict) -> None:
+    schema = _two_string_schema()
+    assert repair_json(raw, schema=schema, return_objects=True) == expected
+    assert repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True) == expected
+
+
 def test_schema_guides_missing_value_type_defaults():
     pytest.importorskip("jsonschema")
     schema = {
@@ -133,99 +153,56 @@ def test_schema_pydantic_v2_defaults():
     assert repair_with_schema(raw, SchemaModel) == {"evidence_types": []}
 
 
-def test_schema_pydantic_model_keeps_literal_fenced_snippet_in_multiline_string():
-    pytest.importorskip("jsonschema")
-    pydantic = pytest.importorskip("pydantic")
-    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
-    if int(version.split(".")[0]) < 2:
-        pytest.skip("pydantic v2 required")
-
-    class SchemaModel(pydantic.BaseModel):
-        a: str
-        b: str
-
-    raw = '{\n"a": "\n```{}```\n",\n"b": "x",\n}'
-    expected = {"a": "\n```{}```", "b": "x"}
-    schema = SchemaModel.model_json_schema()
-
-    assert repair_json(raw, schema=schema, return_objects=True) == expected
-    assert repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True) == expected
-
-
-def test_schema_pydantic_model_keeps_literal_fenced_snippet_before_stray_quote_line():
-    pytest.importorskip("jsonschema")
-    pydantic = pytest.importorskip("pydantic")
-    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
-    if int(version.split(".")[0]) < 2:
-        pytest.skip("pydantic v2 required")
-
-    class SchemaModel(pydantic.BaseModel):
-        a: str
-        b: str
-
-    raw = '{\n"a": "\n```{}```\n"\n",\n"b": "x",\n}'
-    expected = {"a": '\n```{}```\n"', "b": "x"}
-    schema = SchemaModel.model_json_schema()
-
-    assert repair_json(raw, schema=schema, return_objects=True) == expected
-    assert repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True) == expected
-
-
-def test_schema_pydantic_model_keeps_literal_fenced_snippet_before_stray_quote_line_with_single_quoted_key():
-    pytest.importorskip("jsonschema")
-    pydantic = pytest.importorskip("pydantic")
-    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
-    if int(version.split(".")[0]) < 2:
-        pytest.skip("pydantic v2 required")
-
-    class SchemaModel(pydantic.BaseModel):
-        a: str
-        b: str
-
-    raw = '{\n"a": "\n```{}```\n"\n",\n\'b\': "x",\n}'
-    expected = {"a": '\n```{}```\n"', "b": "x"}
-    schema = SchemaModel.model_json_schema()
-
-    assert repair_json(raw, schema=schema, return_objects=True) == expected
-    assert repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True) == expected
-
-
-def test_schema_pydantic_model_keeps_literal_fenced_snippet_before_stray_quote_line_with_comment_before_key():
-    pytest.importorskip("jsonschema")
-    pydantic = pytest.importorskip("pydantic")
-    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
-    if int(version.split(".")[0]) < 2:
-        pytest.skip("pydantic v2 required")
-
-    class SchemaModel(pydantic.BaseModel):
-        a: str
-        b: str
-
-    raw = '{\n"a": "\n```{}```\n"\n", // c\n"b": "x",\n}'
-    expected = {"a": '\n```{}```\n"', "b": "x"}
-    schema = SchemaModel.model_json_schema()
-
-    assert repair_json(raw, schema=schema, return_objects=True) == expected
-    assert repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True) == expected
-
-
-def test_schema_pydantic_model_keeps_literal_fenced_snippet_before_stray_quote_line_with_bare_key():
-    pytest.importorskip("jsonschema")
-    pydantic = pytest.importorskip("pydantic")
-    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
-    if int(version.split(".")[0]) < 2:
-        pytest.skip("pydantic v2 required")
-
-    class SchemaModel(pydantic.BaseModel):
-        a: str
-        b: str
-
-    raw = '{\n"a": "\n```{}```\n"\n",\n b: "x",\n}'
-    expected = {"a": '\n```{}```\n"', "b": "x"}
-    schema = SchemaModel.model_json_schema()
-
-    assert repair_json(raw, schema=schema, return_objects=True) == expected
-    assert repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True) == expected
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ('{\n"a": "\n```{}```\n",\n"b": "x",\n}', {"a": "\n```{}```", "b": "x"}),
+        ('{\n"a": "\n```{}```\n"\n",\n"b": "x",\n}', {"a": '\n```{}```\n"', "b": "x"}),
+        ('{\n"a": "\n```{}```\n"\n",\n\'b\': "x",\n}', {"a": '\n```{}```\n"', "b": "x"}),
+        ('{\n"a": "\n```{}```\n"\n", // c\n"b": "x",\n}', {"a": '\n```{}```\n"', "b": "x"}),
+        ('{\n"a": "\n```{}```\n"\n",\n b: "x",\n}', {"a": '\n```{}```\n"', "b": "x"}),
+        ('{"a":"```}```"a","b":"x"}', {"a": '```}```"a', "b": "x"}),
+        ('{"a":"x}``` [1,2]\n","b":"y"}', {"a": "x}``` [1,2]", "b": "y"}),
+        ('{"a":"x}``` [http://x]\n","b":"y"}', {"a": "x}``` [http://x]", "b": "y"}),
+        ('{"a":"x}``` [foo[bar]\n","b":"y"}', {"a": "x}``` [foo[bar]", "b": "y"}),
+        ('{"a":"x}``` [{\n","b":"y"}', {"a": "x}``` [{", "b": "y"}),
+        ('{"a":"x}``` [foo, [bar]\n","b":"y"}', {"a": "x}``` [foo, [bar]", "b": "y"}),
+        ('{"a":"x}``` [1,"z"]\n","b":"y"}', {"a": 'x}``` [1,"z"]', "b": "y"}),
+        ('{"a":"x}``` [1, [2]]\n","b":"y"}', {"a": "x}``` [1, [2]]", "b": "y"}),
+        ('{"a":"x}``` [1,[2],k:v]\n","b":"y"}', {"a": "x}``` [1,[2],k:v]", "b": "y"}),
+        ('{"a":"x}``` (1,(2),k:v)\n","b":"y"}', {"a": "x}``` (1,(2),k:v)", "b": "y"}),
+        ('{"a":"x}``` [1,2],\n","b":"y"}', {"a": "x}``` [1,2],", "b": "y"}),
+        ('{"a":"x}``` // c\n [1,2]\n","b":"y"}', {"a": "x}``` // c\n [1,2]", "b": "y"}),
+        ('{"a":"x}``` // c\n [1,2],\n","b":"y"}', {"a": "x}``` // c\n [1,2],", "b": "y"}),
+        (
+            '{\n"a": "\n```c\nint main() {\n}\n```\nImplementation: "xxx", xxx\n",\n"b": "x",\n}',
+            {"a": '\n```c\nint main() {\n}\n```\nImplementation: "xxx", xxx', "b": "x"},
+        ),
+    ],
+    ids=[
+        "multiline-string",
+        "stray-quote-line",
+        "single-quoted-next-key",
+        "comment-prefixed-next-key",
+        "bare-next-key",
+        "inline-quoted-prose",
+        "inline-array-literal",
+        "url-like-inline-array",
+        "unmatched-inner-delimiter",
+        "unbalanced-inline-array-like-prose",
+        "unmatched-inner-delimiter-after-comma",
+        "quoted-item-inline-array",
+        "balanced-nested-inline-array",
+        "nested-numeric-inline-array-with-bare-key-like-prose",
+        "nested-numeric-parenthesized-value-with-bare-key-like-prose",
+        "inline-array-with-trailing-comma",
+        "comment-prefixed-inline-array",
+        "comment-prefixed-inline-array-with-trailing-comma",
+        "fenced-code-block-before-inline-quoted-prose",
+    ],
+)
+def test_schema_pydantic_model_keeps_literal_fenced_snippet_cases(raw, expected):
+    _assert_two_string_schema_repairs(raw, expected)
 
 
 def test_schema_boolean_coercion_is_mode_independent():
