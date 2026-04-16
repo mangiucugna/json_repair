@@ -23,9 +23,11 @@
 
 ## Docs
 - Keep `README.zh.md` aligned with `README.md` when contributor guidance or usage behavior changes.
+- In Chinese-facing docs or support copy, lead with low-friction asks (`Star`, share, issue with sample) before sponsorship asks.
 - For local docs demo validation, follow `.agents/skills/docs-demo-local-test/SKILL.md`.
 - Use `.agents/specs/docs-demo-ui/SPEC.md` to decide whether the docs demo needs no UI test, a smoke test, or a comprehensive Chrome MCP run; keep the spec current when demo behavior or test expectations change.
 - Keep docs demo share state in the URL hash, not query params; large `json`/`schema` permalinks can hit static-host URI limits, so read legacy query-param links but write compressed hash URLs.
+- Keep the docs demo's live permalink visible in the address bar while editing; do not hide or clear the hash after hydration unless product behavior changes intentionally.
 
 ## Code Areas
 - API and CLI entry points: `src/json_repair/json_repair.py`, `src/json_repair/__init__.py`, `src/json_repair/__main__.py`.

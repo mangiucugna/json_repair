@@ -6,14 +6,39 @@
 
 [English](README.md) | **中文**
 
-这个轻量工具包可以修复无效的 JSON 字符串。想了解支持的全部场景，请查看单元测试。
+这个 Python 工具包可以修复来自 LLM、API、日志和人工编辑输入中的损坏 JSON。
+
+- 可修复缺失引号、逗号、括号、注释、夹杂说明文字和被截断的值。
+- 既可以作为 `json.loads()` 的兜底解析器，也可以配合 schema 做引导修复。
+- 可直接安装 `pip install json-repair`，也可以先试用在线演示。
 
 ![banner](banner.png)
 
 ---
 
-# 想支持这个项目？
-这个库免费且由作者业余维护。如果它帮到了你的工作，欢迎在 GitHub Sponsors 支持：https://github.com/sponsors/mangiucugna
+## 快速示例
+
+```python
+import json_repair
+
+bad_json = '{"users":[{"name":"Ada","role":"admin",}],"ok":tru'
+decoded_object = json_repair.loads(bad_json)
+
+# {'users': [{'name': 'Ada', 'role': 'admin'}], 'ok': True}
+```
+
+如果 `json_repair` 帮你省下了调试时间，欢迎给仓库点个 Star：https://github.com/mangiucugna/json_repair
+
+---
+
+## 如果这个项目帮到你了
+
+- 最简单的支持方式：给仓库点个 Star，让更多人能搜到它。
+- 如果身边有人也在处理大模型或脏数据 JSON，把仓库或在线演示链接发给他们。
+- 如果你遇到了修不好的样例，欢迎在 GitHub 提 Issue 并附上最小复现输入。
+- 如果你的团队在生产环境长期使用它，再考虑通过 Sponsors 支持维护会更自然。
+
+---
 
 ## 高级赞助商
 - [Icana-AI](https://github.com/Icana-AI) —— CallCoach（全球领先的呼叫中心 AI 教练）的开发者。访问 [https://www.icana.ai/](https://www.icana.ai/)
@@ -22,9 +47,14 @@
 ---
 
 # 演示
-- 中文提示的在线演示（GitHub Pages）：https://mangiucugna.github.io/json_repair/index.zh.html  
+- 中文提示的在线演示（GitHub Pages）：https://mangiucugna.github.io/json_repair/index.zh.html
 - 英文演示：https://mangiucugna.github.io/json_repair/
 - Google NotebookLM 英文音频介绍：https://notebooklm.google.com/notebook/05312bb3-f6f3-4e49-a99b-bd51db64520b/audio
+
+---
+
+# 想支持这个项目？
+这个库免费且由作者业余维护。如果它帮到了你的工作，欢迎在 GitHub Sponsors 支持：https://github.com/sponsors/mangiucugna
 
 ---
 
@@ -252,6 +282,16 @@ repair_json(
 ```python
 stream_output = repair_json(stream_input, stream_stable=True)
 ```
+
+### 更多集成示例
+
+如果你想直接复制到实际项目里使用，可查看 [examples/README.md](examples/README.md)：
+
+- [repair_llm_output.py](examples/repair_llm_output.py)：修复带 Markdown 代码块或额外说明文字的模型输出。
+- [chinese_llm_output.py](examples/chinese_llm_output.py)：修复包含中文字段和值的模型输出，并保留原始中文字符。
+- [pydantic_schema.py](examples/pydantic_schema.py)：使用 Pydantic v2 模型做 schema 引导修复。
+- [stream_stable.py](examples/stream_stable.py)：在流式输出尚未完成时保持稳定的部分 JSON。
+- [fastapi_app.py](examples/fastapi_app.py)：在 FastAPI 接口中完成修复和校验。
 
 ### CLI 使用
 安装命令行工具：

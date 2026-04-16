@@ -77,6 +77,11 @@
             <p class="eyebrow">Open source · Free · No signup</p>
             <h1>JSON Repair & Schema Validation — fix malformed JSON online</h1>
             <p class="lede">Paste broken JSON (even messy LLM output), optionally provide a JSON Schema, and instantly get valid, formatted output with a detailed log of every fix.</p>
+            <div class="hero-actions">
+                <a class="button-like primary" href="https://github.com/mangiucugna/json_repair/" target="_blank" rel="noopener">Star on GitHub</a>
+                <a class="button-like secondary" href="https://github.com/mangiucugna/json_repair/issues/new/choose" target="_blank" rel="noopener">Share a bad sample</a>
+            </div>
+            <p class="hero-note">If this demo solves a real problem for you, a GitHub Star is the clearest way to help more people find it.</p>
         </header>
         <main>
             <section>
@@ -135,6 +140,17 @@ python -m json_repair</code></pre>
                     <textarea id="output-json" aria-label="Repaired JSON" readonly placeholder="Formatted JSON will appear here..."></textarea>
                 </div>
             </div>
+            <section id="success-support" class="support-card hidden" aria-live="polite">
+                <h2>Did this save you time?</h2>
+                <p>If this repair solved a real problem, the fastest way to help is to star the repo, share it, or send a broken sample we can learn from.</p>
+                <div class="support-actions">
+                    <a class="button-like primary" href="https://github.com/mangiucugna/json_repair/" target="_blank" rel="noopener">Star on GitHub</a>
+                    <button type="button" id="copy-repo-link">Copy repo link</button>
+                    <a class="button-like secondary" href="https://github.com/mangiucugna/json_repair/issues/new/choose" target="_blank" rel="noopener">Report a bad sample</a>
+                </div>
+                <p id="support-copy-status" class="helper-text support-status"></p>
+                <p class="helper-text">If your team relies on it in production, GitHub Sponsors helps keep maintenance predictable.</p>
+            </section>
             <div class="textarea-container schema-container">
                 <label for="schema-json">Optional JSON Schema (object or boolean)</label>
                 <textarea id="schema-json" aria-label="JSON Schema" placeholder='{"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]}'></textarea>
@@ -144,7 +160,11 @@ python -m json_repair</code></pre>
                     <option value="salvage">salvage (best-effort array/object salvage)</option>
                 </select>
                 <p class="helper-text">Optional. Provide a JSON Schema to guide coercions, defaults, and validation. Leave empty to use normal repair mode.</p>
-                <p class="schema-note">Schema is optional and included in the page URL so you can share reproducible examples.</p>
+                <p class="schema-note">Use the share button to copy a reproducible permalink. The address bar updates live as you edit.</p>
+                <div class="helper-actions">
+                    <button type="button" id="copy-share-link">Copy share link</button>
+                    <p id="share-copy-status" class="helper-text share-status" aria-live="polite"></p>
+                </div>
             </div>
             <div class="textarea-container">
                 <label for="log-output">Repair actions performed</label>
@@ -167,7 +187,7 @@ python -m json_repair</code></pre>
             </section>
         </main>
         <footer>
-            <p><strong>Support:</strong> <a href="https://github.com/sponsors/mangiucugna" target="_blank" rel="noopener">Buy me a beer</a> · <strong>Source:</strong> <a href="https://github.com/mangiucugna/json_repair/" target="_blank" rel="noopener">json_repair on GitHub</a></p>
+            <p><strong>Support:</strong> <a href="https://github.com/mangiucugna/json_repair/" target="_blank" rel="noopener">Star the repo</a> · <a href="https://github.com/mangiucugna/json_repair/issues/new/choose" target="_blank" rel="noopener">Report a bad sample</a> · <a href="https://github.com/sponsors/mangiucugna" target="_blank" rel="noopener">Sponsor maintenance</a> · <strong>Source:</strong> <a href="https://github.com/mangiucugna/json_repair/" target="_blank" rel="noopener">json_repair on GitHub</a></p>
         </footer>
         <script src="index.js"></script>
         <!-- Google tag (gtag.js) -->

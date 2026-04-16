@@ -40,7 +40,7 @@ Status: Active
 - The agent MUST run `Level 2` in a fresh isolated browser context so prior local storage, stale requests, and previous test state do not contaminate results.
 - The agent MUST patch browser `fetch` to target `http://127.0.0.1:5000/api/repair-json` before testing request-driven behavior.
 - The agent MUST verify, during `Level 1` and `Level 2`, that at least one request actually hits the local API target.
-- The agent MUST leave the local docs page on a clean short URL after any share-state hydration flow; tests for URL behavior are incomplete if they only inspect rendered content.
+- The agent MUST verify the visible local docs URL after any hydration or editing flow; tests for URL behavior are incomplete if they only inspect rendered content.
 - The agent MUST treat large-example share behavior as a first-class contract when URL or sharing code changes.
 - The agent MUST explicitly report any skipped required scenario in the final response.
 
@@ -100,7 +100,7 @@ Status: Active
    - Confirm draft state is written to local storage.
    - Reload the page.
    - Confirm the input and schema rehydrate from local storage.
-   - Confirm the visible page URL remains the short local page path.
+   - Confirm the visible page URL reflects the current state as a compressed hash permalink.
 
 4. Small share-link flow
    - Use a small reproducible example.
@@ -109,7 +109,7 @@ Status: Active
    - Read the copied URL when possible.
    - Open the copied URL in a fresh isolated context.
    - Confirm input and schema hydrate correctly.
-   - Confirm the visible URL is cleaned after hydration.
+   - Confirm the visible URL remains a usable compressed hash permalink after hydration.
 
 5. Large share-state flow
    - Use a realistically large payload and a matching schema.
@@ -118,7 +118,7 @@ Status: Active
      - long string fields such as explanations or model output
      - enough size to exceed the readable plain-URL path
      - schema present, not omitted
-   - Confirm the page remains usable and the visible URL stays short during editing.
+   - Confirm the page remains usable and the visible URL stays as a compressed hash permalink during editing.
    - Use the share-link button.
    - Confirm the large example follows the intended large-share behavior:
      - if large share links are supported, the copied link is produced in the documented large-share format and can be reopened
@@ -126,13 +126,13 @@ Status: Active
    - If a large link is copied, open it in a fresh isolated context and confirm:
      - state hydrates correctly
      - the local API receives the request with schema included
-     - the visible URL is cleaned after hydration
+     - the visible URL remains a usable compressed hash permalink after hydration
    - This scenario is mandatory whenever URL, share, history, compression, storage, or clipboard behavior changed.
 
 6. Legacy-link compatibility
    - If older share-link formats are still supported, open at least one legacy link.
    - Confirm state hydrates correctly.
-   - Confirm the page cleans the visible URL after hydration.
+   - Confirm the page rewrites the visible URL into the current compressed hash format after hydration.
 
 7. Chinese-page smoke
    - Open `http://127.0.0.1:4173/index.zh.html`.

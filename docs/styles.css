@@ -22,6 +22,20 @@ header {
     margin-top: 8px;
 }
 
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.hero-note {
+    font-size: 0.95rem;
+    color: #4b5563;
+    margin-top: 10px;
+    margin-bottom: 0;
+}
+
 .notice {
     background: #fef3c7;
     border: 1px solid #f59e0b;
@@ -144,6 +158,14 @@ select {
     margin-top: 6px;
 }
 
+.helper-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    margin-top: 10px;
+}
+
 .schema-container {
     margin-top: 4px;
 }
@@ -171,6 +193,66 @@ select {
 .faq p {
     margin-top: 0;
     margin-bottom: 12px;
+}
+
+.support-card {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 18px;
+}
+
+.support-card h2 {
+    margin-top: 0;
+    margin-bottom: 8px;
+}
+
+.support-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 14px 0 10px;
+}
+
+.button-like,
+.support-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    border: 1px solid #cbd5e1;
+    background: white;
+    color: #1f2937;
+}
+
+.button-like.primary {
+    background: #0f766e;
+    border-color: #0f766e;
+    color: white;
+}
+
+.button-like.secondary,
+.support-actions button {
+    background: white;
+    color: #1f2937;
+}
+
+.support-actions button {
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.support-status {
+    min-height: 1.2em;
+}
+
+.share-status {
+    min-height: 1.2em;
+    margin: 0;
 }
 
 footer {

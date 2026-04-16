@@ -7,14 +7,38 @@
 
 English | [中文](README.zh.md)
 
-This simple package can be used to fix an invalid json string. To know all cases in which this package will work, check out the unit test.
+# json_repair
+
+Repair malformed JSON from LLMs, APIs, logs, and user input in Python.
+
+- Fix missing quotes, commas, brackets, comments, stray prose, and truncated values.
+- Use it as a drop-in fallback for `json.loads()` or as a schema-guided repair step.
+- Install with `pip install json-repair` or try the [live demo](https://mangiucugna.github.io/json_repair/).
 
 ![banner](banner.png)
 
 ---
 
-# Think about sponsoring this library!
-This library is free for everyone and it's maintained and developed as a side project so, if you find this library useful for your work, consider becoming a sponsor via this link: https://github.com/sponsors/mangiucugna
+## Quick example
+
+```python
+import json_repair
+
+bad_json = '{"users":[{"name":"Ada","role":"admin",}],"ok":tru'
+decoded_object = json_repair.loads(bad_json)
+
+# {'users': [{'name': 'Ada', 'role': 'admin'}], 'ok': True}
+```
+
+If `json_repair` saves you time, [star the repository](https://github.com/mangiucugna/json_repair) so more people can find it.
+
+---
+
+# Demo
+If you are unsure whether this library will fix your specific problem, or simply want your JSON validated online, try one of these:
+
+- Live demo: https://mangiucugna.github.io/json_repair/
+- Audio overview: [NotebookLM introduction](https://notebooklm.google.com/notebook/05312bb3-f6f3-4e49-a99b-bd51db64520b/audio)
 
 ## Premium sponsors
 - [Icana-AI](https://github.com/Icana-AI) Makers of CallCoach, the world's best Call Centre AI Coach. Visit [https://www.icana.ai/](https://www.icana.ai/)
@@ -22,10 +46,8 @@ This library is free for everyone and it's maintained and developed as a side pr
 
 ---
 
-# Demo
-If you are unsure if this library will fix your specific problem, or simply want your json validated online, you can visit the demo site on GitHub pages: https://mangiucugna.github.io/json_repair/
-
-Or hear an [audio deepdive generate by Google's NotebookLM](https://notebooklm.google.com/notebook/05312bb3-f6f3-4e49-a99b-bd51db64520b/audio) for an introduction to the module
+# Think about sponsoring this library!
+This library is free for everyone and is maintained as a side project, so if it helps your work, consider becoming a sponsor: https://github.com/sponsors/mangiucugna
 
 ---
 
@@ -314,6 +336,15 @@ Sometimes you are streaming some data and want to repair the JSON coming from it
 ```
 stream_output = repair_json(stream_input, stream_stable=True)
 ```
+
+### More integration examples
+
+If you want copy-paste examples for real applications, see [examples/README.md](examples/README.md):
+
+- [repair_llm_output.py](examples/repair_llm_output.py) repairs markdown-wrapped or prose-wrapped model output.
+- [pydantic_schema.py](examples/pydantic_schema.py) uses a Pydantic v2 model as schema guidance.
+- [stream_stable.py](examples/stream_stable.py) keeps partial JSON stable during streaming.
+- [fastapi_app.py](examples/fastapi_app.py) drops the repair step into a FastAPI endpoint.
 
 ### Use json_repair from CLI
 

@@ -8,6 +8,7 @@ const SCHEMA_REPAIR_MODES = new Set([DEFAULT_SCHEMA_MODE, SALVAGE_SCHEMA_MODE]);
 const URL_STATE_HASH_KEY = 'jr';
 const URL_STATE_VERSION = 'v1';
 const RAW_URL_STATE_CODEC = 'u';
+const DRAFT_STORAGE_KEY = 'jsonRepairDraft.v1';
 const URL_STATE_CODECS = [
     { id: 'd', format: 'deflate' },
     { id: 'g', format: 'gzip' },
@@ -17,10 +18,16 @@ const schemaEl = document.getElementById('schema-json');
 const modeEl = document.getElementById('schema-repair-mode');
 const outputEl = document.getElementById('output-json');
 const logEl = document.getElementById('log-output');
+const successSupportEl = document.getElementById('success-support');
+const copyRepoLinkBtn = document.getElementById('copy-repo-link');
+const supportCopyStatusEl = document.getElementById('support-copy-status');
+const copyShareLinkBtn = document.getElementById('copy-share-link');
+const shareCopyStatusEl = document.getElementById('share-copy-status');
 const isChinese = (document.documentElement.lang || '').toLowerCase().startsWith('zh');
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 const supportedURLStateCodec = getSupportedURLStateCodec();
+const REPO_URL = "https://github.com/mangiucugna/json_repair/";
 let urlUpdateSequence = 0;
 
 const messages = isChinese
@@ -37,6 +44,13 @@ const messages = isChinese
         httpErrorPrefix: "请求失败，状态码：",
         contextLabel: "上下文",
         messageLabel: "信息",
+        supportCopySuccess: "仓库链接已复制，欢迎发给同事或朋友。",
+        supportCopyUnavailable: "当前浏览器不支持自动复制，请手动复制仓库链接。",
+        supportCopyFailure: "复制失败，请手动复制仓库链接。",
+        shareCopySuccess: "分享链接已复制，可直接发给同事或贴到 Issue 里。",
+        shareCopyUnavailable: "当前浏览器不支持自动复制分享链接。",
+        shareCopyFailure: "生成或复制分享链接失败，请重试。",
+        shareCopyEmpty: "先输入 JSON 或 Schema，再复制分享链接。",
     }
     : {
         noRepairNeeded: "Nothing to do, this was already valid JSON.",
@@ -51,7 +65,60 @@ const messages = isChinese
         httpErrorPrefix: "Request failed with status ",
         contextLabel: "Context",
         messageLabel: "Message",
+        supportCopySuccess: "Repository link copied. Share it with someone who needs it.",
+        supportCopyUnavailable: "Clipboard access is unavailable. Copy the repository link manually.",
+        supportCopyFailure: "Could not copy the repository link. Copy it manually instead.",
+        shareCopySuccess: "Share link copied. Send it to someone who needs the exact same example.",
+        shareCopyUnavailable: "Clipboard access is unavailable for share links in this browser.",
+        shareCopyFailure: "Could not create or copy the share link. Try again.",
+        shareCopyEmpty: "Enter JSON or a schema before copying a share link.",
     };
+
+function setSupportVisibility(isVisible) {
+    if (!successSupportEl) {
+        return;
+    }
+    successSupportEl.classList.toggle('hidden', !isVisible);
+}
+
+function setSupportCopyStatus(message = '') {
+    if (supportCopyStatusEl) {
+        supportCopyStatusEl.textContent = message;
+    }
+}
+
+function setShareCopyStatus(message = '') {
+    if (shareCopyStatusEl) {
+        shareCopyStatusEl.textContent = message;
+    }
+}
+
+async function writeTextToClipboard(text) {
+    if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+        return 'unavailable';
+    }
+
+    try {
+        await navigator.clipboard.writeText(text);
+        return 'success';
+    } catch {
+        return 'failure';
+    }
+}
+
+async function copyRepositoryLink() {
+    const result = await writeTextToClipboard(REPO_URL);
+    if (result === 'success') {
+        setSupportCopyStatus(messages.supportCopySuccess);
+        return;
+    }
+
+    setSupportCopyStatus(
+        result === 'unavailable'
+            ? messages.supportCopyUnavailable
+            : messages.supportCopyFailure
+    );
+}
 
 function getSupportedURLStateCodec() {
     if (typeof CompressionStream !== 'function' || typeof DecompressionStream !== 'function') {
@@ -119,6 +186,21 @@ async function compressURLState(rawBytes) {
     return { codec: supportedURLStateCodec.id, bytes: compressedBytes };
 }
 
+function buildCleanURL() {
+    const url = new URL(window.location.href);
+    url.search = '';
+    url.hash = '';
+    return url;
+}
+
+function getCurrentState() {
+    return {
+        inputJSON: inputEl.value,
+        schemaJSON: schemaEl ? schemaEl.value : '',
+        schemaMode: modeEl ? modeEl.value : DEFAULT_SCHEMA_MODE,
+    };
+}
+
 function buildURLState(inputJSON, schemaJSON, schemaMode) {
     const state = {};
 
@@ -137,6 +219,14 @@ function buildURLState(inputJSON, schemaJSON, schemaMode) {
 
 function hasURLState(state) {
     return Object.keys(state).length > 0;
+}
+
+function hasStateContent(state) {
+    return !!state && (
+        state.inputJSON !== ''
+        || state.schemaJSON.trim() !== ''
+        || state.schemaMode !== DEFAULT_SCHEMA_MODE
+    );
 }
 
 async function encodeURLState(state) {
@@ -193,40 +283,76 @@ function getLegacyValueFromURL(param) {
 }
 
 function getLegacyStateFromURL() {
-    return {
-        inputJSON: getLegacyValueFromURL('json'),
-        schemaJSON: getLegacyValueFromURL('schema'),
-        schemaMode: getLegacyValueFromURL('schema_mode'),
-    };
+    return parseURLState({
+        j: getLegacyValueFromURL('json'),
+        s: getLegacyValueFromURL('schema'),
+        m: getLegacyValueFromURL('schema_mode'),
+    });
 }
 
 async function getStateFromURL() {
     const hashPrefix = `#${URL_STATE_HASH_KEY}=`;
     if (window.location.hash.startsWith(hashPrefix)) {
         const hashState = await decodeURLState(window.location.hash.slice(hashPrefix.length));
-        if (hashState) {
+        if (hasStateContent(hashState)) {
             return hashState;
         }
     }
 
-    return getLegacyStateFromURL();
+    const legacyState = getLegacyStateFromURL();
+    return hasStateContent(legacyState) ? legacyState : null;
+}
+
+function getDraftState() {
+    try {
+        const serializedState = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (!serializedState) {
+            return null;
+        }
+        const draftState = parseURLState(JSON.parse(serializedState));
+        return hasStateContent(draftState) ? draftState : null;
+    } catch {
+        return null;
+    }
+}
+
+function persistDraftState(inputJSON, schemaJSON, schemaMode) {
+    try {
+        const nextState = buildURLState(inputJSON, schemaJSON, schemaMode);
+        if (!hasURLState(nextState)) {
+            window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+            return;
+        }
+        window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(nextState));
+    } catch {
+        return;
+    }
+}
+
+async function buildShareURL(inputJSON, schemaJSON, schemaMode) {
+    const state = buildURLState(inputJSON, schemaJSON, schemaMode);
+    if (!hasURLState(state)) {
+        return null;
+    }
+
+    const url = buildCleanURL();
+    const encodedState = await encodeURLState(state);
+    // Store shared state in the fragment so large payloads do not hit static-host query limits.
+    url.hash = `${URL_STATE_HASH_KEY}=${encodedState}`;
+    return url.toString();
 }
 
 async function updateURL(inputJSON, schemaJSON, schemaMode) {
-    const nextState = buildURLState(inputJSON, schemaJSON, schemaMode);
     const requestId = ++urlUpdateSequence;
-    const url = new URL(window.location);
+    const nextState = buildURLState(inputJSON, schemaJSON, schemaMode);
+    const url = buildCleanURL();
 
-    url.search = '';
-    if (!hasURLState(nextState)) {
-        url.hash = '';
-    } else {
+    if (hasURLState(nextState)) {
         try {
             const encodedState = await encodeURLState(nextState);
             if (requestId !== urlUpdateSequence) {
                 return;
             }
-            // Store shared state in the fragment so large payloads do not hit static-host query limits.
             url.hash = `${URL_STATE_HASH_KEY}=${encodedState}`;
         } catch {
             return;
@@ -238,6 +364,35 @@ async function updateURL(inputJSON, schemaJSON, schemaMode) {
     }
 
     window.history.replaceState({}, '', url);
+}
+
+async function copyShareLink() {
+    const { inputJSON, schemaJSON, schemaMode } = getCurrentState();
+    const state = buildURLState(inputJSON, schemaJSON, schemaMode);
+    if (!hasURLState(state)) {
+        setShareCopyStatus(messages.shareCopyEmpty);
+        return;
+    }
+
+    let shareURL;
+    try {
+        shareURL = await buildShareURL(inputJSON, schemaJSON, schemaMode);
+    } catch {
+        setShareCopyStatus(messages.shareCopyFailure);
+        return;
+    }
+
+    const result = await writeTextToClipboard(shareURL);
+    if (result === 'success') {
+        setShareCopyStatus(messages.shareCopySuccess);
+        return;
+    }
+
+    setShareCopyStatus(
+        result === 'unavailable'
+            ? messages.shareCopyUnavailable
+            : messages.shareCopyFailure
+    );
 }
 
 function showClientError(message, details = '') {
@@ -289,15 +444,17 @@ function parseSchemaRepairMode(modeText) {
 }
 
 function handleInputChange() {
-    const inputJSON = inputEl.value;
-    const schemaJSON = schemaEl ? schemaEl.value : '';
-    const schemaMode = modeEl ? modeEl.value : DEFAULT_SCHEMA_MODE;
+    const { inputJSON, schemaJSON, schemaMode } = getCurrentState();
+    persistDraftState(inputJSON, schemaJSON, schemaMode);
+    setShareCopyStatus('');
     void updateURL(inputJSON, schemaJSON, schemaMode);
     processInput(inputJSON, schemaJSON, schemaMode);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const initialState = await getStateFromURL();
+    const urlState = await getStateFromURL();
+    const draftState = urlState ? null : getDraftState();
+    const initialState = urlState || draftState;
     const initialJSON = initialState ? initialState.inputJSON : '';
     const initialSchema = initialState ? initialState.schemaJSON : '';
     const initialSchemaMode = initialState ? initialState.schemaMode : DEFAULT_SCHEMA_MODE;
@@ -314,9 +471,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (modeEl) {
         modeEl.value = resolvedSchemaMode;
     }
-    if (initialJSON !== '' || initialSchema.trim() !== '' || resolvedSchemaMode !== DEFAULT_SCHEMA_MODE) {
+
+    if (initialState) {
+        persistDraftState(initialJSON, initialSchema, resolvedSchemaMode);
         void updateURL(initialJSON, initialSchema, resolvedSchemaMode);
     }
+
     if (initialJSON) {
         processInput(initialJSON, initialSchema, resolvedSchemaMode);
     }
@@ -329,11 +489,23 @@ if (schemaEl) {
 if (modeEl) {
     modeEl.addEventListener('change', handleInputChange);
 }
+if (copyRepoLinkBtn) {
+    copyRepoLinkBtn.addEventListener('click', () => {
+        void copyRepositoryLink();
+    });
+}
+if (copyShareLinkBtn) {
+    copyShareLinkBtn.addEventListener('click', () => {
+        void copyShareLink();
+    });
+}
 
 function processInput(inputJSON, schemaJSON = '', schemaMode = DEFAULT_SCHEMA_MODE) {
     if (inputJSON.trim() === '') {
         outputEl.value = '';
         logEl.value = '';
+        setSupportVisibility(false);
+        setSupportCopyStatus('');
         return;
     }
 
@@ -344,6 +516,9 @@ function processInput(inputJSON, schemaJSON = '', schemaMode = DEFAULT_SCHEMA_MO
     if (controller) {
         controller.abort();
     }
+
+    setSupportVisibility(false);
+    setSupportCopyStatus('');
 
     const { schema, error } = parseSchema(schemaJSON);
     if (error) {
@@ -415,9 +590,12 @@ function processInput(inputJSON, schemaJSON = '', schemaMode = DEFAULT_SCHEMA_MO
 
             outputEl.value = JSON.stringify(formattedJSON, null, 4);
             logEl.value = formatLogs(logs);
+            setSupportVisibility(true);
+            setSupportCopyStatus('');
         })
         .catch((error) => {
             if (error.name !== 'AbortError') {
+                setSupportVisibility(false);
                 showClientError(`${messages.formatErrorPrefix}${error.message}`);
             }
         });

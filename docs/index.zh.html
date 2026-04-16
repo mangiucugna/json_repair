@@ -70,6 +70,11 @@
             <p class="eyebrow">开源 · 免费 · 无需注册</p>
             <h1>JSON 修复器与 Schema 校验 — 在线修复损坏 JSON</h1>
             <p class="lede">粘贴损坏的 JSON（包括大模型输出），并可选提供 JSON Schema，即可获得有效、格式化结果与每一步修复日志。</p>
+            <div class="hero-actions">
+                <a class="button-like primary" href="https://github.com/mangiucugna/json_repair/" target="_blank" rel="noopener">去 GitHub 点 Star</a>
+                <a class="button-like secondary" href="https://github.com/mangiucugna/json_repair/issues/new/choose" target="_blank" rel="noopener">提交坏样例</a>
+            </div>
+            <p class="hero-note">如果这个演示帮你解决了真实问题，给仓库点个 Star 是最直接、最有用的支持方式。</p>
         </header>
         <main>
             <section>
@@ -128,6 +133,17 @@ python -m json_repair</code></pre>
                     <textarea id="output-json" aria-label="修复后的 JSON" readonly placeholder="格式化后的 JSON 将显示在此..."></textarea>
                 </div>
             </div>
+            <section id="success-support" class="support-card hidden" aria-live="polite">
+                <h2>这个结果帮到你了吗？</h2>
+                <p>如果这次修复帮你省了时间，最有效的支持方式通常不是立刻赞助，而是先让更多人知道这个项目。</p>
+                <div class="support-actions">
+                    <a class="button-like primary" href="https://github.com/mangiucugna/json_repair/" target="_blank" rel="noopener">去 GitHub 点 Star</a>
+                    <button type="button" id="copy-repo-link">复制仓库链接</button>
+                    <a class="button-like secondary" href="https://github.com/mangiucugna/json_repair/issues/new/choose" target="_blank" rel="noopener">提交坏样例</a>
+                </div>
+                <p id="support-copy-status" class="helper-text support-status"></p>
+                <p class="helper-text">如果你的团队长期在生产环境使用它，再考虑 Sponsors 支持维护会更自然。</p>
+            </section>
             <div class="textarea-container schema-container">
                 <label for="schema-json">可选 JSON Schema（对象或布尔值）</label>
                 <textarea id="schema-json" aria-label="JSON Schema" placeholder='{"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]}'></textarea>
@@ -137,7 +153,11 @@ python -m json_repair</code></pre>
                     <option value="salvage">salvage（尽力返回可用数组/对象）</option>
                 </select>
                 <p class="helper-text">可选。提供 JSON Schema 可引导类型转换、默认值填充和校验；留空则使用普通修复模式。</p>
-                <p class="schema-note">Schema 为可选项，并会写入页面 URL，方便分享可复现实例。</p>
+                <p class="schema-note">使用下方按钮复制可复现实例链接；编辑过程中地址栏会实时更新。</p>
+                <div class="helper-actions">
+                    <button type="button" id="copy-share-link">复制分享链接</button>
+                    <p id="share-copy-status" class="helper-text share-status" aria-live="polite"></p>
+                </div>
             </div>
             <div class="textarea-container">
                 <label for="log-output">修复步骤日志</label>
@@ -160,7 +180,7 @@ python -m json_repair</code></pre>
             </section>
         </main>
         <footer>
-            <p><strong>支持作者：</strong> <a href="https://github.com/sponsors/mangiucugna" target="_blank" rel="noopener">请我喝杯啤酒</a> · <strong>源码：</strong> <a href="https://github.com/mangiucugna/json_repair/" target="_blank" rel="noopener">json_repair on GitHub</a></p>
+            <p><strong>这个工具帮到你了？</strong> <a href="https://github.com/mangiucugna/json_repair/" target="_blank" rel="noopener">给仓库点 Star</a> · <a href="https://github.com/mangiucugna/json_repair/issues/new/choose" target="_blank" rel="noopener">提交坏样例</a> · <a href="https://github.com/sponsors/mangiucugna" target="_blank" rel="noopener">赞助维护</a> · <strong>源码：</strong> <a href="https://github.com/mangiucugna/json_repair/" target="_blank" rel="noopener">json_repair on GitHub</a></p>
             <p><a href="index.html" rel="alternate">Switch to English</a></p>
         </footer>
         <script src="index.js"></script>
