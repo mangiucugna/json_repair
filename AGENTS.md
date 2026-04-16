@@ -15,6 +15,7 @@
 
 ## Release / Packaging
 - Project version lives in `pyproject.toml` under `[project].version`; use semantic versioning, with patch bumps for bug fixes.
+- Keep `CITATION.cff` aligned with the current released version metadata in `pyproject.toml`; update `date-released` when publishing a new release and omit empty optional fields such as `doi`.
 - Keep `MANIFEST.in` pruning `tests` so test modules are not shipped in the sdist.
 - In `[tool.setuptools.package-data]`, use the real package key `json_repair` so `py.typed` stays included reliably.
 - Run `uvx twine check dist/*` after building and before publishing.
