@@ -42,17 +42,9 @@
 - `JSONParser.parse` should return only JSON; use `parser.logger` for logs instead of tuple returns.
 - Parser fast paths must work for both plain strings and `StringFileWrapper`; do not rely on `str`-only helpers inside parse helpers.
 - When adding repair heuristics, emit a `self.log` entry and keep `strict=True` conservative unless the relaxed behavior is explicitly intended.
-- In `parse_string` object-value context, comma heuristics should stop only for plausible next members; commas followed by prose or inline raw containers like `{"blank_1": ...}` belong to the string.
-- In `parse_string` object-value context, brace heuristics for `}` before triple backticks must not truncate quoted multiline strings that contain literal fenced snippets like ````{}````.
-- In `parse_string` object-value context, brace heuristics for `}` before triple backticks must also preserve fenced snippets followed by literal quoted prose such as ````}```"a``; otherwise the parser truncates the current member and drops later keys.
-- In `parse_string` object-value context, the `}` before triple-backticks heuristic must not scan through quotes inside a following raw container that is outside the string, but literal container content such as ```` [1,2],\n"`` can still belong to the current string; treat `container + comma` as outside the string only when that comma actually starts the next object member.
-- When `parse_string` decides that a post-fence raw container still belongs to the current object-value string, carry that decision into the actual scan and consume the balanced container as string content; lookahead-only fixes still let inner quotes inside `[... "x" ...]` or `{"k":"v"}` terminate the string early.
-- Inside a post-fence raw container that is being preserved as literal string content, do not reinterpret `#`, `//`, or `/* */` sequences as actual comments; slash-heavy literals like `[http://x]` and `[/a//b/]` must stay intact.
-- Inside a post-fence raw container that is being preserved as literal string content, only treat inner `[`/`{`/`(` as nested structure when the preceding significant character makes a nested value plausible; unmatched inner delimiters like `[foo[bar]` can be plain prose.
-- After `,` or `:` inside a preserved post-fence raw container, inner `[`/`{`/`(` still need a plausible structured next token; prose such as `[foo, [bar]` must stay literal even though the delimiter could also start a real nested value.
-- For preserved post-fence raw containers, digit-starting nested arrays or parenthesized values after `,` or `:` are still structured; otherwise `_skip_inline_container(...)` can stop at the first inner `]` or `)` and let later bare-key-like prose steal the next member.
-- If text after a post-fence `[`/`{`/`(` cannot be balanced as a raw container, fall back to the generic quote scan instead of forcing the string closed; unbalanced bracket-like prose such as ```` [{`` can still belong to the current string.
-- In `parse_string` object-value context, do not let `quote + whitespace + quote` short-circuit before misplaced-quote recovery when a next member follows; malformed multiline strings can place a stray quote on its own line before the real terminator, and that next key may be quoted, comment-prefixed, or bare, but `,}` and trailing commas at EOF must still terminate the value instead of being treated as another member, and generic comma classification must stay conservative about multiline curly-quoted prose inside strings.
+- In `parse_string` object-value context, closing heuristics must stay conservative: preserve multiline prose, fenced snippets, and raw container-like text unless there is a clearly valid next member.
+- If `parse_string` decides a raw container-like chunk belongs to the current string, carry that decision into the real scan; do not reinterpret comment markers or nested delimiters as structure unless the surrounding tokens make structured content clearly plausible.
+- Misplaced-quote recovery in `parse_string` must run before short-circuit quote heuristics when a next member may follow.
 - When a schema is provided, apply schema repair and validation for both valid and invalid JSON inputs.
 - Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`; avoid duplicating parser switch logic.
 - `patternProperties` matching is intentionally limited to a safe literal-plus-anchor subset; do not execute user-supplied regexes.
@@ -63,12 +55,11 @@
 
 ## Known Pitfalls
 - In `SchemaRepairer._repair_type_union`, validate each candidate branch before returning so mixed unions can fall back to a later valid branch.
-- In salvage mode, keep list-to-object/root-array salvage heuristics scoped to object-only schemas; skip them when array is also allowed at that level.
+- In salvage mode, keep structural salvage heuristics scoped to object-only schemas unless broader behavior is explicitly intended.
 - In `repair_json`, keep a single shared output-finalization path for logging, `return_objects`, empty-string handling, and `json.dumps`.
 - In `schema_repair_mode="salvage"`, only drop array items for data-repair failures; propagate schema-definition errors.
 - In `parse_object`, keep the empty-object-to-array fallback gated by object-shape detection; escaped object keys or object-style `:` separators must stay on the object-repair path instead of being reclassified as set literals.
 - Parser refactors are sensitive to context lifetimes and heuristic branch ordering; preserve malformed-input behavior when restructuring `parse_string` and `parse_object`.
 - Normalize `RecursionError` from the top-level repair parser entry point into `ValueError`; downstream callers commonly handle parse failures but not raw recursion exceptions.
-- Parenthesized Python syntax must distinguish explicit tuples like `()` and `(1,)` from grouped scalars like `(1)`, and array repair must preserve the expected closing delimiter so `[` inputs still log a missing `]` when they end with `)`.
-- Top-level `(` scanning must stay more conservative than nested tuple parsing; inline prose or numbered headings can contain parentheses before the real JSON block, so only standalone parenthesized values should start a top-level parse.
+- Parenthesized Python syntax must distinguish explicit tuples from grouped scalars, and top-level `(` scanning must stay more conservative than nested tuple parsing.
 - Top-level comment skipping currently bounces between `parse_json` and `parse_comment`; prefer iterative re-entry when touching that flow because comment-heavy inputs can hit `RecursionError` after a few hundred comments.
