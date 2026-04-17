@@ -5,7 +5,7 @@
 [![Github Sponsors](https://img.shields.io/github/sponsors/mangiucugna)](https://github.com/sponsors/mangiucugna)
 [![GitHub Repo stars](https://img.shields.io/github/stars/mangiucugna/json_repair?style=flat)](https://github.com/mangiucugna/json_repair/stargazers)
 
-English | [中文](README.zh.md)
+English | [中文](https://github.com/mangiucugna/json_repair/blob/main/README.zh.md)
 
 # json_repair
 
@@ -15,7 +15,7 @@ Repair malformed JSON from LLMs, APIs, logs, and user input in Python.
 - Use it as a drop-in fallback for `json.loads()` or as a schema-guided repair step.
 - Install with `pip install json-repair` or try the [live demo](https://mangiucugna.github.io/json_repair/).
 
-![banner](banner.png)
+![banner](https://raw.githubusercontent.com/mangiucugna/json_repair/main/banner.png)
 
 ---
 
@@ -339,12 +339,12 @@ stream_output = repair_json(stream_input, stream_stable=True)
 
 ### More integration examples
 
-If you want copy-paste examples for real applications, see [examples/README.md](examples/README.md):
+If you want copy-paste examples for real applications, see [examples/README.md](https://github.com/mangiucugna/json_repair/blob/main/examples/README.md):
 
-- [repair_llm_output.py](examples/repair_llm_output.py) repairs markdown-wrapped or prose-wrapped model output.
-- [pydantic_schema.py](examples/pydantic_schema.py) uses a Pydantic v2 model as schema guidance.
-- [stream_stable.py](examples/stream_stable.py) keeps partial JSON stable during streaming.
-- [fastapi_app.py](examples/fastapi_app.py) drops the repair step into a FastAPI endpoint.
+- [repair_llm_output.py](https://github.com/mangiucugna/json_repair/blob/main/examples/repair_llm_output.py) repairs markdown-wrapped or prose-wrapped model output.
+- [pydantic_schema.py](https://github.com/mangiucugna/json_repair/blob/main/examples/pydantic_schema.py) uses a Pydantic v2 model as schema guidance.
+- [stream_stable.py](https://github.com/mangiucugna/json_repair/blob/main/examples/stream_stable.py) keeps partial JSON stable during streaming.
+- [fastapi_app.py](https://github.com/mangiucugna/json_repair/blob/main/examples/fastapi_app.py) drops the repair step into a FastAPI endpoint.
 
 ### Use json_repair from CLI
 

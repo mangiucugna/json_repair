@@ -12,7 +12,7 @@
 - 既可以作为 `json.loads()` 的兜底解析器，也可以配合 schema 做引导修复。
 - 可直接安装 `pip install json-repair`，也可以先试用在线演示。
 
-![banner](banner.png)
+![banner](https://raw.githubusercontent.com/mangiucugna/json_repair/main/banner.png)
 
 ---
 
@@ -285,13 +285,13 @@ stream_output = repair_json(stream_input, stream_stable=True)
 
 ### 更多集成示例
 
-如果你想直接复制到实际项目里使用，可查看 [examples/README.md](examples/README.md)：
+如果你想直接复制到实际项目里使用，可查看 [examples/README.md](https://github.com/mangiucugna/json_repair/blob/main/examples/README.md)：
 
-- [repair_llm_output.py](examples/repair_llm_output.py)：修复带 Markdown 代码块或额外说明文字的模型输出。
-- [chinese_llm_output.py](examples/chinese_llm_output.py)：修复包含中文字段和值的模型输出，并保留原始中文字符。
-- [pydantic_schema.py](examples/pydantic_schema.py)：使用 Pydantic v2 模型做 schema 引导修复。
-- [stream_stable.py](examples/stream_stable.py)：在流式输出尚未完成时保持稳定的部分 JSON。
-- [fastapi_app.py](examples/fastapi_app.py)：在 FastAPI 接口中完成修复和校验。
+- [repair_llm_output.py](https://github.com/mangiucugna/json_repair/blob/main/examples/repair_llm_output.py)：修复带 Markdown 代码块或额外说明文字的模型输出。
+- [chinese_llm_output.py](https://github.com/mangiucugna/json_repair/blob/main/examples/chinese_llm_output.py)：修复包含中文字段和值的模型输出，并保留原始中文字符。
+- [pydantic_schema.py](https://github.com/mangiucugna/json_repair/blob/main/examples/pydantic_schema.py)：使用 Pydantic v2 模型做 schema 引导修复。
+- [stream_stable.py](https://github.com/mangiucugna/json_repair/blob/main/examples/stream_stable.py)：在流式输出尚未完成时保持稳定的部分 JSON。
+- [fastapi_app.py](https://github.com/mangiucugna/json_repair/blob/main/examples/fastapi_app.py)：在 FastAPI 接口中完成修复和校验。
 
 ### CLI 使用
 安装命令行工具：
