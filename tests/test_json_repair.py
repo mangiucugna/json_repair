@@ -1,9 +1,12 @@
+import importlib
 import sys
 
 import pytest
 
 from src.json_repair.json_parser import JSONParser
 from src.json_repair.json_repair import loads, repair_json
+
+json_repair_module = importlib.import_module("src.json_repair.json_repair")
 
 
 def test_valid_json():
@@ -20,6 +23,15 @@ def test_valid_json():
     assert repair_json('{"key": 12345678901234567890}') == '{"key": 12345678901234567890}'
     assert repair_json('{"key": "value\u263a"}') == '{"key": "value\\u263a"}'
     assert repair_json('{"key": "value\\nvalue"}') == '{"key": "value\\nvalue"}'
+
+
+def test_valid_json_fast_path_does_not_initialize_repair_parser(monkeypatch):
+    def fail_parser_initialization(*_args, **_kwargs):
+        raise AssertionError("valid JSON fast path should not initialize the repair parser")
+
+    monkeypatch.setattr(json_repair_module, "JSONParser", fail_parser_initialization)
+
+    assert json_repair_module.repair_json('{"key": "value"}', return_objects=True) == {"key": "value"}
 
 
 def test_multiple_jsons():

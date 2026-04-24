@@ -40,6 +40,7 @@
 ## Repo-Specific Implementation Notes
 - Avoid extracting short, non-shared helpers in parser code when the inline logic is still readable.
 - `JSONParser.parse` should return only JSON; use `parser.logger` for logs instead of tuple returns.
+- Keep string-input valid JSON fast paths free of `JSONParser` initialization; file-backed parsing may initialize earlier to preserve descriptor fallback semantics.
 - Parser fast paths must work for both plain strings and `StringFileWrapper`; do not rely on `str`-only helpers inside parse helpers.
 - `load(fd)` must behave like `json.load(fd)` and repair from the descriptor's current position; keep `StringFileWrapper` logical index zero aligned to `fd.tell()`.
 - When adding repair heuristics, emit a `self.log` entry and keep `strict=True` conservative unless the relaxed behavior is explicitly intended.
@@ -53,6 +54,7 @@
 - Preserve schema dict identity in `SchemaRepairer.resolve_schema` whenever possible so validator caching remains effective.
 - `schema_repair_mode` supports only `standard` and opt-in `salvage`; `salvage` should stay limited to best-effort structural recovery.
 - `schema_repair_mode="salvage"` without a schema must raise `ValueError`.
+- `strict=True` must not bypass or second-guess the `json.loads` fast path; if stdlib accepts input as valid JSON, preserve that behavior unless the public contract changes.
 - Treat `skip_json_loads=True` as an explicit opt-out of JSON loader fast paths for inputs already known to be invalid; do not classify valid-JSON differences under that flag as bugs unless the documented contract changes.
 
 ## Known Pitfalls

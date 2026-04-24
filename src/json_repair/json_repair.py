@@ -136,10 +136,15 @@ def repair_json(
     if schema is not None and strict:
         raise ValueError("schema and strict cannot be used together.")
 
-    parser = JSONParser(json_str, json_fd, logging, chunk_length, stream_stable, strict)
+    parser: JSONParser | None = None
+    repair_log: list[dict[str, str]] = []
+    if json_fd is not None:
+        parser = JSONParser(json_str, json_fd, logging, chunk_length, stream_stable, strict)
+        if logging:
+            repair_log = parser.logger
     schema_obj = schema_from_input(schema) if schema is not None else None
     repairer = (
-        SchemaRepairer(schema_obj, parser.logger if logging else None, schema_repair_mode=schema_repair_mode)
+        SchemaRepairer(schema_obj, repair_log if logging else None, schema_repair_mode=schema_repair_mode)
         if schema_obj is not None
         else None
     )
@@ -169,6 +174,10 @@ def repair_json(
     except (json.JSONDecodeError, TypeError, ValueError):
         pass
     if not is_valid_json:
+        if parser is None:
+            parser = JSONParser(json_str, json_fd, logging, chunk_length, stream_stable, strict)
+            if logging:
+                parser.logger = repair_log
         try:
             if repairer is not None and schema_obj is not None:
                 # If schema-guided, we want to attempt repairs even on valid JSON that fails schema validation.
@@ -183,7 +192,7 @@ def repair_json(
     # It's useful to return the actual object instead of the json string,
     # it allows this lib to be a replacement of the json library
     if logging:
-        return parsed_json, parser.logger or []
+        return parsed_json, repair_log
     if return_objects:
         return parsed_json
     # Avoid returning only a pair of quotes if it's an empty string
