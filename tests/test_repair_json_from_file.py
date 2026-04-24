@@ -1,8 +1,20 @@
 import os
 import pathlib
 import tempfile
+from io import StringIO
 
-from src.json_repair.json_repair import from_file
+from src.json_repair.json_repair import from_file, load
+
+
+def test_load_repairs_from_current_file_position():
+    prefix = '{"stale": true}\n'
+    raw = prefix + '{"key": }'
+
+    for skip_json_loads in [False, True]:
+        fd = StringIO(raw)
+        fd.seek(len(prefix))
+
+        assert load(fd, skip_json_loads=skip_json_loads, chunk_length=2) == {"key": ""}
 
 
 def test_repair_json_from_file():

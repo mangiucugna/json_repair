@@ -27,7 +27,8 @@ class StringFileWrapper:
         self.buffer_length = chunk_length
         # Keep track of the starting file position ("cookie") for each chunk so we can
         # seek safely without landing in the middle of a multibyte code point.
-        self._chunk_positions: list[int] = [0]
+        self._initial_position = fd.tell()
+        self._chunk_positions: list[int] = [self._initial_position]
         self.length: int | None = None
 
     def get_buffer(self, index: int) -> str:
@@ -159,7 +160,7 @@ class StringFileWrapper:
             start += len(self)
 
         current_position = self.fd.tell()
-        self.fd.seek(start)
+        self.fd.seek(self._initial_position + start)
         self.fd.write(value)
         self.fd.seek(current_position)
 

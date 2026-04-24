@@ -41,6 +41,7 @@
 - Avoid extracting short, non-shared helpers in parser code when the inline logic is still readable.
 - `JSONParser.parse` should return only JSON; use `parser.logger` for logs instead of tuple returns.
 - Parser fast paths must work for both plain strings and `StringFileWrapper`; do not rely on `str`-only helpers inside parse helpers.
+- `load(fd)` must behave like `json.load(fd)` and repair from the descriptor's current position; keep `StringFileWrapper` logical index zero aligned to `fd.tell()`.
 - When adding repair heuristics, emit a `self.log` entry and keep `strict=True` conservative unless the relaxed behavior is explicitly intended.
 - In `parse_string` object-value context, closing heuristics must stay conservative: preserve multiline prose, fenced snippets, and raw container-like text unless there is a clearly valid next member.
 - If `parse_string` decides a raw container-like chunk belongs to the current string, carry that decision into the real scan; do not reinterpret comment markers or nested delimiters as structure unless the surrounding tokens make structured content clearly plausible.
@@ -51,7 +52,7 @@
 - `SchemaRepairer.repair_value` repairs only a subset of JSON Schema; `SchemaRepairer.validate(...)` must remain the enforcement path for unsupported keywords.
 - `schema_repair_mode` supports only `standard` and opt-in `salvage`; `salvage` should stay limited to best-effort structural recovery.
 - `schema_repair_mode="salvage"` without a schema must raise `ValueError`.
-- Treat `skip_json_loads=True` as an explicit opt-out of JSON loader fast paths.
+- Treat `skip_json_loads=True` as an explicit opt-out of JSON loader fast paths for inputs already known to be invalid; do not classify valid-JSON differences under that flag as bugs unless the documented contract changes.
 
 ## Known Pitfalls
 - In `SchemaRepairer._repair_type_union`, validate each candidate branch before returning so mixed unions can fall back to a later valid branch.
