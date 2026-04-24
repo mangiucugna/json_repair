@@ -90,23 +90,23 @@ def _append_literal_char(
 
 def _prepare_string_entry(
     self: "JSONParser",
-) -> tuple[StringParseState, object]:
-    state = StringParseState()
-
+) -> tuple[StringParseState | None, object]:
     char = self.get_char_at()
     if char in ["#", "/"]:
-        return state, self.parse_comment()
+        return None, self.parse_comment()
 
     while char and char not in STRING_DELIMITERS and not char.isalnum():
         self.index += 1
         char = self.get_char_at()
 
     if not char:
-        return state, ""
+        return None, ""
 
     fast_path_value = _try_parse_simple_quoted_string(self)
     if fast_path_value is not None:
-        return state, fast_path_value
+        return None, fast_path_value
+
+    state = StringParseState()
 
     if char == "'":
         state.lstring_delimiter = state.rstring_delimiter = "'"
@@ -741,6 +741,7 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
     state, direct_result = _prepare_string_entry(self)
     if direct_result is not NO_DIRECT_RESULT:
         return cast("JSONReturnType", direct_result)
+    assert state is not None
 
     char = _scan_string_body(self, state)
     return _finalize_string_result(self, state, char)
