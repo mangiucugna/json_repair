@@ -1,6 +1,6 @@
-from collections.abc import Iterator
-from contextlib import contextmanager
 from enum import Enum, auto
+from types import TracebackType
+from typing import Literal
 
 
 class ContextValues(Enum):
@@ -9,19 +9,34 @@ class ContextValues(Enum):
     ARRAY = auto()
 
 
+class _JsonContextEntry:
+    __slots__ = ("context", "value")
+
+    def __init__(self, context: "JsonContext", value: ContextValues) -> None:
+        self.context = context
+        self.value = value
+
+    def __enter__(self) -> None:
+        self.context.set(self.value)
+
+    def __exit__(
+        self,
+        _exc_type: type[BaseException] | None,
+        _exc: BaseException | None,
+        _traceback: TracebackType | None,
+    ) -> Literal[False]:
+        self.context.reset()
+        return False
+
+
 class JsonContext:
     def __init__(self) -> None:
         self.context: list[ContextValues] = []
         self.current: ContextValues | None = None
         self.empty: bool = True
 
-    @contextmanager
-    def enter(self, value: ContextValues) -> Iterator[None]:
-        self.set(value)
-        try:
-            yield
-        finally:
-            self.reset()
+    def enter(self, value: ContextValues) -> _JsonContextEntry:
+        return _JsonContextEntry(self, value)
 
     def set(self, value: ContextValues) -> None:
         """

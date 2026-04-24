@@ -42,6 +42,7 @@
 - `JSONParser.parse` should return only JSON; use `parser.logger` for logs instead of tuple returns.
 - Keep string-input valid JSON fast paths free of `JSONParser` initialization; file-backed parsing may initialize earlier to preserve descriptor fallback semantics.
 - Parser fast paths must work for both plain strings and `StringFileWrapper`; do not rely on `str`-only helpers inside parse helpers.
+- `JsonContext.enter` is parser-hot-path code; keep it as a lightweight context manager rather than `contextlib.contextmanager`.
 - `load(fd)` must behave like `json.load(fd)` and repair from the descriptor's current position; keep `StringFileWrapper` logical index zero aligned to `fd.tell()`.
 - When adding repair heuristics, emit a `self.log` entry and keep `strict=True` conservative unless the relaxed behavior is explicitly intended.
 - In `parse_string` object-value context, closing heuristics must stay conservative: preserve multiline prose, fenced snippets, and raw container-like text unless there is a clearly valid next member.
