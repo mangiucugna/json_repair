@@ -6,8 +6,8 @@ authors:
 - family-names: "Baccianella"
   given-names: "Stefano"
   orcid: "https://orcid.org/0009-0005-7654-4471"
-version: "0.59.4"
-date-released: 2026-04-15
+version: "0.59.5"
+date-released: 2026-04-24
 license: "MIT"
 abstract: "A Python package to repair broken JSON strings, including malformed JSON commonly produced by LLMs."
 keywords:
