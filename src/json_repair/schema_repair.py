@@ -178,11 +178,10 @@ class SchemaRepairer:
             return schema
         if not isinstance(schema, dict):
             raise SchemaDefinitionError("Schema must be an object.")
-        schema_dict: dict[str, Any] = {}
-        for key, value in schema.items():
+        for key in schema:
             if not isinstance(key, str):
                 raise SchemaDefinitionError("Schema keys must be strings.")
-            schema_dict[key] = value
+        schema_dict = cast("dict[str, Any]", schema)
         while "$ref" in schema_dict:
             ref = schema_dict["$ref"]
             resolved = self._resolve_ref(ref)

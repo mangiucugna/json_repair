@@ -150,6 +150,9 @@ def test_schema_repairer_validate_and_prepare():
     integer_schema = {"type": "integer"}
     repairer.validate(1, integer_schema)
     assert repairer._get_validator(integer_schema) is repairer._get_validator(integer_schema)
+    repairer.is_valid(1, integer_schema)
+    repairer.is_valid(2, integer_schema)
+    assert len(repairer._validator_cache) == 1
     with pytest.raises(ValueError, match="is not of type"):
         repairer.validate("x", {"type": "integer"})
 

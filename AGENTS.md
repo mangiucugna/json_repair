@@ -50,6 +50,7 @@
 - Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`; avoid duplicating parser switch logic.
 - `patternProperties` matching is intentionally limited to a safe literal-plus-anchor subset; do not execute user-supplied regexes.
 - `SchemaRepairer.repair_value` repairs only a subset of JSON Schema; `SchemaRepairer.validate(...)` must remain the enforcement path for unsupported keywords.
+- Preserve schema dict identity in `SchemaRepairer.resolve_schema` whenever possible so validator caching remains effective.
 - `schema_repair_mode` supports only `standard` and opt-in `salvage`; `salvage` should stay limited to best-effort structural recovery.
 - `schema_repair_mode="salvage"` without a schema must raise `ValueError`.
 - Treat `skip_json_loads=True` as an explicit opt-out of JSON loader fast paths for inputs already known to be invalid; do not classify valid-JSON differences under that flag as bugs unless the documented contract changes.
