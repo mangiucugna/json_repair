@@ -41,6 +41,7 @@
 - Avoid extracting short, non-shared helpers in parser code when the inline logic is still readable.
 - `JSONParser.parse` should return only JSON; use `parser.logger` for logs instead of tuple returns.
 - Keep string-input valid JSON fast paths free of `JSONParser` initialization; file-backed parsing may initialize earlier to preserve descriptor fallback semantics.
+- In very hot object-member parser loops, prefer explicit `JsonContext.set/reset` with `try/finally` over per-member context-manager allocation.
 - Parser fast paths must work for both plain strings and `StringFileWrapper`; do not rely on `str`-only helpers inside parse helpers.
 - `JsonContext.enter` is parser-hot-path code; keep it as a lightweight context manager rather than `contextlib.contextmanager`.
 - `load(fd)` must behave like `json.load(fd)` and repair from the descriptor's current position; keep `StringFileWrapper` logical index zero aligned to `fd.tell()`.

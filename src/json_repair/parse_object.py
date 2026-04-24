@@ -134,7 +134,8 @@ def _parse_object_key(
 ) -> tuple[str, int]:
     key = ""
     rollback_index = self.index
-    with self.context.enter(ContextValues.OBJECT_KEY):
+    self.context.set(ContextValues.OBJECT_KEY)
+    try:
         while self.get_char_at():
             rollback_index = self.index
             if self.get_char_at() == "[" and key == "" and _merge_object_array_continuation(self, obj):
@@ -152,6 +153,8 @@ def _parse_object_key(
                     )
                     raise ValueError("Empty key found in strict mode while parsing object.")
                 break
+    finally:
+        self.context.reset()
     return key, rollback_index
 
 
@@ -221,7 +224,8 @@ def _parse_object_value(
     prop_schema: dict[str, Any] | bool | None,
     key_path: str,
 ) -> JSONReturnType:
-    with self.context.enter(ContextValues.OBJECT_VALUE):
+    self.context.set(ContextValues.OBJECT_VALUE)
+    try:
         self.skip_whitespaces()
         char = self.get_char_at()
         if char in [",", "}"]:
@@ -235,6 +239,8 @@ def _parse_object_value(
         if schema_repairer is not None:
             return self.parse_json(prop_schema, key_path)
         return self.parse_json()
+    finally:
+        self.context.reset()
 
 
 def _repair_empty_object_result(
