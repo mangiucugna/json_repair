@@ -32,6 +32,53 @@ def _finalize_object(
     return obj
 
 
+def _strip_comments_for_empty_object_classification(body: str) -> str:
+    stripped = []
+    in_quote: str | None = None
+    backslashes = 0
+    index = 0
+    while index < len(body):
+        char = body[index]
+        next_char = body[index + 1] if index + 1 < len(body) else ""
+
+        if char == "\\":
+            backslashes += 1
+            stripped.append(char)
+            index += 1
+            continue
+        if in_quote is not None:
+            stripped.append(char)
+            if char == in_quote and backslashes % 2 == 0:
+                in_quote = None
+            backslashes = 0
+            index += 1
+            continue
+        if char in STRING_DELIMITERS and backslashes % 2 == 0:
+            in_quote = char
+            stripped.append(char)
+            backslashes = 0
+            index += 1
+            continue
+        backslashes = 0
+
+        if char == "#" or (char == "/" and next_char == "/"):
+            index += 2 if char == "/" else 1
+            while index < len(body) and body[index] not in ["\n", "\r"]:
+                index += 1
+            continue
+        if char == "/" and next_char == "*":
+            index += 2
+            while index < len(body) - 1 and body[index : index + 2] != "*/":
+                index += 1
+            index = min(index + 2, len(body))
+            continue
+
+        stripped.append(char)
+        index += 1
+
+    return "".join(stripped)
+
+
 def _classify_empty_object_repair(
     self: "JSONParser",
     start_index: int,
@@ -50,6 +97,9 @@ def _classify_empty_object_repair(
             "Parsed object is empty but the input starts like an escaped object key, normalizing and reparsing it as an object",
         )
         return "object", normalized_object
+    body = _strip_comments_for_empty_object_classification(body).lstrip()
+    if not body:
+        return "keep", None
 
     in_quote: str | None = None
     backslashes = 0

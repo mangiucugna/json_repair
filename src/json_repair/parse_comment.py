@@ -43,7 +43,7 @@ def parse_comment(self: "JSONParser") -> JSONReturnType:
                 comment = "//"
                 self.index += 2  # Skip both slashes.
                 char = self.get_char_at()
-                while char and char not in termination_characters:
+                while char and char not in ["\n", "\r"]:
                     comment += char
                     self.index += 1
                     char = self.get_char_at()
