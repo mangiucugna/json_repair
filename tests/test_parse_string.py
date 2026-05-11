@@ -300,6 +300,12 @@ def test_parse_string_object_value_brace_heuristics():
         assert repair_json(raw, return_objects=True, skip_json_loads=True) == expected
 
 
+def test_parse_string_preserves_escaped_braces_after_comma_group():
+    raw = r'{ "key": "\\{1,2\\} \\{3\\}" }'
+
+    assert repair_json(raw, return_objects=True, skip_json_loads=True) == {"key": r"\{1,2\} \{3\}"}
+
+
 def test_parse_string_missing_quotes_object_value_stops_at_quote_fragment():
     assert repair_json('{0:a"0"', return_objects=True, skip_json_loads=True) == {"0": "a"}
 

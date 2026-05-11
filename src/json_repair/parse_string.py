@@ -553,7 +553,11 @@ def _scan_string_body(
                     "While parsing a string missing the left delimiter in array context, we found a ] or ,, stopping here",
                 )
                 break
-        if state.pending_inline_container and char in INLINE_CONTAINER_OPENERS:
+        if (
+            state.pending_inline_container
+            and char in INLINE_CONTAINER_OPENERS
+            and (not state.string_acc or state.string_acc[-1] != "\\")
+        ):
             container_end_idx = _skip_inline_container(self, 0)
             if container_end_idx is not None:
                 self.log(
