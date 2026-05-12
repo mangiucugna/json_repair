@@ -49,6 +49,7 @@
 - In `parse_string` object-value context, closing heuristics must stay conservative: preserve multiline prose, fenced snippets, and raw container-like text unless there is a clearly valid next member.
 - If `parse_string` decides a raw container-like chunk belongs to the current string, carry that decision into the real scan; do not reinterpret comment markers or nested delimiters as structure unless the surrounding tokens make structured content clearly plausible.
 - Escaped structural characters inside strings, such as LaTeX `\\{...\\}` groups, must not trigger raw inline-container parsing; keep them on the normal escape-scanning path.
+- In object-value comma heuristics, only prime raw inline-container parsing from the next non-space token; do not scan far ahead and let ordinary prose commas affect later math or container-like fragments.
 - `//` comments must ignore all structural characters until a newline or carriage return; do not let `]`, `}`, or `:` terminate them early.
 - Keep `StringParseState` allocation out of direct-result string fast paths; it is called heavily on parser-path inputs.
 - Misplaced-quote recovery in `parse_string` must run before short-circuit quote heuristics when a next member may follow.

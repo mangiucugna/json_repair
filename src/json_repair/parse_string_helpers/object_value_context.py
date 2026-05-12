@@ -43,15 +43,17 @@ def classify_object_value_comma(parser: "JSONParser") -> ObjectValueCommaClassif
         if parser.get_char_at(bare_key_idx) == ":":
             return "member"
 
+    if next_c in ["{", "["]:
+        return "container"
+
     next_quote_idx = parser.skip_to_character(character=STRING_DELIMITERS, idx=next_idx)
     next_quote = parser.get_char_at(next_quote_idx)
     if not next_quote:
         return "string"
 
     container_idx = parser.skip_to_character(character=["{", "["], idx=next_idx)
-    container_c = parser.get_char_at(container_idx)
-    if container_c in ["{", "["] and container_idx < next_quote_idx:
-        return "container"
+    if parser.get_char_at(container_idx) in ["{", "["] and container_idx < next_quote_idx:
+        return "string"
 
     key_end_idx = parser.skip_to_character(character=next_quote, idx=next_quote_idx + 1)
     if not parser.get_char_at(key_end_idx):

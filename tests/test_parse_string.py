@@ -306,6 +306,12 @@ def test_parse_string_preserves_escaped_braces_after_comma_group():
     assert repair_json(raw, return_objects=True, skip_json_loads=True) == {"key": r"\{1,2\} \{3\}"}
 
 
+def test_parse_string_preserves_latex_command_after_bracketed_comma():
+    raw = r'{ "key": "x [0,2] f(-\\frac{3}{4})" }'
+
+    assert repair_json(raw, return_objects=True, skip_json_loads=True) == {"key": r"x [0,2] f(-\frac{3}{4})"}
+
+
 def test_parse_string_missing_quotes_object_value_stops_at_quote_fragment():
     assert repair_json('{0:a"0"', return_objects=True, skip_json_loads=True) == {"0": "a"}
 
