@@ -8,6 +8,27 @@ def test_strict_rejects_multiple_top_level_values():
         repair_json('{"key":"value"}["value"]', strict=True)
 
 
+def test_strict_rejects_comma_separated_same_shape_top_level_objects():
+    with pytest.raises(ValueError, match="Multiple top-level JSON elements"):
+        repair_json('{"key":"value"}, {"key":"value_after"}', strict=True)
+
+
+def test_strict_rejects_adjacent_same_shape_top_level_objects():
+    with pytest.raises(ValueError, match="Multiple top-level JSON elements"):
+        repair_json('{"key":"value"}{"key":"value_after"}', strict=True)
+
+
+def test_strict_rejects_adjacent_same_shape_top_level_arrays():
+    with pytest.raises(ValueError, match="Multiple top-level JSON elements"):
+        repair_json("[1][2]", strict=True)
+
+
+@pytest.mark.parametrize("payload", ['{"key":"value"}[]', '{"key":"value"}{}', "[]{}", "{}[]", "[1]{}"])
+def test_strict_rejects_falsy_top_level_values(payload):
+    with pytest.raises(ValueError, match="Multiple top-level JSON elements"):
+        repair_json(payload, strict=True)
+
+
 def test_strict_duplicate_keys_inside_array():
     payload = '[{"key": "first", "key": "second"}]'
     with pytest.raises(ValueError, match="Duplicate key found"):

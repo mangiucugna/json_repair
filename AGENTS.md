@@ -73,3 +73,4 @@
 - Normalize `RecursionError` from the top-level repair parser entry point into `ValueError`; downstream callers commonly handle parse failures but not raw recursion exceptions.
 - Parenthesized Python syntax must distinguish explicit tuples from grouped scalars, and top-level `(` scanning must stay more conservative than nested tuple parsing.
 - Top-level comment skipping currently bounces between `parse_json` and `parse_comment`; prefer iterative re-entry when touching that flow because comment-heavy inputs can hit `RecursionError` after a few hundred comments.
+- Same-shaped multiple top-level objects or arrays can be collapsed by the update heuristic in `_parse_top_level` before strict-mode multiple-element detection; cover sibling-vs-update behavior explicitly when changing that flow.

@@ -115,9 +115,16 @@ class JSONParser:
             while self.index < len(self.json_str):
                 self.context.clear()
                 self.deferred_contexts.clear()
+                is_comma_separated = self._next_top_level_value_is_comma_separated()
+                element_start_index = self.index
                 j = parse_element()
+                if self.strict and self.index > element_start_index:
+                    self.log(
+                        "Multiple top-level JSON elements found in strict mode, raising an error",
+                    )
+                    raise ValueError("Multiple top-level JSON elements found in strict mode.")
                 if j:
-                    if ObjectComparer.is_same_object(json[-1], j):
+                    if not is_comma_separated and ObjectComparer.is_same_object(json[-1], j):
                         # Treat repeated objects as updates: keep the newest value.
                         json.pop()
                     else:
@@ -131,12 +138,17 @@ class JSONParser:
                     "There were no more elements, returning the element without the array",
                 )
                 json = json[0]
-            elif self.strict:
-                self.log(
-                    "Multiple top-level JSON elements found in strict mode, raising an error",
-                )
-                raise ValueError("Multiple top-level JSON elements found in strict mode.")
         return json
+
+    def _next_top_level_value_is_comma_separated(self) -> bool:
+        idx = self.scroll_whitespaces()
+        if self.get_char_at(idx) == ",":
+            return True
+
+        idx = self.index - 1
+        while idx >= 0 and self.json_str[idx].isspace():
+            idx -= 1
+        return idx >= 0 and self.json_str[idx] == ","
 
     def parse_json(
         self,

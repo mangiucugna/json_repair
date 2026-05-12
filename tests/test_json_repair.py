@@ -38,11 +38,21 @@ def test_multiple_jsons():
     assert repair_json("[]{}") == "[]"
     assert repair_json('[]{"key":"value"}') == '{"key": "value"}'
     assert repair_json('{"key":"value"}[1,2,3,True]') == '[{"key": "value"}, [1, 2, 3, true]]'
+    assert repair_json('{"key":"value"}, {"key":"value_after"}', return_objects=True) == [
+        {"key": "value"},
+        {"key": "value_after"},
+    ]
     assert (
         repair_json('lorem ```json {"key":"value"} ``` ipsum ```json [1,2,3,True] ``` 42')
         == '[{"key": "value"}, [1, 2, 3, true]]'
     )
     assert repair_json('[{"key":"value"}][{"key":"value_after"}]') == '[{"key": "value_after"}]'
+
+
+def test_top_level_separator_detects_pending_comma():
+    parser = JSONParser(' , {"key": "value"}', None, False)
+
+    assert parser._next_top_level_value_is_comma_separated()
 
 
 def test_parenthesized_prose_does_not_hijack_fenced_json():
