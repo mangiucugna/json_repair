@@ -312,6 +312,15 @@ def test_parse_string_preserves_latex_command_after_bracketed_comma():
     assert repair_json(raw, return_objects=True, skip_json_loads=True) == {"key": r"x [0,2] f(-\frac{3}{4})"}
 
 
+def test_parse_string_keeps_latex_braces_before_inline_object_literal():
+    raw = r'{ "llm_reason": "curve $C: \\frac{x^2}{m}$ answer is {"blank_1": "5"}, correct is 4.", "llm_answer": "4" }'
+
+    assert repair_json(raw, return_objects=True, skip_json_loads=True) == {
+        "llm_reason": r'curve $C: \frac{x^2}{m}$ answer is {"blank_1": "5"}, correct is 4.',
+        "llm_answer": "4",
+    }
+
+
 def test_parse_string_missing_quotes_object_value_stops_at_quote_fragment():
     assert repair_json('{0:a"0"', return_objects=True, skip_json_loads=True) == {"0": "a"}
 

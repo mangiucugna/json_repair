@@ -602,6 +602,19 @@ def _scan_string_body(
             and char == "}"
             and (not state.string_acc or state.string_acc[-1] != state.rstring_delimiter)
         ):
+            kept_inline_closer = False
+            brace_balance = 0
+            for acc_char in reversed(state.string_acc):
+                if acc_char == "}":
+                    brace_balance += 1
+                elif acc_char == "{":
+                    if brace_balance == 0:
+                        char = _append_literal_char(self, state, char)
+                        kept_inline_closer = True
+                        break
+                    brace_balance -= 1
+            if kept_inline_closer:
+                continue
             rstring_delimiter_missing = True
             self.skip_whitespaces()
             if self.get_char_at(1) == "\\":
@@ -633,11 +646,6 @@ def _scan_string_body(
                 j = self.skip_to_character(character="}", idx=i)
                 if j - i > 1:
                     rstring_delimiter_missing = False
-                elif self.get_char_at(j):
-                    for c in reversed(state.string_acc):
-                        if c == "{":
-                            rstring_delimiter_missing = False
-                            break
             if rstring_delimiter_missing:
                 self.log(
                     "While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn't determine that a right delimiter was present. Stopping here",
@@ -671,6 +679,7 @@ def _scan_string_body(
                     "While parsing a string in object value context, we found a } that closes the object, stopping here",
                 )
                 break
+        assert char is not None
         state.string_acc += char
         self.index += 1
         char = self.get_char_at()
