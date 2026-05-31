@@ -21,7 +21,7 @@
 ```python
 import json_repair
 
-bad_json = '{"users":[{"name":"Ada","role":"admin",}],"ok":tru'
+bad_json = '{"users":[{"name":"Ada","role":"admin",}],"ok":true'
 decoded_object = json_repair.loads(bad_json)
 
 # {'users': [{'name': 'Ada', 'role': 'admin'}], 'ok': True}
