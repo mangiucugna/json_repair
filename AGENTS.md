@@ -11,6 +11,7 @@
 - `tests/test_performance.py` is timing-sensitive and can fail on slower machines.
 - Keep schema performance coverage in `tests/test_performance.py` for both fast-path (`skip_json_loads=False`) and parser-path (`skip_json_loads=True`) scenarios.
 - The `uv-lock-upgrade` hook can rewrite `uv.lock`, including the local `json-repair` package version, so restage it before committing after version bumps or dependency changes.
+- The commit hook stack can also autoupdate `.pre-commit-config.yaml` and `uv.lock`; if those hook-managed files keep changing during commit, do not repeatedly restore them and retry the same commit flow.
 - Keep schema-only dependencies in their own `schema` group; CI jobs that only exercise core parser paths should use `--no-default-groups` and omit `schema` so Python prerelease jobs are not blocked on upstream PyO3 wheels.
 
 ## Release / Packaging
