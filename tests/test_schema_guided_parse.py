@@ -137,6 +137,26 @@ def test_schema_skip_json_loads_keeps_parser_path_for_scalars():
         repair_json('"1"', schema={"type": "integer"}, skip_json_loads=True, return_objects=True)
 
 
+def test_schema_circular_ref_raises_definition_error():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "$ref": "#/definitions/a",
+        "definitions": {
+            "a": {"$ref": "#/definitions/a"},
+        },
+    }
+
+    with pytest.raises(ValueError, match=r"Circular \$ref detected"):
+        repair_json("{}", schema=schema, return_objects=True)
+
+
+def test_schema_non_string_ref_raises_definition_error():
+    pytest.importorskip("jsonschema")
+
+    with pytest.raises(ValueError, match=r"\$ref must be a string"):
+        repair_json("{}", schema={"$ref": 123}, return_objects=True)
+
+
 def test_schema_pydantic_v2_defaults():
     pydantic = pytest.importorskip("pydantic")
     version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))

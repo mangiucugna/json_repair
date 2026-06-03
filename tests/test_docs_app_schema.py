@@ -82,6 +82,24 @@ def test_docs_api_schema_validation_error_returns_400(client):
     assert "does not match" in payload["error"]
 
 
+def test_docs_api_rejects_circular_schema_ref(client):
+    pytest.importorskip("jsonschema")
+    schema = {
+        "$ref": "#/definitions/a",
+        "definitions": {
+            "a": {"$ref": "#/definitions/a"},
+        },
+    }
+
+    response = client.post(
+        "/api/repair-json",
+        json={"malformedJSON": "{}", "schema": schema},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "Circular $ref detected: #/definitions/a"}
+
+
 def test_docs_api_rejects_invalid_schema_repair_mode_type(client):
     response = client.post(
         "/api/repair-json",

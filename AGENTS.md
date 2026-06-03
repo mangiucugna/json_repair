@@ -61,6 +61,7 @@
 - `patternProperties` matching is intentionally limited to a safe literal-plus-anchor subset; do not execute user-supplied regexes.
 - `SchemaRepairer.repair_value` repairs only a subset of JSON Schema; `SchemaRepairer.validate(...)` must remain the enforcement path for unsupported keywords.
 - Preserve schema dict identity in `SchemaRepairer.resolve_schema` whenever possible so validator caching remains effective.
+- `SchemaRepairer.resolve_schema` must reject circular and non-string `$ref` values before validation or repair so untrusted schemas fail fast instead of spinning.
 - `schema_repair_mode` supports only `standard` and opt-in `salvage`; `salvage` should stay limited to best-effort structural recovery.
 - `schema_repair_mode="salvage"` without a schema must raise `ValueError`.
 - `strict=True` must not bypass or second-guess the `json.loads` fast path; if stdlib accepts input as valid JSON, preserve that behavior unless the public contract changes.

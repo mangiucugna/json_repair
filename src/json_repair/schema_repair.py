@@ -182,8 +182,15 @@ class SchemaRepairer:
             if not isinstance(key, str):
                 raise SchemaDefinitionError("Schema keys must be strings.")
         schema_dict = cast("dict[str, Any]", schema)
+        seen_schema_ids: set[int] = set()
         while "$ref" in schema_dict:
             ref = schema_dict["$ref"]
+            if not isinstance(ref, str):
+                raise SchemaDefinitionError("$ref must be a string.")
+            schema_id = id(schema_dict)
+            if schema_id in seen_schema_ids:
+                raise SchemaDefinitionError(f"Circular $ref detected: {ref}")
+            seen_schema_ids.add(schema_id)
             resolved = self._resolve_ref(ref)
             if isinstance(resolved, bool):
                 return resolved
