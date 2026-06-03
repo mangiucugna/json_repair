@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 NO_DIRECT_RESULT = object()
 INLINE_CONTAINER_CLOSING_DELIMITERS = {"[": "]", "{": "}", "(": ")"}
 INLINE_CONTAINER_OPENERS = tuple(INLINE_CONTAINER_CLOSING_DELIMITERS)
+LOW_SMART_QUOTE_SENTINEL = "\0"
 
 
 @dataclass
@@ -26,6 +27,26 @@ class StringParseState:
     unmatched_delimiter: bool = False
     pending_inline_container: bool = False
     inline_container_stack: list[str] = field(default_factory=list)
+
+
+def _outer_rstring_delimiter(state: StringParseState) -> str:
+    return state.rstring_delimiter[0]
+
+
+def _active_rstring_delimiter(state: StringParseState) -> str:
+    return state.rstring_delimiter[-1]
+
+
+def _in_low_smart_quote_span(state: StringParseState) -> bool:
+    return _active_rstring_delimiter(state) == LOW_SMART_QUOTE_SENTINEL
+
+
+def _push_low_smart_quote_span(state: StringParseState) -> None:
+    state.rstring_delimiter += LOW_SMART_QUOTE_SENTINEL
+
+
+def _pop_low_smart_quote_span(state: StringParseState) -> None:
+    state.rstring_delimiter = state.rstring_delimiter[:-1]
 
 
 def _try_parse_simple_quoted_string(self: "JSONParser") -> str | None:
@@ -183,7 +204,13 @@ def _normalize_escape_sequence(
     char: str,
 ) -> tuple[bool, str | None]:
     self.log("Found a stray escape sequence, normalizing it")
-    if char in [state.rstring_delimiter, "t", "n", "r", "b", "\\"]:
+    active_rstring_delimiter = _active_rstring_delimiter(state)
+    if _in_low_smart_quote_span(state) and char == '"':
+        state.string_acc = state.string_acc[:-1] + char
+        _pop_low_smart_quote_span(state)
+        self.index += 1
+        return True, self.get_char_at()
+    if char in [active_rstring_delimiter, "t", "n", "r", "b", "\\"]:
         state.string_acc = state.string_acc[:-1]
         escape_seqs = {"t": "\t", "n": "\n", "r": "\r", "b": "\b"}
         state.string_acc += escape_seqs.get(char, char)
@@ -193,7 +220,7 @@ def _normalize_escape_sequence(
             next_char
             and state.string_acc
             and state.string_acc[-1] == "\\"
-            and next_char in [state.rstring_delimiter, "\\"]
+            and next_char in [active_rstring_delimiter, "\\"]
         ):
             state.string_acc = state.string_acc[:-1] + next_char
             self.index += 1
@@ -207,7 +234,7 @@ def _normalize_escape_sequence(
             state.string_acc = state.string_acc[:-1] + chr(int(next_chars, 16))
             self.index += 1 + num_chars
             return True, self.get_char_at()
-    elif char in STRING_DELIMITERS and char != state.rstring_delimiter:
+    elif char == "„" or char in STRING_DELIMITERS and char != active_rstring_delimiter:
         self.log("Found a delimiter that was escaped but shouldn't be escaped, removing the escape")
         state.string_acc = state.string_acc[:-1] + char
         self.index += 1
@@ -232,15 +259,16 @@ def _brace_before_code_fence_belongs_to_string(
             keep_post_fence_container = True
             quote_search_idx = container_end_idx
 
-    quote_idx = self.skip_to_character(character=state.rstring_delimiter, idx=quote_search_idx)
-    while self.get_char_at(quote_idx) == state.rstring_delimiter:
+    outer_rstring_delimiter = _outer_rstring_delimiter(state)
+    quote_idx = self.skip_to_character(character=outer_rstring_delimiter, idx=quote_search_idx)
+    while self.get_char_at(quote_idx) == outer_rstring_delimiter:
         after_quote_idx = self.scroll_whitespaces(idx=quote_idx + 1)
         after_quote = self.get_char_at(after_quote_idx)
         if after_quote in [",", "}", "]", None]:
             if keep_post_fence_container:
                 state.pending_inline_container = True
             return True
-        quote_idx = self.skip_to_character(character=state.rstring_delimiter, idx=quote_idx + 1)
+        quote_idx = self.skip_to_character(character=outer_rstring_delimiter, idx=quote_idx + 1)
     return False
 
 
@@ -419,7 +447,9 @@ def _handle_right_delimiter_candidate(
     state: StringParseState,
     char: str,
 ) -> tuple[bool, str | None, bool]:
-    if state.doubled_quotes and self.get_char_at(1) == state.rstring_delimiter:
+    outer_rstring_delimiter = _outer_rstring_delimiter(state)
+
+    if state.doubled_quotes and self.get_char_at(1) == outer_rstring_delimiter:
         self.log("While parsing a string, we found a doubled quote, ignoring it")
         self.index += 1
         return True, char, False
@@ -428,7 +458,7 @@ def _handle_right_delimiter_candidate(
         i = 1
         next_c = self.get_char_at(i)
         while next_c and next_c not in [
-            state.rstring_delimiter,
+            outer_rstring_delimiter,
             state.lstring_delimiter,
         ]:
             i += 1
@@ -454,7 +484,7 @@ def _handle_right_delimiter_candidate(
     next_c = self.get_char_at(i)
     check_comma_in_object_value = True
     while next_c and next_c not in [
-        state.rstring_delimiter,
+        outer_rstring_delimiter,
         state.lstring_delimiter,
     ]:
         if check_comma_in_object_value and next_c.isalpha():
@@ -470,7 +500,7 @@ def _handle_right_delimiter_candidate(
         next_c = self.get_char_at(i)
     if next_c == "," and self.context.current == ContextValues.OBJECT_VALUE:
         i += 1
-        i = self.skip_to_character(character=state.rstring_delimiter, idx=i)
+        i = self.skip_to_character(character=outer_rstring_delimiter, idx=i)
         next_c = self.get_char_at(i)
         i += 1
         i = self.scroll_whitespaces(idx=i)
@@ -481,7 +511,7 @@ def _handle_right_delimiter_candidate(
             )
             next_char = _append_literal_char(self, state, char)
             return True, next_char, False
-    elif next_c == state.rstring_delimiter and self.get_char_at(i - 1) != "\\":
+    elif next_c == outer_rstring_delimiter and self.get_char_at(i - 1) != "\\":
         if _only_whitespace_until(self, i) and not (
             self.context.current == ContextValues.OBJECT_VALUE and _quoted_object_member_follows(self, i)
         ):
@@ -493,11 +523,11 @@ def _handle_right_delimiter_candidate(
                 )
                 next_char = _append_literal_char(self, state, char)
                 return True, next_char, False
-            i = self.skip_to_character(character=state.rstring_delimiter, idx=i + 1)
+            i = self.skip_to_character(character=outer_rstring_delimiter, idx=i + 1)
             i += 1
             next_c = self.get_char_at(i)
             while next_c and next_c != ":":
-                if next_c in [",", "]", "}"] or (next_c == state.rstring_delimiter and self.get_char_at(i - 1) != "\\"):
+                if next_c in [",", "]", "}"] or (next_c == outer_rstring_delimiter and self.get_char_at(i - 1) != "\\"):
                     break
                 i += 1
                 next_c = self.get_char_at(i)
@@ -509,14 +539,14 @@ def _handle_right_delimiter_candidate(
                 next_char = _append_literal_char(self, state, char)
                 return True, next_char, False
         elif self.context.current == ContextValues.ARRAY:
-            even_delimiters = next_c == state.rstring_delimiter
-            while next_c == state.rstring_delimiter:
-                i = self.skip_to_character(character=[state.rstring_delimiter, "]"], idx=i + 1)
+            even_delimiters = next_c == outer_rstring_delimiter
+            while next_c == outer_rstring_delimiter:
+                i = self.skip_to_character(character=[outer_rstring_delimiter, "]"], idx=i + 1)
                 next_c = self.get_char_at(i)
-                if next_c != state.rstring_delimiter:
+                if next_c != outer_rstring_delimiter:
                     even_delimiters = False
                     break
-                i = self.skip_to_character(character=[state.rstring_delimiter, "]"], idx=i + 1)
+                i = self.skip_to_character(character=[outer_rstring_delimiter, "]"], idx=i + 1)
                 next_c = self.get_char_at(i)
             if even_delimiters:
                 self.log(
@@ -540,8 +570,9 @@ def _scan_string_body(
     self: "JSONParser",
     state: StringParseState,
 ) -> str | None:
+    outer_rstring_delimiter = _outer_rstring_delimiter(state)
     char = self.get_char_at()
-    while char and char != state.rstring_delimiter:
+    while char and (char != outer_rstring_delimiter or _in_low_smart_quote_span(state)):
         if state.missing_quotes:
             if self.context.current == ContextValues.OBJECT_KEY and (char == ":" or char.isspace()):
                 self.log(
@@ -553,6 +584,14 @@ def _scan_string_body(
                     "While parsing a string missing the left delimiter in array context, we found a ] or ,, stopping here",
                 )
                 break
+        if char == "„" and (not state.string_acc or state.string_acc[-1] != "\\"):
+            _push_low_smart_quote_span(state)
+            char = _append_literal_char(self, state, char)
+            continue
+        if _in_low_smart_quote_span(state) and char == "”":
+            _pop_low_smart_quote_span(state)
+            char = _append_literal_char(self, state, char)
+            continue
         if (
             state.pending_inline_container
             and char in INLINE_CONTAINER_OPENERS
@@ -600,7 +639,7 @@ def _scan_string_body(
             not self.stream_stable
             and self.context.current == ContextValues.OBJECT_VALUE
             and char == "}"
-            and (not state.string_acc or state.string_acc[-1] != state.rstring_delimiter)
+            and (not state.string_acc or state.string_acc[-1] != outer_rstring_delimiter)
         ):
             kept_inline_closer = False
             brace_balance = 0
@@ -619,7 +658,7 @@ def _scan_string_body(
             self.skip_whitespaces()
             if self.get_char_at(1) == "\\":
                 rstring_delimiter_missing = False
-            i = self.skip_to_character(character=state.rstring_delimiter, idx=1)
+            i = self.skip_to_character(character=outer_rstring_delimiter, idx=1)
             next_c = self.get_char_at(i)
             if next_c:
                 i += 1
@@ -655,9 +694,9 @@ def _scan_string_body(
             not self.stream_stable
             and char == "]"
             and ContextValues.ARRAY in self.context.context
-            and (not state.string_acc or state.string_acc[-1] != state.rstring_delimiter)
+            and (not state.string_acc or state.string_acc[-1] != outer_rstring_delimiter)
         ):
-            i = self.skip_to_character(state.rstring_delimiter)
+            i = self.skip_to_character(outer_rstring_delimiter)
             if not self.get_char_at(i):
                 break
         if self.context.current == ContextValues.OBJECT_VALUE and char == "}":
@@ -696,7 +735,7 @@ def _scan_string_body(
             next_c = self.get_char_at(i)
             if next_c:
                 i += 1
-                i = self.skip_to_character(character=state.rstring_delimiter, idx=i)
+                i = self.skip_to_character(character=outer_rstring_delimiter, idx=i)
                 next_c = self.get_char_at(i)
                 if next_c:
                     i += 1
@@ -712,7 +751,11 @@ def _scan_string_body(
                     "While parsing a string missing the right delimiter in object key context, we found a :, stopping here",
                 )
                 break
-        if char == state.rstring_delimiter and state.string_acc and state.string_acc[-1] != "\\":
+        if _in_low_smart_quote_span(state) and char == '"':
+            _pop_low_smart_quote_span(state)
+            char = _append_literal_char(self, state, char)
+            continue
+        if char == outer_rstring_delimiter and state.string_acc and state.string_acc[-1] != "\\":
             assert char is not None
             handled_delimiter, char, should_break = _handle_right_delimiter_candidate(self, state, char)
             if should_break:
@@ -727,6 +770,7 @@ def _finalize_string_result(
     state: StringParseState,
     char: str | None,
 ) -> str:
+    outer_rstring_delimiter = _outer_rstring_delimiter(state)
     if char and state.missing_quotes and self.context.current == ContextValues.OBJECT_KEY and char.isspace():
         self.log(
             "While parsing a string, handling an extreme corner case in which the LLM added a comment instead of valid string, invalidate the string and return an empty value",
@@ -735,7 +779,7 @@ def _finalize_string_result(
         if self.get_char_at() not in [":", ","]:
             return ""
 
-    if char != state.rstring_delimiter:
+    if char != outer_rstring_delimiter:
         if not self.stream_stable:
             self.log(
                 "While parsing a string, we missed the closing quote, ignoring",

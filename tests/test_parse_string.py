@@ -230,6 +230,34 @@ def test_parse_string_keeps_multiline_curly_quoted_prose_after_comma():
     _assert_object_repairs('{"x": "a,\n “term”: explanation", "y": 2}', {"x": "a,\n “term”: explanation", "y": 2})
 
 
+def test_parse_string_keeps_low_smart_quote_span_closed_by_ascii_quote():
+    _assert_object_repairs(
+        '{"text": "despre „autocritică" și autocompasiune"}',
+        {"text": 'despre „autocritică" și autocompasiune'},
+    )
+
+
+def test_parse_string_keeps_low_smart_quote_span_closed_by_unicode_quote():
+    _assert_object_repairs(
+        '{"text": "despre „autocritică” și autocompasiune"}',
+        {"text": "despre „autocritică” și autocompasiune"},
+    )
+
+
+def test_parse_string_keeps_low_smart_quote_span_closed_by_escaped_ascii_quote():
+    _assert_object_repairs(
+        '{"text": "aplicație „sham\\"), a făcut"}',
+        {"text": 'aplicație „sham"), a făcut'},
+    )
+
+
+def test_parse_string_escaped_low_smart_quote_does_not_open_inner_span():
+    _assert_object_repairs(
+        '{"text": "a \\„ b", "y": 1}',
+        {"text": "a „ b", "y": 1},
+    )
+
+
 def test_parse_boolean_or_null():
     assert repair_json("True", return_objects=True) == ""
     assert repair_json("False", return_objects=True) == ""
@@ -533,6 +561,18 @@ def test_scan_string_body_keeps_closing_inline_container_character():
     assert char == '"'
     assert state.string_acc == "x]"
     assert state.inline_container_stack == []
+
+
+def test_scan_string_body_closes_low_smart_quote_span_with_unicode_quote():
+    parser = JSONParser('”"', None, False)
+    parser.context.set(ContextValues.OBJECT_VALUE)
+    state = StringParseState(rstring_delimiter='"\0', string_acc="prefix")
+
+    char = _scan_string_body(parser, state)
+
+    assert char == '"'
+    assert state.string_acc == "prefix”"
+    assert state.rstring_delimiter == '"'
 
 
 def test_quoted_object_member_follows_rejects_unquoted_next_key():
