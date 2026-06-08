@@ -144,12 +144,15 @@ repair_json("{'test_chinese_ascii':'统一码'}", ensure_ascii=False)
 - 如果你已经确定输入不是有效 JSON，可以传 `skip_json_loads=True`，直接跳过这一步验证。
 - `return_objects=True` 更快，因为直接返回对象。
 - `skip_json_loads=True` 只适合你 100% 确定输入不是有效 JSON 的场景。
+- `skip_json_loads=True` 不是“更快但对有效 JSON 等价”的模式；它会绕过标准库成功路径，因此有效输入应使用默认行为。
 - 如有转义问题，传入原始字符串（如 `r"string with escaping\""`）。
 
 这是一个明确的取舍：
 
 - 默认行为：先走标准库 JSON 校验路径，失败后再修复
 - `skip_json_loads=True`：直接跳过校验路径，进入修复解析器
+
+重要：`skip_json_loads=True` 只适用于你已经确定输入无效的场景。如果把本来就是有效的 JSON 强行送进修复解析器，`json_repair` 仍可能尝试“修复”，从而改变结果的结构或值。如果你需要保证有效 JSON 原样保留，请保持 `skip_json_loads=False`。
 
 `json_repair` 故意保持标准库 JSON 作为默认验证路径，不会自动探测或切换到第三方 JSON 库。这样可以避免常见路径上的额外开销，也能让行为更可预测。
 

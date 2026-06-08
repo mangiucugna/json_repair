@@ -9,27 +9,21 @@
 - Run the full test suite with `uv run pytest`.
 - Run the full hook stack with `pre-commit run --all-files`.
 - `tests/test_performance.py` is timing-sensitive and can fail on slower machines.
-- Keep schema performance coverage in `tests/test_performance.py` for both fast-path (`skip_json_loads=False`) and parser-path (`skip_json_loads=True`) scenarios.
-- The `uv-lock-upgrade` hook can rewrite `uv.lock`, including the local `json-repair` package version, so restage it before committing after version bumps or dependency changes.
-- The commit hook stack can also autoupdate `.pre-commit-config.yaml` and `uv.lock`; if those hook-managed files keep changing during commit, do not repeatedly restore them and retry the same commit flow.
-- Keep schema-only dependencies in their own `schema` group; CI jobs that only exercise core parser paths should use `--no-default-groups` and omit `schema` so Python prerelease jobs are not blocked on upstream PyO3 wheels.
+- `tests/test_type_inference.py` exercises import resolution from a temp directory; keep it independent of editable installs.
+- The hook stack may rewrite `uv.lock` or `.pre-commit-config.yaml`; if hook-managed files change during commit flows, restage the resulting updates instead of repeatedly restoring them.
 
-## Release / Packaging
+## Release And Packaging
 - Project version lives in `pyproject.toml` under `[project].version`; use semantic versioning, with patch bumps for bug fixes.
-- Keep `CITATION.cff` aligned with the current released version metadata in `pyproject.toml`; update `date-released` when publishing a new release and omit empty optional fields such as `doi`.
+- Keep `CITATION.cff` aligned with the released version metadata in `pyproject.toml`.
 - Keep `MANIFEST.in` pruning `tests` so test modules are not shipped in the sdist.
-- In `[tool.setuptools.package-data]`, use the real package key `json_repair` so `py.typed` stays included reliably.
+- In `[tool.setuptools.package-data]`, use the real package key `json_repair` so `py.typed` remains included.
 - Run `uvx twine check dist/*` after building and before publishing.
-- Gate optional schema dependencies with `python_full_version` markers during new Python prerelease cycles so core installs and non-schema tests can still run before upstream PyO3 wheels are available.
 
 ## Docs
-- Keep `README.zh.md` aligned with `README.md` when contributor guidance or usage behavior changes.
-- In Chinese-facing docs or support copy, lead with low-friction asks (`Star`, share, issue with sample) before sponsorship asks.
+- Keep `README.zh.md` aligned with `README.md` when behavior or contributor guidance changes.
+- `README.md` is the PyPI long description via `pyproject.toml`; avoid relative file or image links there.
 - For local docs demo validation, follow `.agents/skills/docs-demo-local-test/SKILL.md`.
-- Use `.agents/specs/docs-demo-ui/SPEC.md` to decide whether the docs demo needs no UI test, a smoke test, or a comprehensive Chrome MCP run; keep the spec current when demo behavior or test expectations change.
-- Keep docs demo share state in the URL hash, not query params; large `json`/`schema` permalinks can hit static-host URI limits, so read legacy query-param links but write compressed hash URLs.
-- Keep the docs demo's live permalink visible in the address bar while editing; do not hide or clear the hash after hydration unless product behavior changes intentionally.
-- `README.md` is the PyPI long description via `pyproject.toml`; avoid relative file/image links there and use absolute GitHub or raw URLs instead.
+- Keep docs demo share state in the URL hash, not query params.
 
 ## Code Areas
 - API and CLI entry points: `src/json_repair/json_repair.py`, `src/json_repair/__init__.py`, `src/json_repair/__main__.py`.
@@ -38,43 +32,18 @@
 - Schema logic: `src/json_repair/schema_repair.py`.
 - Demo API/UI: `docs/app.py`, `docs/index.js`, `docs/index*.html`, `docs/styles.css`.
 
-## Repo-Specific Implementation Notes
-- Avoid extracting short, non-shared helpers in parser code when the inline logic is still readable.
-- `JSONParser.parse` should return only JSON; use `parser.logger` for logs instead of tuple returns.
-- Keep string-input valid JSON fast paths free of `JSONParser` initialization; file-backed parsing may initialize earlier to preserve descriptor fallback semantics.
-- In very hot object-member parser loops, prefer explicit `JsonContext.set/reset` with `try/finally` over per-member context-manager allocation.
-- Parser fast paths must work for both plain strings and `StringFileWrapper`; do not rely on `str`-only helpers inside parse helpers.
-- `JsonContext.enter` is parser-hot-path code; keep it as a lightweight context manager rather than `contextlib.contextmanager`.
-- `load(fd)` must behave like `json.load(fd)` and repair from the descriptor's current position; keep `StringFileWrapper` logical index zero aligned to `fd.tell()`.
-- When adding repair heuristics, emit a `self.log` entry and keep `strict=True` conservative unless the relaxed behavior is explicitly intended.
-- In `parse_string` object-value context, closing heuristics must stay conservative: preserve multiline prose, fenced snippets, and raw container-like text unless there is a clearly valid next member.
-- If `parse_string` decides a raw container-like chunk belongs to the current string, carry that decision into the real scan; do not reinterpret comment markers or nested delimiters as structure unless the surrounding tokens make structured content clearly plausible.
-- Escaped structural characters inside strings, such as LaTeX `\\{...\\}` groups, must not trigger raw inline-container parsing; keep them on the normal escape-scanning path.
-- In object-value comma heuristics, only prime raw inline-container parsing from the next non-space token; do not scan far ahead and let ordinary prose commas affect later math or container-like fragments.
-- In object-value strings, a `}` that balances an unmatched `{` already accumulated in the current string should stay literal before using later `:` tokens to infer object structure.
-- In object-value strings, treat an unmatched low-open smart quote like `„` as part of the current string so the next ASCII `"` inside that span is not mistaken for the JSON string terminator.
-- `//` comments must ignore all structural characters until a newline or carriage return; do not let `]`, `}`, or `:` terminate them early.
-- Keep `StringParseState` allocation out of direct-result string fast paths; it is called heavily on parser-path inputs.
-- Misplaced-quote recovery in `parse_string` must run before short-circuit quote heuristics when a next member may follow.
+## Durable Implementation Notes
+- Keep valid-JSON fast paths on the standard library path; `strict=True` must not second-guess inputs that `json.loads` already accepts.
+- Treat `skip_json_loads=True` as an explicit opt-out for inputs already known to be invalid; do not assume behavior must match the stdlib-preserving path for valid JSON.
+- `load(fd)` should behave like `json.load(fd)` and repair from the descriptor's current position.
+- When adding repair heuristics, keep `strict=True` conservative and emit parser logs for automatic corrections.
 - When a schema is provided, apply schema repair and validation for both valid and invalid JSON inputs.
-- Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`; avoid duplicating parser switch logic.
-- `patternProperties` matching is intentionally limited to a safe literal-plus-anchor subset; do not execute user-supplied regexes.
-- `SchemaRepairer.repair_value` repairs only a subset of JSON Schema; `SchemaRepairer.validate(...)` must remain the enforcement path for unsupported keywords.
+- Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`.
+- `patternProperties` matching is intentionally limited to a safe subset; do not execute user-supplied regexes.
 - Preserve schema dict identity in `SchemaRepairer.resolve_schema` whenever possible so validator caching remains effective.
-- `SchemaRepairer.resolve_schema` must reject circular and non-string `$ref` values before validation or repair so untrusted schemas fail fast instead of spinning.
-- `schema_repair_mode` supports only `standard` and opt-in `salvage`; `salvage` should stay limited to best-effort structural recovery.
-- `schema_repair_mode="salvage"` without a schema must raise `ValueError`.
-- `strict=True` must not bypass or second-guess the `json.loads` fast path; if stdlib accepts input as valid JSON, preserve that behavior unless the public contract changes.
-- Treat `skip_json_loads=True` as an explicit opt-out of JSON loader fast paths for inputs already known to be invalid; do not classify valid-JSON differences under that flag as bugs unless the documented contract changes.
+- `schema_repair_mode` supports only `standard` and opt-in `salvage`; `salvage` should remain best-effort structural recovery, not broad silent coercion.
 
-## Known Pitfalls
-- In `SchemaRepairer._repair_type_union`, validate each candidate branch before returning so mixed unions can fall back to a later valid branch.
-- In salvage mode, keep structural salvage heuristics scoped to object-only schemas unless broader behavior is explicitly intended.
+## Refactor Pitfalls
 - In `repair_json`, keep a single shared output-finalization path for logging, `return_objects`, empty-string handling, and `json.dumps`.
-- In `schema_repair_mode="salvage"`, only drop array items for data-repair failures; propagate schema-definition errors.
-- In `parse_object`, keep the empty-object-to-array fallback gated by object-shape detection; escaped object keys or object-style `:` separators must stay on the object-repair path instead of being reclassified as set literals.
-- Parser refactors are sensitive to context lifetimes and heuristic branch ordering; preserve malformed-input behavior when restructuring `parse_string` and `parse_object`.
-- Normalize `RecursionError` from the top-level repair parser entry point into `ValueError`; downstream callers commonly handle parse failures but not raw recursion exceptions.
-- Parenthesized Python syntax must distinguish explicit tuples from grouped scalars, and top-level `(` scanning must stay more conservative than nested tuple parsing.
-- Top-level comment skipping currently bounces between `parse_json` and `parse_comment`; prefer iterative re-entry when touching that flow because comment-heavy inputs can hit `RecursionError` after a few hundred comments.
-- Same-shaped multiple top-level objects or arrays can be collapsed by the update heuristic in `_parse_top_level` before strict-mode multiple-element detection; cover sibling-vs-update behavior explicitly when changing that flow.
+- Parser refactors are sensitive to context lifetimes and heuristic branch ordering; preserve malformed-input behavior when restructuring `parse_string` or `parse_object`.
+- Normalize top-level `RecursionError` into `ValueError`.

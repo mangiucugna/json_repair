@@ -190,11 +190,14 @@ This is an explicit tradeoff:
 - default behavior: validate with stdlib JSON first, then repair only if needed
 - `skip_json_loads=True`: skip the validation fast path and go straight to the repair parser
 
+Important: `skip_json_loads=True` is only for inputs you already know are invalid. If you force already-valid JSON through the repair parser, `json_repair` may still "repair" it and can change the resulting structure or values. If you need valid JSON to be preserved as-is, keep `skip_json_loads=False`.
+
 `json_repair` intentionally keeps the validation path on the standard library. It does not auto-detect or auto-use third-party JSON libraries, which keeps behavior predictable and avoids extra overhead on the common path.
 
 Some rules of thumb to use:
 - Setting `return_objects=True` will always be faster because the parser returns an object already and it doesn't have serialize that object to JSON
 - `skip_json_loads=True` is faster only if you 100% know that the string is not a valid JSON
+- `skip_json_loads=True` is not a "faster but equivalent" mode for valid JSON; it intentionally bypasses the stdlib success path, so valid inputs should use the default behavior
 - If you are having issues with escaping pass the string as **raw** string like: `r"string with escaping\""`
 
 ### When to use your own JSON library
