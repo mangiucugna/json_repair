@@ -163,3 +163,18 @@ def test_docs_api_salvage_mode_drops_invalid_array_items(client):
     payload = response.get_json()
     assert isinstance(payload, list)
     assert payload[0] == {"items": [{"id": 1, "score": 85.6}]}
+
+
+def test_docs_api_deep_schema_returns_400_instead_of_500(client):
+    pytest.importorskip("jsonschema")
+    schema = {"type": "object"}
+    for _ in range(550):
+        schema = {"allOf": [schema]}
+
+    response = client.post(
+        "/api/repair-json",
+        json={"malformedJSON": "{}", "schema": schema},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"error": "Input schema nesting exceeds the supported schema recursion depth."}

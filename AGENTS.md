@@ -42,8 +42,10 @@
 - `patternProperties` matching is intentionally limited to a safe subset; do not execute user-supplied regexes.
 - Preserve schema dict identity in `SchemaRepairer.resolve_schema` whenever possible so validator caching remains effective.
 - `schema_repair_mode` supports only `standard` and opt-in `salvage`; `salvage` should remain best-effort structural recovery, not broad silent coercion.
+- Treat user-supplied schemas as an attacker-controlled input surface: deep nesting in schema normalization, validation, and repair paths needs an explicit depth limit or controlled `ValueError`, not an uncaught `RecursionError`.
 
 ## Refactor Pitfalls
 - In `repair_json`, keep a single shared output-finalization path for logging, `return_objects`, empty-string handling, and `json.dumps`.
 - Parser refactors are sensitive to context lifetimes and heuristic branch ordering; preserve malformed-input behavior when restructuring `parse_string` or `parse_object`.
 - Normalize top-level `RecursionError` into `ValueError`.
+- The existing top-level `RecursionError` normalization in `repair_json` currently protects only the parser branch; schema fast-path validation and schema repair calls need the same guard when they recurse on attacker-controlled schemas.

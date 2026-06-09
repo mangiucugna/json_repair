@@ -111,6 +111,26 @@ def test_schema_valid_fast_path_keeps_logging_empty():
     assert logs == []
 
 
+def test_deep_allof_schema_raises_value_error_instead_of_recursion_error():
+    pytest.importorskip("jsonschema")
+    schema = {"type": "object", "properties": {"value": {"type": "string"}}}
+    for _ in range(550):
+        schema = {"allOf": [schema]}
+
+    with pytest.raises(ValueError, match="supported schema recursion depth"):
+        repair_json('{"value": "ok"}', schema=schema, return_objects=True)
+
+
+def test_deep_properties_schema_raises_value_error_instead_of_recursion_error():
+    pytest.importorskip("jsonschema")
+    schema = {"type": "string"}
+    for depth in range(550):
+        schema = {"type": "object", "properties": {f"level_{depth}": schema}}
+
+    with pytest.raises(ValueError, match="supported schema recursion depth"):
+        repair_json("{}", schema=schema, return_objects=True)
+
+
 def test_schema_applies_to_valid_json_fast_path_outputs_and_logging():
     pytest.importorskip("jsonschema")
     schema = {

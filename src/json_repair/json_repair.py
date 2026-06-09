@@ -157,18 +157,21 @@ def repair_json(
             parsed_json = json.load(json_fd) if json_fd else json.loads(json_str)
             if repairer is not None and schema_obj is not None:
                 # Validate here to ensure that we reject values that cannot satisfy the schema and fall back to the more expensive parser+schema repair if needed, instead of just returning the valid but schema-noncompliant JSON.
-                if repairer.is_valid(parsed_json, schema_obj):
-                    is_valid_json = True
-                else:
-                    try:
-                        # repair_value may mutate containers in place; if validate fails we still
-                        # fall back to parser.parse_with_schema, which fully replaces parsed_json.
-                        repaired_value = repairer.repair_value(parsed_json, schema_obj, "$")
-                        if repairer.is_valid(repaired_value, schema_obj):
-                            parsed_json = repaired_value
-                            is_valid_json = True
-                    except ValueError:
-                        pass
+                try:
+                    if repairer.is_valid(parsed_json, schema_obj):
+                        is_valid_json = True
+                    else:
+                        try:
+                            # repair_value may mutate containers in place; if validate fails we still
+                            # fall back to parser.parse_with_schema, which fully replaces parsed_json.
+                            repaired_value = repairer.repair_value(parsed_json, schema_obj, "$")
+                            if repairer.is_valid(repaired_value, schema_obj):
+                                parsed_json = repaired_value
+                                is_valid_json = True
+                        except ValueError:
+                            pass
+                except RecursionError as exc:
+                    raise ValueError("Input schema nesting exceeds the supported schema recursion depth.") from exc
             else:
                 is_valid_json = True
     except (json.JSONDecodeError, TypeError, ValueError):
@@ -181,8 +184,11 @@ def repair_json(
         try:
             if repairer is not None and schema_obj is not None:
                 # If schema-guided, we want to attempt repairs even on valid JSON that fails schema validation.
-                parsed_json = parser.parse_with_schema(repairer, schema_obj)
-                repairer.validate(parsed_json, schema_obj)
+                try:
+                    parsed_json = parser.parse_with_schema(repairer, schema_obj)
+                    repairer.validate(parsed_json, schema_obj)
+                except RecursionError as exc:
+                    raise ValueError("Input schema nesting exceeds the supported schema recursion depth.") from exc
             else:
                 # Otherwise, we can skip the more expensive schema-aware parsing and just do a normal parse.
                 parsed_json = parser.parse()
