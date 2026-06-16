@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import importlib
+import json
 from typing import Any, Literal, cast
 
 from .parser_schema import array_schema_config, object_schema_config
@@ -325,7 +326,40 @@ class SchemaRepairer:
             return self._repair_object(value, schema, path)
         return self._coerce_scalar(value, schema_type, path)
 
+    def _load_json_string_container(
+        self,
+        value: Any,
+        expected_type: type[object],
+        path: str,
+        unwrap_log_message: str,
+        salvage_log_message: str,
+    ) -> Any:
+        if not isinstance(value, str):
+            return value
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            if self.schema_repair_mode != "salvage":
+                return value
+            json_repair_module = importlib.import_module(f"{__package__}.json_repair")
+            repaired = json_repair_module.loads(value, skip_json_loads=True)
+            if isinstance(repaired, expected_type):
+                self._log(salvage_log_message, path)
+                return repaired
+            return value
+        if isinstance(parsed, expected_type):
+            self._log(unwrap_log_message, path)
+            return parsed
+        return value
+
     def _repair_array(self, value: Any, schema: dict[str, Any], path: str) -> JSONReturnType:
+        value = self._load_json_string_container(
+            value,
+            list,
+            path,
+            "Unwrapped JSON string to array to match schema",
+            "Repaired malformed JSON string to array to match schema",
+        )
         if isinstance(value, list):
             items: list[JSONReturnType] = value
         else:
@@ -395,6 +429,13 @@ class SchemaRepairer:
                 # Conservatively unwrap the common root wrapper shape: [{...}] -> {...}.
                 value = value[0]
                 self._log("Unwrapped single-item root array to object while salvaging", path)
+        value = self._load_json_string_container(
+            value,
+            dict,
+            path,
+            "Unwrapped JSON string to object to match schema",
+            "Repaired malformed JSON string to object to match schema",
+        )
         if not isinstance(value, dict):
             raise ValueError(f"Expected object at {path}, got {type(value).__name__}.")
 
