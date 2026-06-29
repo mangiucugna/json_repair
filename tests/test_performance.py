@@ -12,6 +12,23 @@ correct_json = (path / "valid.json").read_text()
 
 incorrect_json = (path / "invalid.json").read_text()
 
+
+def _unclosed_object_string_payload(target_bytes, fragment_factory):
+    base = '{"a": "'
+    pieces = []
+    index = 0
+    while len(base) + len(",".join(pieces)) < target_bytes:
+        pieces.append(fragment_factory(index))
+        index += 1
+    return base + ",".join(pieces)
+
+
+unclosed_object_string_fragments = '{"a": "' + ",".join("fragment" for _ in range(3000))
+mixed_quote_object_string_fragments = _unclosed_object_string_payload(
+    35000,
+    lambda index: 'frag"ment' if index % 3 == 0 else ("'fragment'" if index % 3 == 1 else "fragment"),
+)
+
 schema_perf = {
     "type": "array",
     "items": {
@@ -140,6 +157,34 @@ def test_false_false_incorrect(benchmark):
     max_time = 3 / 10**3  # 3 millisecond
 
     # Assert that the average time is below the threshold
+    assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
+
+
+@pytest.mark.skipif(CI, reason="Performance tests are skipped in CI")
+def test_unclosed_object_string_with_many_comma_fragments(benchmark):
+    benchmark(
+        repair_json,
+        unclosed_object_string_fragments,
+        return_objects=True,
+        skip_json_loads=True,
+    )
+
+    mean_time = benchmark.stats.get("median")
+    max_time = 75 / 10**3  # 75 millisecond
+    assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
+
+
+@pytest.mark.skipif(CI, reason="Performance tests are skipped in CI")
+def test_unclosed_object_string_with_mixed_quote_fragments(benchmark):
+    benchmark(
+        repair_json,
+        mixed_quote_object_string_fragments,
+        return_objects=True,
+        skip_json_loads=True,
+    )
+
+    mean_time = benchmark.stats.get("median")
+    max_time = 125 / 10**3  # 125 millisecond
     assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
 
 

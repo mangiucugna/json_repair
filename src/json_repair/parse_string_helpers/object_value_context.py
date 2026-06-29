@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from ..json_parser import JSONParser  # noqa: TID252
 
 
-ObjectValueCommaClassification = Literal["container", "member", "string"]
+ObjectValueCommaClassification = Literal["container", "member", "string", "string_no_future_delimiter"]
 
 
 def classify_object_value_comma(parser: "JSONParser") -> ObjectValueCommaClassification:
@@ -46,16 +46,14 @@ def classify_object_value_comma(parser: "JSONParser") -> ObjectValueCommaClassif
     if next_c in ["{", "["]:
         return "container"
 
-    next_quote_idx = parser.skip_to_character(character=STRING_DELIMITERS, idx=next_idx)
-    next_quote = parser.get_char_at(next_quote_idx)
-    if not next_quote:
+    next_special_idx = parser.skip_to_character(character=[*STRING_DELIMITERS, "{", "["], idx=next_idx)
+    next_special = parser.get_char_at(next_special_idx)
+    if not next_special:
+        return "string_no_future_delimiter"
+    if next_special in ["{", "["]:
         return "string"
 
-    container_idx = parser.skip_to_character(character=["{", "["], idx=next_idx)
-    if parser.get_char_at(container_idx) in ["{", "["] and container_idx < next_quote_idx:
-        return "string"
-
-    key_end_idx = parser.skip_to_character(character=next_quote, idx=next_quote_idx + 1)
+    key_end_idx = parser.skip_to_character(character=next_special, idx=next_special_idx + 1)
     if not parser.get_char_at(key_end_idx):
         return "string"
     key_end_idx = parser.scroll_whitespaces(idx=key_end_idx + 1)

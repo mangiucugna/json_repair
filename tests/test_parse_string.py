@@ -23,6 +23,16 @@ def _assert_object_repairs(raw: str, expected: dict) -> None:
     assert repair_json(raw, skip_json_loads=True, return_objects=True) == expected
 
 
+class CountingParser(JSONParser):
+    def __init__(self, json_str: str) -> None:
+        super().__init__(json_str, None, False)
+        self.skip_to_character_calls = 0
+
+    def skip_to_character(self, character: str | list[str], idx: int = 0) -> int:
+        self.skip_to_character_calls += 1
+        return super().skip_to_character(character, idx)
+
+
 def test_parse_string():
     assert repair_json('"') == ""
     assert repair_json("\n") == ""
@@ -79,6 +89,14 @@ def test_missing_and_mixed_quotes():
     assert repair_json('{"key": "v"alu"e"} key:') == '{"key": "v\\"alu\\"e"}'
     assert repair_json('{"key": "v"alue", "key2": "value2"}') == '{"key": "v\\"alue", "key2": "value2"}'
     assert repair_json('[{"key": "v"alu,e", "key2": "value2"}]') == '[{"key": "v\\"alu,e", "key2": "value2"}]'
+
+
+def test_object_value_comma_without_future_delimiter_scans_once():
+    parser = CountingParser('"value,fragment,fragment,fragment')
+    parser.context.set(ContextValues.OBJECT_VALUE)
+
+    assert parser.parse_string() == "value,fragment,fragment,fragment"
+    assert parser.skip_to_character_calls == 1
 
 
 def test_escaping():

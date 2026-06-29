@@ -27,6 +27,7 @@ class StringParseState:
     unmatched_delimiter: bool = False
     pending_inline_container: bool = False
     inline_container_stack: list[str] = field(default_factory=list)
+    object_value_has_no_future_delimiter: bool = False
 
 
 def _outer_rstring_delimiter(state: StringParseState) -> str:
@@ -615,12 +616,16 @@ def _scan_string_body(
             and not state.pending_inline_container
             and not state.inline_container_stack
         ):
-            comma_classification = classify_object_value_comma(self)
+            comma_classification = (
+                "string" if state.object_value_has_no_future_delimiter else classify_object_value_comma(self)
+            )
             if comma_classification == "member":
                 self.log(
                     "While parsing a string missing the right delimiter in object value context, we found a comma that starts the next object member. Stopping here",
                 )
                 break
+            if comma_classification == "string_no_future_delimiter":
+                state.object_value_has_no_future_delimiter = True
             state.pending_inline_container = comma_classification == "container"
             self.log(
                 "While parsing a string in object value context, we found a comma that belongs to the string, keeping it",
