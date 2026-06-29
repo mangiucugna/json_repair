@@ -19,7 +19,7 @@ jobs:
       # IMPORTANT: this permission is mandatory for Trusted Publishing
       id-token: write
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install the latest version of uv
       uses: astral-sh/setup-uv@v7
