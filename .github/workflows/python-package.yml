@@ -24,13 +24,13 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15.0-alpha.8"]
 
     steps:
-    - uses: actions/checkout@v7
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install the latest version of uv
-      uses: astral-sh/setup-uv@v7
+      uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9
       with:
         activate-environment: true
     - name: Test with pytest

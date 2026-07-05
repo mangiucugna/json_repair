@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Literal
 
 from ..utils.constants import STRING_DELIMITERS  # noqa: TID252
@@ -9,7 +10,10 @@ if TYPE_CHECKING:
 ObjectValueCommaClassification = Literal["container", "member", "string", "string_no_future_delimiter"]
 
 
-def classify_object_value_comma(parser: "JSONParser") -> ObjectValueCommaClassification:
+def classify_object_value_comma(
+    parser: "JSONParser",
+    cached_skip_to_character: Callable[[str | list[str], int], int] | None = None,
+) -> ObjectValueCommaClassification:
     next_idx = parser.scroll_whitespaces(idx=1)
     next_c = parser.get_char_at(next_idx)
     if next_c in ["}", None]:
@@ -46,14 +50,15 @@ def classify_object_value_comma(parser: "JSONParser") -> ObjectValueCommaClassif
     if next_c in ["{", "["]:
         return "container"
 
-    next_special_idx = parser.skip_to_character(character=[*STRING_DELIMITERS, "{", "["], idx=next_idx)
+    skip_to_character = cached_skip_to_character or parser.skip_to_character
+    next_special_idx = skip_to_character([*STRING_DELIMITERS, "{", "["], next_idx)
     next_special = parser.get_char_at(next_special_idx)
     if not next_special:
         return "string_no_future_delimiter"
     if next_special in ["{", "["]:
         return "string"
 
-    key_end_idx = parser.skip_to_character(character=next_special, idx=next_special_idx + 1)
+    key_end_idx = skip_to_character(next_special, next_special_idx + 1)
     if not parser.get_char_at(key_end_idx):
         return "string"
     key_end_idx = parser.scroll_whitespaces(idx=key_end_idx + 1)

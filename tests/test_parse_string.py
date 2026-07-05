@@ -346,6 +346,18 @@ def test_parse_string_object_value_brace_heuristics():
         assert repair_json(raw, return_objects=True, skip_json_loads=True) == expected
 
 
+def test_parse_string_far_quote_comma_payload_keeps_existing_repair_shape():
+    raw = '{"a": "' + ("x," * 10_000) + '" tail'
+
+    assert repair_json(raw, return_objects=True, skip_json_loads=True) == {"a": "x," * 10_000}
+
+
+def test_parse_string_far_quote_brace_payload_keeps_existing_repair_shape():
+    raw = '{"a": "' + ("x}" * 5_000) + '" tail'
+
+    assert repair_json(raw, return_objects=True, skip_json_loads=True) == {"a": "x}" * 5_000}
+
+
 def test_parse_string_preserves_escaped_braces_after_comma_group():
     raw = r'{ "key": "\\{1,2\\} \\{3\\}" }'
 

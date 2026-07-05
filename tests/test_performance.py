@@ -1,5 +1,6 @@
 import os
 import pathlib
+import time
 
 import pytest
 
@@ -28,6 +29,8 @@ mixed_quote_object_string_fragments = _unclosed_object_string_payload(
     35000,
     lambda index: 'frag"ment' if index % 3 == 0 else ("'fragment'" if index % 3 == 1 else "fragment"),
 )
+far_quote_comma_object_string_fragments = '{"a": "' + ("x," * 10_000) + '" tail'
+far_quote_brace_object_string_fragments = '{"a": "' + ("x}" * 5_000) + '" tail'
 
 schema_perf = {
     "type": "array",
@@ -186,6 +189,26 @@ def test_unclosed_object_string_with_mixed_quote_fragments(benchmark):
     mean_time = benchmark.stats.get("median")
     max_time = 125 / 10**3  # 125 millisecond
     assert mean_time < max_time, f"Benchmark exceeded threshold: {mean_time:.3f}s > {max_time:.3f}s"
+
+
+@pytest.mark.skipif(CI, reason="Performance tests are skipped in CI")
+def test_far_quote_object_string_with_many_comma_fragments():
+    start = time.perf_counter()
+    repair_json(far_quote_comma_object_string_fragments, return_objects=True, skip_json_loads=True)
+    elapsed = time.perf_counter() - start
+
+    max_time = 250 / 10**3  # 250 millisecond
+    assert elapsed < max_time, f"Performance regression: {elapsed:.3f}s > {max_time:.3f}s"
+
+
+@pytest.mark.skipif(CI, reason="Performance tests are skipped in CI")
+def test_far_quote_object_string_with_many_brace_fragments():
+    start = time.perf_counter()
+    repair_json(far_quote_brace_object_string_fragments, return_objects=True, skip_json_loads=True)
+    elapsed = time.perf_counter() - start
+
+    max_time = 250 / 10**3  # 250 millisecond
+    assert elapsed < max_time, f"Performance regression: {elapsed:.3f}s > {max_time:.3f}s"
 
 
 @pytest.mark.skipif(CI, reason="Performance tests are skipped in CI")

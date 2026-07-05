@@ -28,6 +28,8 @@ class StringParseState:
     pending_inline_container: bool = False
     inline_container_stack: list[str] = field(default_factory=list)
     object_value_has_no_future_delimiter: bool = False
+    lookahead_cache: dict[tuple[str, ...], tuple[int, int | None]] = field(default_factory=dict)
+    object_value_unmatched_opening_braces: int = 0
 
 
 def _outer_rstring_delimiter(state: StringParseState) -> str:
@@ -105,9 +107,55 @@ def _append_literal_char(
     state: StringParseState,
     current_char: str,
 ) -> str | None:
-    state.string_acc += current_char
+    _append_string_content(state, current_char)
     self.index += 1
     return self.get_char_at()
+
+
+def _append_string_content(state: StringParseState, content: str) -> None:
+    state.string_acc += content
+    for char in content:
+        if char == "{":
+            state.object_value_unmatched_opening_braces += 1
+        elif char == "}" and state.object_value_unmatched_opening_braces:
+            state.object_value_unmatched_opening_braces -= 1
+
+
+def _rebuild_unmatched_opening_braces(state: StringParseState) -> None:
+    state.object_value_unmatched_opening_braces = 0
+    for char in state.string_acc:
+        if char == "{":
+            state.object_value_unmatched_opening_braces += 1
+        elif char == "}" and state.object_value_unmatched_opening_braces:
+            state.object_value_unmatched_opening_braces -= 1
+
+
+def _cached_skip_to_character(
+    self: "JSONParser",
+    state: StringParseState,
+    character: str | list[str],
+    idx: int = 0,
+) -> int:
+    targets = (character,) if isinstance(character, str) else tuple(character)
+    start_index = self.index + idx
+    cached = state.lookahead_cache.get(targets)
+    if cached is not None:
+        cached_start, cached_match = cached
+        if cached_match is None and start_index >= cached_start:
+            return len(self.json_str) - self.index
+        if cached_match is not None and cached_start <= start_index <= cached_match:
+            return cached_match - self.index
+
+    match_offset = self.skip_to_character(character, idx)
+    match = self.get_char_at(match_offset)
+    if not match:
+        state.lookahead_cache[targets] = (start_index, None)
+        return match_offset
+
+    match_index = self.index + match_offset
+    if match_index == 0 or self.json_str[match_index - 1] != "\\":
+        state.lookahead_cache[targets] = (start_index, match_index)
+    return match_offset
 
 
 def _prepare_string_entry(
@@ -208,6 +256,7 @@ def _normalize_escape_sequence(
     active_rstring_delimiter = _active_rstring_delimiter(state)
     if _in_low_smart_quote_span(state) and char == '"':
         state.string_acc = state.string_acc[:-1] + char
+        _rebuild_unmatched_opening_braces(state)
         _pop_low_smart_quote_span(state)
         self.index += 1
         return True, self.get_char_at()
@@ -215,6 +264,7 @@ def _normalize_escape_sequence(
         state.string_acc = state.string_acc[:-1]
         escape_seqs = {"t": "\t", "n": "\n", "r": "\r", "b": "\b"}
         state.string_acc += escape_seqs.get(char, char)
+        _rebuild_unmatched_opening_braces(state)
         self.index += 1
         next_char = self.get_char_at()
         while (
@@ -224,6 +274,7 @@ def _normalize_escape_sequence(
             and next_char in [active_rstring_delimiter, "\\"]
         ):
             state.string_acc = state.string_acc[:-1] + next_char
+            _rebuild_unmatched_opening_braces(state)
             self.index += 1
             next_char = self.get_char_at()
         return True, next_char
@@ -233,11 +284,13 @@ def _normalize_escape_sequence(
         if len(next_chars) == num_chars and all(c in "0123456789abcdefABCDEF" for c in next_chars):
             self.log("Found a unicode escape sequence, normalizing it")
             state.string_acc = state.string_acc[:-1] + chr(int(next_chars, 16))
+            _rebuild_unmatched_opening_braces(state)
             self.index += 1 + num_chars
             return True, self.get_char_at()
     elif char == "„" or char in STRING_DELIMITERS and char != active_rstring_delimiter:
         self.log("Found a delimiter that was escaped but shouldn't be escaped, removing the escape")
         state.string_acc = state.string_acc[:-1] + char
+        _rebuild_unmatched_opening_braces(state)
         self.index += 1
         return True, self.get_char_at()
     return False, char
@@ -572,6 +625,10 @@ def _scan_string_body(
     state: StringParseState,
 ) -> str | None:
     outer_rstring_delimiter = _outer_rstring_delimiter(state)
+
+    def cached_skip_to_character(character: str | list[str], idx: int = 0) -> int:
+        return _cached_skip_to_character(self, state, character, idx)
+
     char = self.get_char_at()
     while char and (char != outer_rstring_delimiter or _in_low_smart_quote_span(state)):
         if state.missing_quotes:
@@ -605,7 +662,7 @@ def _scan_string_body(
                 )
                 state.pending_inline_container = False
                 state.inline_container_stack.clear()
-                state.string_acc += self.json_str[self.index : self.index + container_end_idx]
+                _append_string_content(state, self.json_str[self.index : self.index + container_end_idx])
                 self.index += container_end_idx
                 char = self.get_char_at()
                 continue
@@ -617,7 +674,12 @@ def _scan_string_body(
             and not state.inline_container_stack
         ):
             comma_classification = (
-                "string" if state.object_value_has_no_future_delimiter else classify_object_value_comma(self)
+                "string"
+                if state.object_value_has_no_future_delimiter
+                else classify_object_value_comma(
+                    self,
+                    cached_skip_to_character,
+                )
             )
             if comma_classification == "member":
                 self.log(
@@ -646,24 +708,14 @@ def _scan_string_body(
             and char == "}"
             and (not state.string_acc or state.string_acc[-1] != outer_rstring_delimiter)
         ):
-            kept_inline_closer = False
-            brace_balance = 0
-            for acc_char in reversed(state.string_acc):
-                if acc_char == "}":
-                    brace_balance += 1
-                elif acc_char == "{":
-                    if brace_balance == 0:
-                        char = _append_literal_char(self, state, char)
-                        kept_inline_closer = True
-                        break
-                    brace_balance -= 1
-            if kept_inline_closer:
+            if state.object_value_unmatched_opening_braces:
+                char = _append_literal_char(self, state, char)
                 continue
             rstring_delimiter_missing = True
             self.skip_whitespaces()
             if self.get_char_at(1) == "\\":
                 rstring_delimiter_missing = False
-            i = self.skip_to_character(character=outer_rstring_delimiter, idx=1)
+            i = _cached_skip_to_character(self, state, outer_rstring_delimiter, idx=1)
             next_c = self.get_char_at(i)
             if next_c:
                 i += 1
@@ -724,12 +776,13 @@ def _scan_string_body(
                 )
                 break
         assert char is not None
-        state.string_acc += char
+        _append_string_content(state, char)
         self.index += 1
         char = self.get_char_at()
         if char is None:
             if self.stream_stable and state.string_acc and state.string_acc[-1] == "\\":
                 state.string_acc = state.string_acc[:-1]
+                _rebuild_unmatched_opening_braces(state)
             break
         if state.string_acc and state.string_acc[-1] == "\\":
             handled_escape, char = _normalize_escape_sequence(self, state, char)
