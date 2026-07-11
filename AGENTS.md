@@ -49,4 +49,3 @@
 - Parser refactors are sensitive to context lifetimes and heuristic branch ordering; preserve malformed-input behavior when restructuring `parse_string` or `parse_object`.
 - Performance regressions often hide in repeated `parse_string` lookahead scans on long malformed object values; include cases with many commas or `}` characters before a far quote when changing comma/right-brace heuristics.
 - Normalize top-level `RecursionError` into `ValueError`.
-- The existing top-level `RecursionError` normalization in `repair_json` currently protects only the parser branch; schema fast-path validation and schema repair calls need the same guard when they recurse on attacker-controlled schemas.

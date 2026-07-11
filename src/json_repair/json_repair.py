@@ -138,8 +138,16 @@ def repair_json(
 
     parser: JSONParser | None = None
     repair_log: list[dict[str, str]] = []
+    try_valid_json_suffix = not skip_json_loads and json_fd is None and schema is None
     if json_fd is not None:
-        parser = JSONParser(json_str, json_fd, logging, chunk_length, stream_stable, strict)
+        parser = JSONParser(
+            json_str,
+            json_fd,
+            logging,
+            chunk_length,
+            stream_stable,
+            strict,
+        )
         if logging:
             repair_log = parser.logger
     schema_obj = schema_from_input(schema) if schema is not None else None
@@ -178,7 +186,15 @@ def repair_json(
         pass
     if not is_valid_json:
         if parser is None:
-            parser = JSONParser(json_str, json_fd, logging, chunk_length, stream_stable, strict)
+            parser = JSONParser(
+                json_str,
+                json_fd,
+                logging,
+                chunk_length,
+                stream_stable,
+                strict,
+                try_valid_json_suffix=try_valid_json_suffix,
+            )
             if logging:
                 parser.logger = repair_log
         try:

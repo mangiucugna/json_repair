@@ -99,6 +99,60 @@ def test_object_value_comma_without_future_delimiter_scans_once():
     assert parser.skip_to_character_calls == 1
 
 
+def test_object_value_bare_key_prose_scans_once():
+    raw = '"value\\n' + (", floof: prose" * 100) + '"'
+    parser = CountingParser(raw)
+    parser.context.set(ContextValues.OBJECT_VALUE)
+
+    assert parser.parse_string() == "value\n" + (", floof: prose" * 100)
+    assert parser.skip_to_character_calls == 3
+
+
+def test_parse_string_keeps_colon_prose_inside_wrapped_valid_json():
+    raw = r"""Here's your JSON:
+{
+  "stuff": [
+    {
+      "a": "foo",
+      "blist": [
+        {
+          "text": "a\n b c, floof: a\n ... a b (c), floof: \n a",
+          "id": 8
+        }
+      ]
+    }
+  ]
+}
+"""
+    expected = {
+        "stuff": [
+            {
+                "a": "foo",
+                "blist": [{"text": "a\n b c, floof: a\n ... a b (c), floof: \n a", "id": 8}],
+            }
+        ]
+    }
+
+    _assert_object_repairs(raw, expected)
+    repaired, logs = repair_json(raw, return_objects=True, logging=True)
+    assert repaired == expected
+    assert not any("comma that starts the next object member" in log["text"] for log in logs)
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ('{"a": "first, b: "second"}', {"a": "first", "b": "second"}),
+        ('{"a": "first, b: 1}', {"a": "first", "b": 1}),
+        ('{"a": "first, b: true}', {"a": "first", "b": True}),
+        ('{"a": "first, b: [1]}', {"a": "first", "b": [1]}),
+        ('{"a": "first, b: prose}', {"a": "first", "b": "prose"}),
+    ],
+)
+def test_parse_string_keeps_bare_member_recovery_for_explicit_and_unclosed_values(raw, expected):
+    assert repair_json(raw, skip_json_loads=True, return_objects=True) == expected
+
+
 def test_escaping():
     assert repair_json("'\"'") == ""
     assert repair_json('{"key": \'string"\n\t\\le\'') == '{"key": "string\\"\\n\\t\\\\le"}'

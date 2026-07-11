@@ -10,10 +10,36 @@ if TYPE_CHECKING:
 ObjectValueCommaClassification = Literal["container", "member", "string", "string_no_future_delimiter"]
 
 
+def _bare_member_has_recoverable_value(
+    parser: "JSONParser",
+    value_idx: int,
+    skip_to_character: Callable[[str | list[str], int], int],
+) -> bool:
+    value_start_idx = parser.scroll_whitespaces(idx=value_idx)
+    value_start = parser.get_char_at(value_start_idx)
+    if value_start in [*STRING_DELIMITERS, "{", "[", "-"]:
+        return True
+    if value_start and value_start.isdigit():
+        return True
+
+    for literal in ["true", "false", "null"]:
+        if all(parser.get_char_at(value_start_idx + offset) == char for offset, char in enumerate(literal)):
+            value_end = parser.get_char_at(value_start_idx + len(literal))
+            if value_end is None or value_end.isspace() or value_end in [",", "}", "]"]:
+                return True
+
+    # An unquoted value is only a safe member boundary when its object closes
+    # before the current string can close. Otherwise prose such as
+    # `, floof: explanation` is more likely to belong to the string.
+    value_end_idx = skip_to_character([*STRING_DELIMITERS, "}"], value_start_idx)
+    return parser.get_char_at(value_end_idx) == "}"
+
+
 def classify_object_value_comma(
     parser: "JSONParser",
     cached_skip_to_character: Callable[[str | list[str], int], int] | None = None,
 ) -> ObjectValueCommaClassification:
+    skip_to_character = cached_skip_to_character or parser.skip_to_character
     next_idx = parser.scroll_whitespaces(idx=1)
     next_c = parser.get_char_at(next_idx)
     if next_c in ["}", None]:
@@ -44,13 +70,16 @@ def classify_object_value_comma(
                 break
             bare_key_idx += 1
         bare_key_idx = parser.scroll_whitespaces(idx=bare_key_idx)
-        if parser.get_char_at(bare_key_idx) == ":":
+        if parser.get_char_at(bare_key_idx) == ":" and _bare_member_has_recoverable_value(
+            parser,
+            bare_key_idx + 1,
+            skip_to_character,
+        ):
             return "member"
 
     if next_c in ["{", "["]:
         return "container"
 
-    skip_to_character = cached_skip_to_character or parser.skip_to_character
     next_special_idx = skip_to_character([*STRING_DELIMITERS, "{", "["], next_idx)
     next_special = parser.get_char_at(next_special_idx)
     if not next_special:

@@ -1,3 +1,4 @@
+import json
 from collections.abc import Callable
 from contextlib import ExitStack
 from typing import TYPE_CHECKING, Any, TextIO
@@ -51,6 +52,7 @@ class JSONParser:
         json_fd_chunk_length: int = 0,
         stream_stable: bool = False,
         strict: bool = False,
+        try_valid_json_suffix: bool = False,
     ) -> None:
         # The string to parse
         self.json_str: str | StringFileWrapper = json_str
@@ -87,6 +89,8 @@ class JSONParser:
         # may not be desirable in some use cases and the user would prefer json_repair to return an exception.
         # So strict mode was added to disable some of those heuristics.
         self.strict = strict
+        self.try_valid_json_suffix = try_valid_json_suffix
+        self.has_tried_valid_json_suffix = False
         self.schema_repairer: SchemaRepairer | None = None
 
     def parse(
@@ -150,6 +154,25 @@ class JSONParser:
             idx -= 1
         return idx >= 0 and self.json_str[idx] == ","
 
+    def _try_parse_valid_json_suffix(self) -> tuple[bool, JSONReturnType]:
+        if (
+            not self.try_valid_json_suffix
+            or self.has_tried_valid_json_suffix
+            or not self.context.empty
+            or self.index == 0
+            or not isinstance(self.json_str, str)
+        ):
+            return False, ""
+
+        self.has_tried_valid_json_suffix = True
+        try:
+            value = json.loads(self.json_str[self.index :])
+        except json.JSONDecodeError:
+            return False, ""
+
+        self.index = len(self.json_str)
+        return True, value
+
     def parse_json(
         self,
         schema: dict[str, Any] | bool | None = None,
@@ -170,6 +193,10 @@ class JSONParser:
             # None means that we are at the end of the string provided
             if char is None:
                 return ""
+            if self.try_valid_json_suffix and char in ["{", "["]:
+                parsed_suffix, value = self._try_parse_valid_json_suffix()
+                if parsed_suffix:
+                    return self._finalize_parsed_value(value, repairer, schema, path)
             # <object> starts with '{'
             if char == "{":
                 self.index += 1
