@@ -34,24 +34,35 @@ def test_valid_json_fast_path_does_not_initialize_repair_parser(monkeypatch):
     assert json_repair_module.repair_json('{"key": "value"}', return_objects=True) == {"key": "value"}
 
 
-def test_prefixed_valid_json_uses_suffix_fast_path_unless_json_loads_is_skipped(monkeypatch):
+def test_prefixed_valid_json_uses_value_fast_path_unless_json_loads_is_skipped(monkeypatch):
     raw = 'Here is your JSON:\n{"text": "a\\n b c, floof: a\\n ... a b (c), floof: \\n a", "id": 8}'
     expected = {"text": "a\n b c, floof: a\n ... a b (c), floof: \n a", "id": 8}
-    original_try_parse = JSONParser._try_parse_valid_json_suffix
-    suffix_attempts: list[int] = []
+    original_try_parse = JSONParser._try_parse_valid_json_value
+    value_attempts: list[int] = []
 
-    def track_suffix_parse(self):
-        suffix_attempts.append(self.index)
+    def track_value_parse(self):
+        value_attempts.append(self.index)
         return original_try_parse(self)
 
-    monkeypatch.setattr(JSONParser, "_try_parse_valid_json_suffix", track_suffix_parse)
+    monkeypatch.setattr(JSONParser, "_try_parse_valid_json_value", track_value_parse)
 
     assert repair_json(raw, return_objects=True) == expected
-    assert suffix_attempts
+    assert value_attempts
 
-    suffix_attempts.clear()
+    value_attempts.clear()
     assert repair_json(raw, return_objects=True, skip_json_loads=True) == expected
-    assert not suffix_attempts
+    assert not value_attempts
+
+
+def test_prefixed_valid_json_with_trailing_text_uses_value_fast_path(monkeypatch):
+    def fail_parse_object(*_args, **_kwargs):
+        raise AssertionError("raw decoding should avoid repair parsing")
+
+    monkeypatch.setattr(JSONParser, "parse_object", fail_parse_object)
+
+    raw = 'Here is your JSON:\n{"text": "literal } and ]"}\nAdditional explanation.'
+
+    assert repair_json(raw, return_objects=True) == {"text": "literal } and ]"}
 
 
 def test_prefixed_invalid_json_falls_back_to_repair_parser():

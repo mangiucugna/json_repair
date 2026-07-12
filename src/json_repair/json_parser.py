@@ -154,7 +154,7 @@ class JSONParser:
             idx -= 1
         return idx >= 0 and self.json_str[idx] == ","
 
-    def _try_parse_valid_json_suffix(self) -> tuple[bool, JSONReturnType]:
+    def _try_parse_valid_json_value(self) -> tuple[bool, JSONReturnType]:
         if (
             not self.try_valid_json_suffix
             or self.has_tried_valid_json_suffix
@@ -166,11 +166,11 @@ class JSONParser:
 
         self.has_tried_valid_json_suffix = True
         try:
-            value = json.loads(self.json_str[self.index :])
+            value, end_idx = json.JSONDecoder().raw_decode(self.json_str[self.index :])
         except json.JSONDecodeError:
             return False, ""
 
-        self.index = len(self.json_str)
+        self.index += end_idx
         return True, value
 
     def parse_json(
@@ -194,7 +194,7 @@ class JSONParser:
             if char is None:
                 return ""
             if self.try_valid_json_suffix and char in ["{", "["]:
-                parsed_suffix, value = self._try_parse_valid_json_suffix()
+                parsed_suffix, value = self._try_parse_valid_json_value()
                 if parsed_suffix:
                     return self._finalize_parsed_value(value, repairer, schema, path)
             # <object> starts with '{'

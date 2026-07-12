@@ -289,6 +289,27 @@ def test_schema_applies_to_valid_json_fast_path_outputs_and_logging():
     assert logs
 
 
+def test_schema_preserves_prefixed_valid_json_string_content():
+    schema = {
+        "type": "object",
+        "properties": {
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {"text": {"type": "string"}, "id": {"type": "integer"}},
+                    "required": ["text", "id"],
+                    "additionalProperties": False,
+                },
+            }
+        },
+        "required": ["items"],
+    }
+    raw = 'Preamble\n{"items": [{"text": "a\\n, extra: 1", "id": 8}]}'
+
+    assert repair_json(raw, schema=schema, return_objects=True) == {"items": [{"text": "a\n, extra: 1", "id": 8}]}
+
+
 def test_schema_applies_to_valid_empty_string():
     pytest.importorskip("jsonschema")
     assert repair_json('""', schema={"type": "string"}) == ""

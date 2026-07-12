@@ -138,7 +138,7 @@ def repair_json(
 
     parser: JSONParser | None = None
     repair_log: list[dict[str, str]] = []
-    try_valid_json_suffix = not skip_json_loads and json_fd is None and schema is None
+    try_valid_json_suffix = not skip_json_loads and json_fd is None
     if json_fd is not None:
         parser = JSONParser(
             json_str,
