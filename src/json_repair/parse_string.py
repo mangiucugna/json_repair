@@ -651,7 +651,15 @@ def _scan_string_body(
             char = _append_literal_char(self, state, char)
             continue
         if (
-            state.pending_inline_container
+            (
+                state.pending_inline_container
+                or (
+                    self.context.current == ContextValues.OBJECT_VALUE
+                    and char == "{"
+                    and self.get_char_at(-1) != "\\"
+                    and _bare_key_is_followed_by_colon(self, self.scroll_whitespaces(idx=1))
+                )
+            )
             and char in INLINE_CONTAINER_OPENERS
             and (not state.string_acc or state.string_acc[-1] != "\\")
         ):

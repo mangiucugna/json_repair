@@ -139,6 +139,23 @@ def test_parse_string_keeps_colon_prose_inside_wrapped_valid_json():
     assert not any("comma that starts the next object member" in log["text"] for log in logs)
 
 
+def test_parse_string_keeps_code_like_content_inside_valid_json():
+    raw = r'{"command":"x\nrollback: (registry: Registry, snapshot: EntitySnapshot) => void;"}'
+    expected = {"command": "x\nrollback: (registry: Registry, snapshot: EntitySnapshot) => void;"}
+
+    _assert_object_repairs(raw, expected)
+    repaired, logs = repair_json(raw, skip_json_loads=True, return_objects=True, logging=True)
+    assert repaired == expected
+    assert not any("comma that starts the next object member" in log["text"] for log in logs)
+
+
+def test_parse_string_keeps_pseudo_object_code_inside_valid_json():
+    raw = r'{"command":"x\nrollback: {registry: Registry, snapshot: EntitySnapshot}"}'
+    expected = {"command": "x\nrollback: {registry: Registry, snapshot: EntitySnapshot}"}
+
+    _assert_object_repairs(raw, expected)
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
