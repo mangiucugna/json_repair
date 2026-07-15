@@ -41,6 +41,7 @@
 - Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`.
 - `patternProperties` matching is intentionally limited to a safe subset; do not execute user-supplied regexes.
 - Preserve schema dict identity in `SchemaRepairer.resolve_schema` whenever possible so validator caching remains effective.
+- When validating a detached `anyOf` or `oneOf` branch, retain the original root schema's resolver scope so root-relative `$ref` values can resolve `$defs`.
 - `schema_repair_mode` supports only `standard` and opt-in `salvage`; `salvage` should remain best-effort structural recovery, not broad silent coercion.
 - Treat user-supplied schemas as an attacker-controlled input surface: deep nesting in schema normalization, validation, and repair paths needs an explicit depth limit or controlled `ValueError`, not an uncaught `RecursionError`.
 

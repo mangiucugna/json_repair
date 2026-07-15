@@ -99,6 +99,35 @@ def test_schema_applies_to_valid_json_without_skip_json_loads():
         repair_json('"bbb"', schema={"type": "string", "pattern": "^a+$"}, return_objects=True)
 
 
+def test_schema_union_branch_keeps_root_defs_scope_during_repair():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "$defs": {
+            "Item": {
+                "type": "object",
+                "properties": {"name": {"type": "string", "pattern": "^example$"}},
+                "required": ["name"],
+            }
+        },
+        "type": "object",
+        "properties": {
+            "value": {
+                "anyOf": [
+                    {"type": "array", "items": {"$ref": "#/$defs/Item"}},
+                    {"type": "null"},
+                ]
+            }
+        },
+        "required": ["value"],
+    }
+
+    assert repair_json('{"value": [{"name": "example"}],}', schema=schema, return_objects=True) == {
+        "value": [{"name": "example"}]
+    }
+    with pytest.raises(ValueError, match="Expected null"):
+        repair_json('{"value": [{"name": "invalid"}],}', schema=schema, return_objects=True)
+
+
 def test_schema_valid_fast_path_keeps_logging_empty():
     pytest.importorskip("jsonschema")
     schema = {

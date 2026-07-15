@@ -132,6 +132,7 @@ class SchemaRepairer:
         self.log = log
         self.schema_repair_mode = normalize_schema_repair_mode(schema_repair_mode)
         self._validator_cache: dict[int, tuple[dict[str, Any], Any]] = {}
+        self._root_validator: Any | None = None
 
     def _log(self, text: str, path: str) -> None:
         if self.log is not None:
@@ -144,11 +145,20 @@ class SchemaRepairer:
             return cached_validator[1]
 
         prepared_schema = self._prepare_schema_for_validation(schema)
-        jsonschema = _require_jsonschema()
-        validator_cls = jsonschema.validators.validator_for(prepared_schema)
-        validator = validator_cls(prepared_schema)
+        root_validator = self._get_root_validator()
+        validator = root_validator if schema is self.root_schema else root_validator.evolve(schema=prepared_schema)
         self._validator_cache[cache_key] = (schema, validator)
         return validator
+
+    def _get_root_validator(self) -> Any:
+        if self._root_validator is not None:
+            return self._root_validator
+
+        prepared_root_schema = self._prepare_schema_for_validation(self.root_schema)
+        jsonschema = _require_jsonschema()
+        validator_cls = jsonschema.validators.validator_for(prepared_root_schema)
+        self._root_validator = validator_cls(prepared_root_schema)
+        return self._root_validator
 
     def is_valid(self, value: JSONReturnType, schema: dict[str, Any] | bool) -> bool:
         schema = self.resolve_schema(schema)
