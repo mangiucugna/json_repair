@@ -48,5 +48,6 @@
 ## Refactor Pitfalls
 - In `repair_json`, keep a single shared output-finalization path for logging, `return_objects`, empty-string handling, and `json.dumps`.
 - Parser refactors are sensitive to context lifetimes and heuristic branch ordering; preserve malformed-input behavior when restructuring `parse_string` or `parse_object`.
+- Preserve bare quotes inside compact regex character classes such as `['"]` and `[^'"]`; do not let them split the enclosing JSON value into separate top-level elements.
 - Performance regressions often hide in repeated `parse_string` lookahead scans on long malformed object values; include cases with many commas or `}` characters before a far quote when changing comma/right-brace heuristics.
 - Normalize top-level `RecursionError` into `ValueError`.

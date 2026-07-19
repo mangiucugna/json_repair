@@ -30,6 +30,7 @@ class StringParseState:
     object_value_has_no_future_delimiter: bool = False
     lookahead_cache: dict[tuple[str, ...], tuple[int, int | None]] = field(default_factory=dict)
     object_value_unmatched_opening_braces: int = 0
+    regex_character_class_start: int | None = None
 
 
 def _outer_rstring_delimiter(state: StringParseState) -> str:
@@ -113,21 +114,44 @@ def _append_literal_char(
 
 
 def _append_string_content(state: StringParseState, content: str) -> None:
+    start_index = len(state.string_acc)
     state.string_acc += content
-    for char in content:
+    for offset, char in enumerate(content):
         if char == "{":
             state.object_value_unmatched_opening_braces += 1
         elif char == "}" and state.object_value_unmatched_opening_braces:
             state.object_value_unmatched_opening_braces -= 1
+        elif char == "[":
+            state.regex_character_class_start = start_index + offset + 1
+        elif char == "]":
+            state.regex_character_class_start = None
+
+
+def _quote_belongs_to_regex_character_class(
+    self: "JSONParser",
+    state: StringParseState,
+) -> bool:
+    """Return whether the current quote is inside a compact ``[...]`` character class."""
+    start = state.regex_character_class_start
+    if start is None or any(char.isspace() for char in state.string_acc[start:]):
+        return False
+
+    closing_bracket_idx = self.skip_to_character("]", idx=1)
+    return self.get_char_at(closing_bracket_idx) == "]"
 
 
 def _rebuild_unmatched_opening_braces(state: StringParseState) -> None:
     state.object_value_unmatched_opening_braces = 0
-    for char in state.string_acc:
+    state.regex_character_class_start = None
+    for index, char in enumerate(state.string_acc):
         if char == "{":
             state.object_value_unmatched_opening_braces += 1
         elif char == "}" and state.object_value_unmatched_opening_braces:
             state.object_value_unmatched_opening_braces -= 1
+        elif char == "[":
+            state.regex_character_class_start = index + 1
+        elif char == "]":
+            state.regex_character_class_start = None
 
 
 def _cached_skip_to_character(
@@ -819,6 +843,17 @@ def _scan_string_body(
                 break
         if _in_low_smart_quote_span(state) and char == '"':
             _pop_low_smart_quote_span(state)
+            char = _append_literal_char(self, state, char)
+            continue
+        if (
+            char == outer_rstring_delimiter
+            and self.context.current == ContextValues.OBJECT_VALUE
+            and _quote_belongs_to_regex_character_class(self, state)
+        ):
+            self.log(
+                "While parsing a string, we found a bare quote inside a regex character class, keeping it",
+            )
+            assert char is not None
             char = _append_literal_char(self, state, char)
             continue
         if char == outer_rstring_delimiter and state.string_acc and state.string_acc[-1] != "\\":

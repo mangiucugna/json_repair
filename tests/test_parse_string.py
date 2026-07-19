@@ -196,6 +196,35 @@ def test_markdown():
     assert repair_json('{ "content": "[LINK](", "key": true }') == '{"content": "[LINK](", "key": true}'
 
 
+@pytest.mark.parametrize(
+    "fenced",
+    [False, True],
+)
+def test_parse_string_keeps_bare_quotes_inside_regex_character_classes(fenced):
+    raw = """{
+        "results": [
+            {"regex": "^\\s*path\\(\\s*['\"]([^'\"]+)['\"]\\s*,"},
+            {"regex": "^\\s*re_path\\(\\s*[^'\"]+['\"]\\s*,"}
+        ]
+    }"""
+    if fenced:
+        raw = f"```json\n{raw}\n```"
+
+    assert repair_json(raw, return_objects=True, skip_json_loads=True) == {
+        "results": [
+            {"regex": r"""^\s*path\(\s*['"]([^'"]+)['"]\s*,"""},
+            {"regex": r"""^\s*re_path\(\s*[^'"]+['"]\s*,"""},
+        ]
+    }
+
+
+def test_parse_string_still_closes_regular_object_members_after_quoted_values():
+    assert repair_json('{"first": "value", "second": "next"}', return_objects=True, skip_json_loads=True) == {
+        "first": "value",
+        "second": "next",
+    }
+
+
 def test_leading_trailing_characters():
     assert repair_json('````{ "key": "value" }```') == '{"key": "value"}'
     assert repair_json("""{    "a": "",    "b": [ { "c": 1} ] \n}```""") == '{"a": "", "b": [{"c": 1}]}'
