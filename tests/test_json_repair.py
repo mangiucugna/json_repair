@@ -34,7 +34,7 @@ def test_valid_json_fast_path_does_not_initialize_repair_parser(monkeypatch):
     assert json_repair_module.repair_json('{"key": "value"}', return_objects=True) == {"key": "value"}
 
 
-def test_prefixed_valid_json_uses_value_fast_path_unless_json_loads_is_skipped(monkeypatch):
+def test_prefixed_valid_json_uses_value_fast_path_when_json_loads_is_skipped(monkeypatch):
     raw = 'Here is your JSON:\n{"text": "a\\n b c, floof: a\\n ... a b (c), floof: \\n a", "id": 8}'
     expected = {"text": "a\n b c, floof: a\n ... a b (c), floof: \n a", "id": 8}
     original_try_parse = JSONParser._try_parse_valid_json_value
@@ -50,8 +50,13 @@ def test_prefixed_valid_json_uses_value_fast_path_unless_json_loads_is_skipped(m
     assert value_attempts
 
     value_attempts.clear()
+
+    def fail_json_loads(*_args, **_kwargs):
+        raise AssertionError("skip_json_loads must not validate the whole input")
+
+    monkeypatch.setattr(json_repair_module.json, "loads", fail_json_loads)
     assert repair_json(raw, return_objects=True, skip_json_loads=True) == expected
-    assert not value_attempts
+    assert value_attempts
 
 
 def test_prefixed_valid_json_with_trailing_text_uses_value_fast_path(monkeypatch):
