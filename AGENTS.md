@@ -8,8 +8,6 @@
 ## Validation
 - Run the full test suite with `uv run pytest`.
 - Run the full hook stack with `pre-commit run --all-files`.
-- `tests/test_performance.py` is timing-sensitive and can fail on slower machines.
-- `tests/test_type_inference.py` exercises import resolution from a temp directory; keep it independent of editable installs.
 - The hook stack may rewrite `uv.lock` or `.pre-commit-config.yaml`; if hook-managed files change during commit flows, restage the resulting updates instead of repeatedly restoring them.
 
 ## Release And Packaging
@@ -22,15 +20,7 @@
 ## Docs
 - Keep `README.zh.md` aligned with `README.md` when behavior or contributor guidance changes.
 - `README.md` is the PyPI long description via `pyproject.toml`; avoid relative file or image links there.
-- For local docs demo validation, follow `.agents/skills/docs-demo-local-test/SKILL.md`.
 - Keep docs demo share state in the URL hash, not query params.
-
-## Code Areas
-- API and CLI entry points: `src/json_repair/json_repair.py`, `src/json_repair/__init__.py`, `src/json_repair/__main__.py`.
-- Parser orchestration: `src/json_repair/json_parser.py`.
-- Repair primitives: `src/json_repair/parse_*.py`, `src/json_repair/parse_string_helpers/*`.
-- Schema logic: `src/json_repair/schema_repair.py`.
-- Demo API/UI: `docs/app.py`, `docs/index.js`, `docs/index*.html`, `docs/styles.css`.
 
 ## Durable Implementation Notes
 - Keep valid-JSON fast paths on the standard library path; `strict=True` must not second-guess inputs that `json.loads` already accepts.
@@ -42,12 +32,12 @@
 - `patternProperties` matching is intentionally limited to a safe subset; do not execute user-supplied regexes.
 - Preserve schema dict identity in `SchemaRepairer.resolve_schema` whenever possible so validator caching remains effective.
 - When validating a detached `anyOf` or `oneOf` branch, retain the original root schema's resolver scope so root-relative `$ref` values can resolve `$defs`.
-- `schema_repair_mode` supports only `standard` and opt-in `salvage`; `salvage` should remain best-effort structural recovery, not broad silent coercion.
+- `schema_repair_mode` supports only `standard` and opt-in `salvage`; salvage may recover strongly evidenced structural mismatches, but must not silently coerce or infer semantic property renames (for example, `results` to `patterns`).
 - Treat user-supplied schemas as an attacker-controlled input surface: deep nesting in schema normalization, validation, and repair paths needs an explicit depth limit or controlled `ValueError`, not an uncaught `RecursionError`.
 
 ## Refactor Pitfalls
 - In `repair_json`, keep a single shared output-finalization path for logging, `return_objects`, empty-string handling, and `json.dumps`.
 - Parser refactors are sensitive to context lifetimes and heuristic branch ordering; preserve malformed-input behavior when restructuring `parse_string` or `parse_object`.
 - Preserve bare quotes inside compact regex character classes such as `['"]` and `[^'"]`; do not let them split the enclosing JSON value into separate top-level elements.
-- Performance regressions often hide in repeated `parse_string` lookahead scans on long malformed object values; include cases with many commas or `}` characters before a far quote when changing comma/right-brace heuristics.
+- Performance regressions often hide in repeated `parse_string` lookahead scans on long malformed object values; include cases with many commas or `}` characters before a far quote, and retain only inputs with a meaningful baseline slowdown (roughly one second or more).
 - Normalize top-level `RecursionError` into `ValueError`.
