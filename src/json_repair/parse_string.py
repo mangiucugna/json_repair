@@ -284,6 +284,18 @@ def _normalize_escape_sequence(
         _pop_low_smart_quote_span(state)
         self.index += 1
         return True, self.get_char_at()
+    if char == "\\":
+        run_start = self.index - 1
+        run_end = self.index + 1
+        while run_end < len(self.json_str) and self.json_str[run_end] == "\\":
+            run_end += 1
+        run_length = run_end - run_start
+        next_char = self.get_char_at(run_end - self.index)
+        if run_length % 2 == 0 and next_char != active_rstring_delimiter:
+            state.string_acc = state.string_acc[:-1] + ("\\" * (run_length // 2))
+            _rebuild_unmatched_opening_braces(state)
+            self.index = run_end
+            return True, self.get_char_at()
     if char in [active_rstring_delimiter, "t", "n", "r", "b", "\\"]:
         state.string_acc = state.string_acc[:-1]
         escape_seqs = {"t": "\t", "n": "\n", "r": "\r", "b": "\b"}

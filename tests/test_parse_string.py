@@ -464,6 +464,19 @@ def test_parse_string_preserves_escaped_braces_after_comma_group():
     assert repair_json(raw, return_objects=True, skip_json_loads=True) == {"key": r"\{1,2\} \{3\}"}
 
 
+@pytest.mark.parametrize(
+    ("raw", "expected", "serialized"),
+    [
+        (r'{"key": "a\\\\b\\\\c",}', r"a\\b\\c", r'{"key": "a\\\\b\\\\c"}'),
+        (r'{"key": "1\\\\2\\\\3",}', r"1\\2\\3", r'{"key": "1\\\\2\\\\3"}'),
+    ],
+)
+def test_parse_string_preserves_repeated_escaped_backslashes_during_repair(raw, expected, serialized):
+    for skip_json_loads in (False, True):
+        assert repair_json(raw, return_objects=True, skip_json_loads=skip_json_loads) == {"key": expected}
+        assert repair_json(raw, skip_json_loads=skip_json_loads) == serialized
+
+
 def test_parse_string_preserves_latex_command_after_bracketed_comma():
     raw = r'{ "key": "x [0,2] f(-\\frac{3}{4})" }'
 
