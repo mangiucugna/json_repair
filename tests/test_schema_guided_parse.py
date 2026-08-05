@@ -67,6 +67,94 @@ def test_schema_missing_required_property_raises():
         repair_with_schema("{}", schema)
 
 
+def test_schema_salvage_selects_first_matching_top_level_fragment():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
+        "required": ["name", "age"],
+    }
+    raw = """Here is an example: {"foo": 1}
+
+Final answer:
+```json
+{"name": "Alice", "age": 30}
+```
+
+Alternative: {"name": "Bob", "age": 40}"""
+
+    assert repair_with_schema(raw, schema, schema_repair_mode="salvage") == {"name": "Alice", "age": 30}
+    repaired, logs = cast(
+        "tuple[object, list[dict[str, str]]]",
+        repair_json(raw, schema=schema, skip_json_loads=True, logging=True, schema_repair_mode="salvage"),
+    )
+    assert repaired == {"name": "Alice", "age": 30}
+    assert any(log["text"] == "Skipped top-level fragment that did not match schema while salvaging" for log in logs)
+
+
+def test_schema_salvage_skips_list_fragment_before_matching_object():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
+        "required": ["name", "age"],
+    }
+    raw = """The options are ["a", "b"].
+
+{"name": "Alice", "age": 30}"""
+
+    assert repair_with_schema(raw, schema, schema_repair_mode="salvage") == {"name": "Alice", "age": 30}
+
+
+def test_schema_standard_still_rejects_invalid_first_top_level_fragment():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
+        "required": ["name", "age"],
+    }
+
+    with pytest.raises(ValueError, match="Missing required properties"):
+        repair_with_schema('{"foo": 1}\n{"name": "Alice", "age": 30}', schema)
+
+
+def test_schema_salvage_raises_when_no_top_level_fragment_matches():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
+        "required": ["name", "age"],
+    }
+
+    with pytest.raises(ValueError, match="Missing required properties"):
+        repair_with_schema('{"foo": 1}\n{"bar": 2}', schema, schema_repair_mode="salvage")
+
+    with pytest.raises(ValueError, match="Missing required properties"):
+        repair_with_schema('{"foo": 1} trailing prose', schema, schema_repair_mode="salvage")
+
+    with pytest.raises(ValueError, match="Missing required properties"):
+        repair_with_schema('{"foo": 1} // trailing comment', schema, schema_repair_mode="salvage")
+
+    with pytest.raises(ValueError, match="is not of type 'object'"):
+        repair_with_schema("", schema, schema_repair_mode="salvage")
+
+
+def test_schema_salvage_does_not_select_an_item_from_a_real_top_level_array():
+    pytest.importorskip("jsonschema")
+    schema = {
+        "type": "object",
+        "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
+        "required": ["name", "age"],
+    }
+
+    with pytest.raises(ValueError, match="Expected object"):
+        repair_with_schema(
+            '[{"foo": 1}, {"name": "Alice", "age": 30}]',
+            schema,
+            schema_repair_mode="salvage",
+        )
+
+
 def test_schema_optional_default_is_inserted():
     pytest.importorskip("jsonschema")
     schema = {
