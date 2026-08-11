@@ -4,25 +4,32 @@ if TYPE_CHECKING:
     from ..json_parser import JSONParser  # noqa: TID252
 
 
-def parse_boolean_or_null(parser: "JSONParser") -> bool | str | None:
-    # <boolean> is one of the literal strings 'true', 'false', or 'null' (unquoted)
+LITERAL_VALUES: dict[str, bool | None] = {
+    "true": True,
+    "false": False,
+    "null": None,
+    "none": None,
+}
+
+
+def parse_boolean_or_null(parser: "JSONParser") -> tuple[bool, bool | None]:
+    """Return whether an unquoted complete literal was found and its value."""
     char = (parser.get_char_at() or "").lower()
-    value_map: dict[str, tuple[str, bool | None]] = {
-        "t": ("true", True),
-        "f": ("false", False),
-        "n": ("null", None),
-    }
-    value: tuple[str, bool | None] = value_map[char]
-
-    i = 0
     starting_index = parser.index
-    while char and i < len(value[0]) and char == value[0][i]:
-        i += 1
-        parser.index += 1
-        char = (parser.get_char_at() or "").lower()
-    if i == len(value[0]):
-        return value[1]
+    for literal, value in LITERAL_VALUES.items():
+        if char != literal[0]:
+            continue
+        parser.index = starting_index
+        for expected_char in literal:
+            if (parser.get_char_at() or "").lower() != expected_char:
+                break
+            parser.index += 1
+        else:
+            next_char = parser.get_char_at()
+            if next_char is None or next_char.isspace() or next_char in {",", "]", "}"}:
+                if literal == "none":
+                    parser.log("Converted unquoted Python None literal to JSON null")
+                return True, value
 
-    # If nothing works reset the index before returning
     parser.index = starting_index
-    return ""
+    return False, None

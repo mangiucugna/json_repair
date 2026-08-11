@@ -209,8 +209,8 @@ def _prepare_string_entry(
         state.rstring_delimiter = "”"
     elif char.isalnum():
         if char.lower() in ["t", "f", "n"] and self.context.current != ContextValues.OBJECT_KEY:
-            value = parse_boolean_or_null(self)
-            if value != "":
+            found_literal, value = parse_boolean_or_null(self)
+            if found_literal:
                 return state, value
         self.log(
             "While parsing a string, we found a literal instead of a quote",

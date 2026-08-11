@@ -387,6 +387,23 @@ def test_parse_boolean_or_null():
     assert repair_json('{"key": TRUE, "key2": FALSE, "key3": Null}   ') == '{"key": true, "key2": false, "key3": null}'
 
 
+def test_parse_literals_require_boundaries_and_support_python_none():
+    assert repair_json('{"value": None }', return_objects=True) == {"value": None}
+    assert repair_json("[None, TRUE, false, Null]", return_objects=True) == [None, True, False, None]
+    assert repair_json("[None", return_objects=True) == [None]
+    assert repair_json('{"value": "None"}', return_objects=True) == {"value": "None"}
+    assert repair_json('{"value": none}', return_objects=True) == {"value": None}
+    assert repair_json('{"value": NONE}', return_objects=True) == {"value": None}
+    assert repair_json('{"value": trueblue}', return_objects=True) == {"value": "trueblue"}
+    assert repair_json('{"value": falsehood}', return_objects=True) == {"value": "falsehood"}
+    assert repair_json('{"value": nullify}', return_objects=True) == {"value": "nullify"}
+    assert repair_json('{"value": NoneType}', return_objects=True) == {"value": "NoneType"}
+
+    repaired, logs = repair_json('{"value": None}', return_objects=True, logging=True)
+    assert repaired == {"value": None}
+    assert any(log["text"] == "Converted unquoted Python None literal to JSON null" for log in logs)
+
+
 def test_parse_string_fast_path_keeps_clean_values_log_free():
     repaired, logs = repair_json('{"key": "value", "items": ["alpha", "beta"]}', return_objects=True, logging=True)
     assert repaired == {"key": "value", "items": ["alpha", "beta"]}
