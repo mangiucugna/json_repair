@@ -26,7 +26,7 @@ def parse_boolean_or_null(parser: "JSONParser") -> tuple[bool, bool | None]:
             parser.index += 1
         else:
             next_char = parser.get_char_at()
-            if next_char is None or next_char.isspace() or next_char in {",", "]", "}"}:
+            if next_char is None or next_char.isspace() or next_char in {",", ")", "]", "}"}:
                 if literal == "none":
                     parser.log("Converted unquoted Python None literal to JSON null")
                 return True, value

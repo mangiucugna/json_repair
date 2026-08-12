@@ -66,6 +66,7 @@ decoded_object = json_repair.loads(bad_json)
 ### 修复 JSON 语法错误
 - 缺失引号、逗号错误、未转义字符、不完整的键值对。
 - 布尔/空值写错（true/false/null），修复损坏的键值结构。
+- Python 风格元组：带逗号的圆括号序列会转换为 JSON 数组，而单个圆括号值仍保持为标量。在数组、对象和元组内，`true`/`false`/`null` 与 `None` 不区分大小写地识别为 JSON 布尔值或 null。
 
 ### 修复损坏的数组和对象
 - 补全/修复未完成的数组或对象，添加必要的元素（逗号、括号）或默认值（null、""）。

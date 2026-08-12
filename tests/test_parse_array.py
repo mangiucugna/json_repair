@@ -57,6 +57,14 @@ def test_parse_array_python_tuple_literals():
     assert repair_json('{"empty": ()}', return_objects=True) == {"empty": []}
 
 
+def test_parse_array_python_tuple_literals_accept_boolean_and_null_values():
+    assert repair_json("(true, false, null)", return_objects=True, skip_json_loads=True) == [True, False, None]
+    assert repair_json("(True, False, None)", return_objects=True, skip_json_loads=True) == [True, False, None]
+    assert repair_json('{"coords": (True, None)}', return_objects=True, skip_json_loads=True) == {
+        "coords": [True, None]
+    }
+
+
 def test_parse_array_parenthesized_scalar_keeps_scalar_shape():
     assert repair_json("(1)", return_objects=True) == 1
     assert repair_json('("x")', return_objects=True) == "x"

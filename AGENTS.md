@@ -40,6 +40,7 @@
 - In `repair_json`, keep a single shared output-finalization path for logging, `return_objects`, empty-string handling, and `json.dumps`.
 - Parser refactors are sensitive to context lifetimes and heuristic branch ordering; preserve malformed-input behavior when restructuring `parse_string` or `parse_object`.
 - Recognize unquoted literals only as complete tokens followed by a JSON separator or end-of-input; support case-insensitive `none` as null, but keep quoted values and other barewords as strings.
+- Treat comma-separated parenthesized sequences as Python-style tuples that normalize to arrays, while preserving a single parenthesized value as a scalar; Python-style literals are supported only within arrays, objects, and tuples, not as bare top-level values.
 - Preserve bare quotes inside compact regex character classes such as `['"]` and `[^'"]`; do not let them split the enclosing JSON value into separate top-level elements.
 - Performance regressions often hide in repeated `parse_string` lookahead scans on long malformed object values; include cases with many commas or `}` characters before a far quote, and retain only inputs with a meaningful baseline slowdown (roughly one second or more).
 - Normalize top-level `RecursionError` into `ValueError`.

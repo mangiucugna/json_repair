@@ -65,6 +65,7 @@ I searched for a lightweight python package that was able to reliably fix this p
 
 - Missing quotes, misplaced commas, unescaped characters, and incomplete key-value pairs.
 - Missing quotation marks, improperly formatted values (true, false, null), and repairs corrupted key-value structures.
+- Python-style tuples: comma-separated parenthesized sequences become JSON arrays, while a single parenthesized value remains a scalar. Within arrays, objects, and tuples, `true`/`false`/`null` and `None` are recognized case-insensitively as JSON booleans or null.
 
 ### Repairing Malformed JSON Arrays and Objects
 
