@@ -47,6 +47,8 @@ def parse_array(
     # <array> ::= '[' [ <json> *(', ' <json>) ] ']' ; A sequence of JSON values separated by commas
     schema_repairer, _schema, schema_config = resolve_parser_array_schema(self.schema_repairer, schema)
     salvage_mode = schema_repairer is not None and schema_repairer.schema_repair_mode == "salvage"
+    array_is_object_value = self.context.current == ContextValues.OBJECT_VALUE
+    closed_before_parent_member = False
 
     arr: list[JSONReturnType] = []
     with self.context.enter(ContextValues.ARRAY):
@@ -66,6 +68,10 @@ def parse_array(
                 i = self.skip_to_character(char, i)
                 i = self.scroll_whitespaces(idx=i + 1)
                 if self.get_char_at(i) == ":":
+                    if array_is_object_value and arr and all(not isinstance(item, (dict, list)) for item in arr):
+                        self.log("Closed unclosed array before object member after scalar items")
+                        closed_before_parent_member = True
+                        break
                     if active_schema_repairer is not None:
                         # Schema-guided object parsing, then enforce schema on the parsed object.
                         value = self.parse_object(item_schema, item_path)
@@ -107,6 +113,7 @@ def parse_array(
                 f"While parsing an array we missed the closing {closing_delimiter}, ignoring it",
             )
 
-        self.index += 1
+        if not closed_before_parent_member:
+            self.index += 1
 
     return arr

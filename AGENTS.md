@@ -42,5 +42,6 @@
 - Recognize unquoted literals only as complete tokens followed by a JSON separator or end-of-input; support case-insensitive `none` as null, but keep quoted values and other barewords as strings.
 - Treat comma-separated parenthesized sequences as Python-style tuples that normalize to arrays, while preserving a single parenthesized value as a scalar; Python-style literals are supported only within arrays, objects, and tuples, not as bare top-level values.
 - Preserve bare quotes inside compact regex character classes such as `['"]` and `[^'"]`; do not let them split the enclosing JSON value into separate top-level elements.
+- When an object property contains an unclosed array of scalar values followed by a quoted `key: value` member, close the array and resume the enclosing object; preserve direct-array and pre-scalar missing-object recovery (`["key": "value"] -> [{"key": "value"}]`).
 - Performance regressions often hide in repeated `parse_string` lookahead scans on long malformed object values; include cases with many commas or `}` characters before a far quote, and retain only inputs with a meaningful baseline slowdown (roughly one second or more).
 - Normalize top-level `RecursionError` into `ValueError`.

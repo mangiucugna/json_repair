@@ -50,6 +50,22 @@ def test_parse_array_edge_cases():
     assert repair_json("{'key1', 'key2'}") == '["key1", "key2"]'
 
 
+def test_parse_array_closes_before_object_member_after_scalar_items():
+    raw = '{"outer": ["a", "b", "next": "value"}'
+
+    assert repair_json(raw, return_objects=True) == {
+        "outer": ["a", "b"],
+        "next": "value",
+    }
+
+
+def test_parse_array_contextually_closes_in_strict_mode():
+    assert repair_json('{"outer": ["a", "b", "next": "value"}', return_objects=True, strict=True) == {
+        "outer": ["a", "b"],
+        "next": "value",
+    }
+
+
 def test_parse_array_python_tuple_literals():
     assert repair_json('("a", "b", "c")', return_objects=True) == ["a", "b", "c"]
     assert repair_json("((1, 2), (3, 4))", return_objects=True) == [[1, 2], [3, 4]]
