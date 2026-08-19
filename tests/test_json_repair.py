@@ -34,6 +34,15 @@ def test_valid_json_fast_path_does_not_initialize_repair_parser(monkeypatch):
     assert json_repair_module.repair_json('{"key": "value"}', return_objects=True) == {"key": "value"}
 
 
+def test_skip_json_loads_does_not_raw_decode_complete_json(monkeypatch):
+    def fail_raw_decode(*_args, **_kwargs):
+        raise AssertionError("skip_json_loads must not raw-decode complete JSON")
+
+    monkeypatch.setattr(json_repair_module.json.JSONDecoder, "raw_decode", fail_raw_decode)
+
+    assert repair_json('{"items": [1, 2, 3]}', return_objects=True, skip_json_loads=True) == {"items": [1, 2, 3]}
+
+
 def test_prefixed_valid_json_uses_value_fast_path_when_json_loads_is_skipped(monkeypatch):
     raw = 'Here is your JSON:\n{"text": "a\\n b c, floof: a\\n ... a b (c), floof: \\n a", "id": 8}'
     expected = {"text": "a\n b c, floof: a\n ... a b (c), floof: \n a", "id": 8}
@@ -70,6 +79,17 @@ def test_prefixed_valid_json_with_trailing_text_uses_value_fast_path(monkeypatch
     assert repair_json(raw, return_objects=True) == {"text": "literal } and ]"}
 
 
+@pytest.mark.parametrize("skip_json_loads", [False, True])
+def test_valid_json_with_trailing_garbage_preserves_string_content(skip_json_loads):
+    raw = r"""{"tool_args": {"code": "# note\nconfig = {'type': 'object', 'properties': {}, 'additionalProperties': True}"}}}"""
+
+    assert repair_json(raw, return_objects=True, skip_json_loads=skip_json_loads) == {
+        "tool_args": {
+            "code": "# note\nconfig = {'type': 'object', 'properties': {}, 'additionalProperties': True}",
+        },
+    }
+
+
 def test_prefixed_invalid_json_falls_back_to_repair_parser():
     assert repair_json('Here is your JSON: {"key": "value', return_objects=True) == {"key": "value"}
 
@@ -93,6 +113,12 @@ def test_top_level_separator_detects_pending_comma():
     parser = JSONParser(' , {"key": "value"}', None, False)
 
     assert parser._next_top_level_value_is_comma_separated()
+
+
+def test_initial_container_trailing_content_rejects_mismatched_delimiters():
+    parser = JSONParser("{]", None, False)
+
+    assert parser._initial_container_has_non_comma_trailing_content() is False
 
 
 def test_parenthesized_prose_does_not_hijack_fenced_json():

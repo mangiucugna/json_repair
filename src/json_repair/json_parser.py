@@ -185,12 +185,44 @@ class JSONParser:
             idx -= 1
         return idx >= 0 and self.json_str[idx] == ","
 
+    def _initial_container_has_non_comma_trailing_content(self) -> bool:
+        if self.index != 0 or not isinstance(self.json_str, str):
+            return True
+
+        containers: list[str] = []
+        in_string = False
+        escaped = False
+        closing_delimiters = {"{": "}", "[": "]"}
+        for index, char in enumerate(self.json_str):
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+                continue
+
+            if char == '"':
+                in_string = True
+            elif char in closing_delimiters:
+                containers.append(char)
+            elif char in ["}", "]"]:
+                if not containers or char != closing_delimiters[containers.pop()]:
+                    return False
+                if not containers:
+                    trailing_index = index + 1
+                    while trailing_index < len(self.json_str) and self.json_str[trailing_index].isspace():
+                        trailing_index += 1
+                    return trailing_index < len(self.json_str) and self.json_str[trailing_index] != ","
+
+        return False
+
     def _try_parse_valid_json_value(self) -> tuple[bool, JSONReturnType]:
         if (
             not self.try_valid_json_suffix
             or self.has_tried_valid_json_suffix
             or not self.context.empty
-            or self.index == 0
             or not isinstance(self.json_str, str)
         ):
             return False, ""
@@ -228,7 +260,11 @@ class JSONParser:
             # None means that we are at the end of the string provided
             if char is None:
                 return ""
-            if self.try_valid_json_suffix and char in ["{", "["]:
+            if (
+                self.try_valid_json_suffix
+                and char in ["{", "["]
+                and self._initial_container_has_non_comma_trailing_content()
+            ):
                 parsed_suffix, value = self._try_parse_valid_json_value()
                 if parsed_suffix:
                     return self._finalize_parsed_value(
