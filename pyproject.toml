@@ -85,6 +85,8 @@ json_repair = "json_repair.__main__:cli"
 # Same as Black.
 indent-width = 4
 line-length = 120
+# Keep documentation code examples outside Ruff's formatter scope.
+extend-exclude = ["*.md"]
 # Assume Python 3.13
 target-version = "py313"
 [tool.ruff.lint]

@@ -9,6 +9,7 @@
 - Run the full test suite with `uv run pytest`.
 - Run the full hook stack with `pre-commit run --all-files`.
 - The hook stack may rewrite `uv.lock` or `.pre-commit-config.yaml`; if hook-managed files change during commit flows, restage the resulting updates instead of repeatedly restoring them.
+- Keep CI's direct `ruff format` invocation aligned with the Python-only `ruff-format` pre-commit hook; Markdown is globally excluded because documentation code examples are not formatter input.
 
 ## Release And Packaging
 - Project version lives in `pyproject.toml` under `[project].version`; use semantic versioning, with patch bumps for bug fixes.

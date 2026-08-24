@@ -23,4 +23,4 @@ jobs:
       run: uv run --no-default-groups --group typecheck --frozen mypy src/
 
     - name: Run ty
-      run: uv run --no-default-groups --group typecheck --frozen ty check src/ tests/
+      run: uv run --no-default-groups --group typecheck --group test --frozen ty check src/ tests/

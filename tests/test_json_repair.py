@@ -296,6 +296,7 @@ def _find_real_recursion_payload() -> str:
         depth *= 2
 
     pytest.skip("Could not reproduce parser recursion on this runtime.")
+    raise AssertionError("pytest.skip() should raise an exception")
 
 
 def test_repair_json_normalizes_real_parser_recursion_error():
