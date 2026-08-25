@@ -250,6 +250,23 @@ def _prepare_string_entry(
             state.doubled_quotes = True
             self.index += 1
         else:
+            if self.get_char_at(i) == state.rstring_delimiter:
+                outer_quote_idx = self.skip_to_character(character=state.rstring_delimiter, idx=i + 1)
+                after_outer_quote_idx = self.scroll_whitespaces(idx=outer_quote_idx + 1)
+                after_outer_quote = self.get_char_at(after_outer_quote_idx)
+                if (
+                    self.context.current == ContextValues.OBJECT_VALUE
+                    and not _only_whitespace_until(self, i)
+                    and self.get_char_at(outer_quote_idx) == state.rstring_delimiter
+                    and after_outer_quote in [",", "}", None]
+                ):
+                    self.log(
+                        "While parsing a string, we found a leading quote that starts a quoted span, keeping it",
+                    )
+                    _append_string_content(state, state.lstring_delimiter)
+                    state.unmatched_delimiter = True
+                    self.index += 1
+                    return state, NO_DIRECT_RESULT
             i = self.scroll_whitespaces(idx=1)
             next_c = self.get_char_at(i)
             if next_c in [*STRING_DELIMITERS, "{", "["]:

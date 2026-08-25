@@ -91,6 +91,23 @@ def test_missing_and_mixed_quotes():
     assert repair_json('[{"key": "v"alu,e", "key2": "value2"}]') == '[{"key": "v\\"alu,e", "key2": "value2"}]'
 
 
+@pytest.mark.parametrize("strict", [False, True])
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ('{"title": ""hello" world"}', {"title": '"hello" world'}),
+        ('{"title": ""hello" world", "b": "y"}', {"title": '"hello" world', "b": "y"}),
+    ],
+)
+def test_parse_string_preserves_leading_quoted_phrase(raw, expected, strict):
+    assert repair_json(raw, return_objects=True, strict=strict) == expected
+
+
+@pytest.mark.parametrize("strict", [False, True])
+def test_parse_string_removes_redundant_leading_quote(strict):
+    assert repair_json('{"key": ""value"}', return_objects=True, strict=strict) == {"key": "value"}
+
+
 def test_object_value_comma_without_future_delimiter_scans_once():
     parser = CountingParser('"value,fragment,fragment,fragment')
     parser.context.set(ContextValues.OBJECT_VALUE)
