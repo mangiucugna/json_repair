@@ -47,4 +47,5 @@
 - When an object property contains an unclosed array of scalar values followed by a quoted `key: value` member, close the array and resume the enclosing object; preserve direct-array and pre-scalar missing-object recovery (`["key": "value"] -> [{"key": "value"}]`).
 - Top-level raw decoding may discard a valid prefix only when non-comma garbage follows; preserve complete-input heuristics and defer comma-prefixed continuations to structural object repair.
 - Performance regressions often hide in repeated `parse_string` lookahead scans on long malformed object values; include cases with many commas or `}` characters before a far quote, and retain only inputs with a meaningful baseline slowdown (roughly one second or more).
+- In `parse_number`, a `+` is valid only immediately after an exponent marker (`e`/`E`); do not broaden plus handling for unrelated malformed arithmetic-like tokens.
 - Normalize top-level `RecursionError` into `ValueError`.

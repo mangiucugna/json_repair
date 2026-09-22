@@ -16,7 +16,11 @@ def parse_number(self: "JSONParser") -> JSONReturnType:
     number_str = ""
     char = self.get_char_at()
     is_array = self.context.current == ContextValues.ARRAY
-    while char and char in NUMBER_CHARS and (not is_array or char != ","):
+    while (
+        char
+        and (char in NUMBER_CHARS or (char == "+" and number_str.endswith(("e", "E"))))
+        and (not is_array or char != ",")
+    ):
         if char != "_":
             number_str += char
         self.index += 1
@@ -25,7 +29,7 @@ def parse_number(self: "JSONParser") -> JSONReturnType:
         # this was a string instead, sorry
         self.index = number_start_index
         return self.parse_string()
-    if number_str and number_str[-1] in "-eE/,":
+    if number_str and number_str[-1] in "+-eE/,":
         # The number ends with a non valid character for a number/currency, rolling back one
         number_str = number_str[:-1]
         self.index -= 1

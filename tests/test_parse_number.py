@@ -1,4 +1,8 @@
-from src.json_repair.json_repair import repair_json
+from io import StringIO
+
+import pytest
+
+from src.json_repair.json_repair import load, repair_json
 
 
 def test_parse_number():
@@ -6,6 +10,26 @@ def test_parse_number():
     assert repair_json("1.2", return_objects=True) == 1.2
     assert repair_json('{"value": 82_461_110}', return_objects=True) == {"value": 82461110}
     assert repair_json('{"value": 1_234.5_6}', return_objects=True) == {"value": 1234.56}
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ('{"value": 1e+10', {"value": 1e10}),
+        ('{"value": -2.5E+3', {"value": -2500.0}),
+        ("[6.02e+23, 2", [6.02e23, 2]),
+        ('{"value": 1e+2, "next": true}', {"value": 100.0, "next": True}),
+    ],
+)
+@pytest.mark.parametrize("skip_json_loads", [False, True])
+def test_parse_number_positive_exponent(raw, expected, skip_json_loads):
+    assert repair_json(raw, return_objects=True, skip_json_loads=skip_json_loads) == expected
+    assert load(StringIO(raw), skip_json_loads=skip_json_loads, chunk_length=2) == expected
+
+
+def test_parse_number_plus_outside_exponent():
+    assert repair_json("[1+2]", return_objects=True) == [1, 2]
+    assert repair_json("[1e+]", return_objects=True) == repair_json("[1e-]", return_objects=True)
 
 
 def test_parse_number_edge_cases():
