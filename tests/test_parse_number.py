@@ -31,3 +31,9 @@ def test_parse_number_edge_cases():
         == '{"rowId": "57eeeeb1-450b-482c-81b9-4be77e95dee2"}'
     )
     assert repair_json("[1, 2notanumber]") == '[1, "2notanumber"]'
+
+
+def test_numeric_prefix_identifiers_preserve_underscored_digits():
+    assert repair_json('{"sku": 123_456ABC}', return_objects=True) == {"sku": "123_456ABC"}
+    assert repair_json("[1_2_3ABC]", return_objects=True) == ["1_2_3ABC"]
+    assert repair_json('{"value": 123_456}', return_objects=True) == {"value": 123456}
