@@ -23,8 +23,8 @@ classifiers = [
 "Live demo" = "https://mangiucugna.github.io/json_repair/"
 [project.optional-dependencies]
 schema = [
-  "jsonschema>=4.21,
-  "pydantic>=2,
+  "jsonschema>=4.21",
+  "pydantic>=2",
 ]
 [dependency-groups]
 dev = [
