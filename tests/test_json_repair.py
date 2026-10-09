@@ -9,6 +9,94 @@ from src.json_repair.json_repair import loads, repair_json
 json_repair_module = importlib.import_module("src.json_repair.json_repair")
 
 
+@pytest.mark.parametrize("skip_json_loads", [False, True])
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ('\n    "a": 1\n}\n', {"a": 1}),
+        ('"a": 1, "b": 2}', {"a": 1, "b": 2}),
+        ('"a": {"b": 2}}', {"a": {"b": 2}}),
+        ('"a": [1, 2]}', {"a": [1, 2]}),
+        ('"a": 0, "b": false, "c": null, "d": ""}', {"a": 0, "b": False, "c": None, "d": ""}),
+        (r'"a\"b": "literal } and {"}', {'a"b': "literal } and {"}),
+        ('"a:b": 1}', {"a:b": 1}),
+        ('"a" \t\r\n: 1}', {"a": 1}),
+        (r'"a\\": 1}', {"a\\": 1}),
+    ],
+)
+def test_missing_opening_object_brace(raw, expected, skip_json_loads):
+    assert loads(raw, skip_json_loads=skip_json_loads) == expected
+
+
+def test_missing_opening_object_brace_logs_and_serializes():
+    result = loads('"a": 1}', logging=True)
+    assert isinstance(result, tuple)
+    value, logs = result
+    assert value == {"a": 1}
+    assert any("opening" in entry["text"] and "brace" in entry["text"] for entry in logs)
+    assert repair_json('"a": 1}') == '{"a": 1}'
+
+
+@pytest.mark.parametrize("skip_json_loads", [False, True])
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ('"a": 1', ""),
+        ('"a": 1,}', ""),
+        ('"a": 1}\v', ""),
+        ('"a": {"b": 2}', {"b": 2}),
+        ('"a": 1} {"b": 2}', {"b": 2}),
+        ('Here is JSON: {"b": 2}', {"b": 2}),
+        ("a: 1}", ""),
+        ('"a', ""),
+        ('"a" text', ""),
+        ('"a"\v: 1}', ""),
+        ("'a': 1}", ""),
+        ("“a”: 1}", ""),
+    ],
+)
+def test_missing_opening_brace_declines_other_malformed_inputs(raw, expected, skip_json_loads):
+    result = loads(raw, logging=True, skip_json_loads=skip_json_loads)
+    assert isinstance(result, tuple)
+    value, logs = result
+    assert value == expected
+    assert not any("opening object brace" in entry["text"] for entry in logs)
+
+
+def test_missing_opening_brace_declines_integer_conversion_limit():
+    get_limit = getattr(sys, "get_int_max_str_digits", None)
+    if get_limit is None or get_limit() == 0:
+        pytest.skip("Python integer conversion limit is not enabled")
+    raw = '"a": ' + "1" * (get_limit() + 1) + "}"
+    assert loads(raw, logging=True) == ("", [])
+
+
+def test_valid_top_level_string_preserved_with_strict_mode():
+    assert loads('"a: 1}"', strict=True, logging=True) == ("a: 1}", [])
+    assert loads('"a: 1}"', skip_json_loads=True, logging=True) == ("", [])
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("{}", {}),
+        ("[]", []),
+        ('"note"', ""),
+        ('"unterminated', ""),
+        ('"note" text', ""),
+        ('"a": 1', ""),
+    ],
+)
+def test_no_speculative_decode_without_missing_brace_signal(raw, expected, monkeypatch):
+    def fail_raw_decode(*_args, **_kwargs):
+        raise AssertionError(
+            "ordinary fallback must not decode a speculative object without key, colon, and closing brace"
+        )
+
+    monkeypatch.setattr(json_repair_module.json.JSONDecoder, "raw_decode", fail_raw_decode)
+    assert loads(raw, skip_json_loads=True) == expected
+
+
 def test_valid_json():
     assert (
         repair_json('{"name": "John", "age": 30, "city": "New York"}')

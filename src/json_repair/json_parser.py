@@ -236,6 +236,40 @@ class JSONParser:
         self.index += end_idx
         return True, value
 
+    def _try_parse_missing_opening_object(self, delimiter: str) -> tuple[bool, JSONReturnType]:
+        if self.scroll_whitespaces(-self.index) != 0:
+            return False, ""
+
+        offset = self.skip_to_character(delimiter, idx=1)
+        if self.get_char_at(offset) is None:
+            return False, ""
+
+        offset = self.scroll_whitespaces(offset + 1)
+        if self.get_char_at(offset) != ":":
+            return False, ""
+
+        end_offset = self.scroll_whitespaces(len(self.json_str) - self.index - 1, backwards=True)
+        if self.get_char_at(end_offset) != "}":
+            return False, ""
+
+        # Require a single insertion to explain the whole input, rather than
+        # treating a quoted prose prefix or an inner container as an object.
+        candidate = "{" + self.json_str[:]
+        try:
+            value, end_idx = json.JSONDecoder().raw_decode(candidate)
+        except ValueError:
+            # Decoder limits (such as oversized integers) also mean the
+            # insertion is insufficient; leave these inputs to normal repair.
+            return False, ""
+        if candidate[end_idx:].strip(" \t\r\n"):
+            return False, ""
+
+        if self.strict:
+            raise ValueError("Missing opening object brace in strict mode.")
+        self.log("Inserted missing opening object brace")
+        self.index = len(self.json_str)
+        return True, value
+
     def parse_json(
         self,
         schema: dict[str, Any] | bool | None = None,
@@ -254,6 +288,7 @@ class JSONParser:
                 return self.parse_json(schema, path, finalize_schema, record_top_level_value)
 
         repairer, schema = self._resolve_schema_for_parse(schema)
+        check_initial_quote = self.index == 0 and self.context.empty
 
         while True:
             char = self.get_char_at()
@@ -310,6 +345,15 @@ class JSONParser:
             if char in ["#", "/"]:
                 value = self.parse_comment(record_top_level_value)
                 return self._finalize_parsed_value(value, repairer, schema, path, finalize_schema)
+            # Only probe a missing brace when normal dispatch would discard the
+            # initial quote; later quoted prose must not start this recovery.
+            if char in STRING_DELIMITERS and check_initial_quote:
+                check_initial_quote = False
+                parsed_object, value = self._try_parse_missing_opening_object(char)
+                if parsed_object:
+                    return self._finalize_parsed_value(
+                        value, repairer, schema, path, finalize_schema, record_top_level_value
+                    )
             # If everything else fails, we just ignore and move on
             self.index += 1
 
@@ -362,14 +406,16 @@ class JSONParser:
         except IndexError:
             pass
 
-    def scroll_whitespaces(self, idx: int = 0) -> int:
+    def scroll_whitespaces(self, idx: int = 0, *, backwards: bool = False) -> int:
         """
-        This function quickly iterates on whitespaces. Doesn't move the self.index and returns the offset from self.index
+        Skip whitespace at idx without moving self.index, returning the relative offset.
+        Set backwards to scan toward the start.
         """
+        step = -1 if backwards else 1
         try:
             char = self.json_str[self.index + idx]
-            while char.isspace():
-                idx += 1
+            while self.index + idx >= 0 and char.isspace():
+                idx += step
                 char = self.json_str[self.index + idx]
         except IndexError:
             pass

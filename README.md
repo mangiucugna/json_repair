@@ -432,6 +432,8 @@ If something is wrong (a missing parentheses or quotes for example) it will use 
 - Quote strings or add missing single quotes
 - Adjust whitespaces and remove line breaks
 
+A missing opening `{` is recovered when the input begins with a double-quoted key and inserting `{` makes the entire input a valid JSON object. For example, `"a": 1}` becomes `{"a": 1}`. This correction is logged with `logging=True` and raises `ValueError` with `strict=True`; it does not infer arbitrary missing prefixes or combine this insertion with other syntax repairs.
+
 I am sure some corner cases will be missing, if you have examples please open an issue or even better push a PR
 
 # Contributing

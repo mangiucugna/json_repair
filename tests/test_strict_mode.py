@@ -3,6 +3,13 @@ import pytest
 from src.json_repair.json_repair import repair_json
 
 
+@pytest.mark.parametrize("skip_json_loads", [False, True])
+@pytest.mark.parametrize("raw", ['"a": 1}', '"a": {"b": 2}}'])
+def test_strict_rejects_missing_opening_object_brace(raw, skip_json_loads):
+    with pytest.raises(ValueError, match="Missing opening object brace"):
+        repair_json(raw, strict=True, skip_json_loads=skip_json_loads)
+
+
 def test_strict_rejects_multiple_top_level_values():
     with pytest.raises(ValueError, match="Multiple top-level JSON elements"):
         repair_json('{"key":"value"}["value"]', strict=True)

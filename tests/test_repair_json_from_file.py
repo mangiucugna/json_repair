@@ -3,7 +3,30 @@ import pathlib
 import tempfile
 from io import StringIO
 
+import pytest
+
 from src.json_repair.json_repair import from_file, load
+
+
+@pytest.mark.parametrize("skip_json_loads", [False, True])
+def test_load_repairs_missing_opening_brace_from_current_position(skip_json_loads):
+    prefix = '{"stale": true}\n'
+    fd = StringIO(prefix + '\n"a": {"b": "你好"}}\n')
+    fd.seek(len(prefix))
+    result = load(fd, logging=True, skip_json_loads=skip_json_loads, chunk_length=2)
+    assert isinstance(result, tuple)
+    value, logs = result
+    assert value == {"a": {"b": "你好"}}
+    assert any("opening object brace" in entry["text"] for entry in logs)
+
+
+def test_load_declines_missing_opening_brace_with_trailing_content():
+    assert load(StringIO('"a": 1} {"b": 2}'), chunk_length=2) == {"b": 2}
+
+
+def test_load_strict_rejects_missing_opening_brace():
+    with pytest.raises(ValueError, match="Missing opening object brace"):
+        load(StringIO('"a": 1}'), strict=True, chunk_length=2)
 
 
 def test_load_repairs_from_current_file_position():

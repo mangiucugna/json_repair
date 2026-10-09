@@ -9,6 +9,27 @@ def repair_with_schema(raw, schema, **kwargs):
     return repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True, **kwargs)
 
 
+@pytest.mark.parametrize("schema_repair_mode", ["standard", "salvage"])
+@pytest.mark.parametrize("skip_json_loads", [False, True])
+def test_schema_applied_after_missing_opening_brace(schema_repair_mode, skip_json_loads):
+    schema = {"type": "object", "properties": {"a": {"type": "integer"}}, "required": ["a"]}
+    assert repair_json(
+        '"a": "1"}',
+        schema=schema,
+        return_objects=True,
+        schema_repair_mode=schema_repair_mode,
+        skip_json_loads=skip_json_loads,
+    ) == {"a": 1}
+    with pytest.raises(ValueError, match=r"Expected integer at \$\.a"):
+        repair_json(
+            '"a": "wrong"}',
+            schema=schema,
+            return_objects=True,
+            schema_repair_mode=schema_repair_mode,
+            skip_json_loads=skip_json_loads,
+        )
+
+
 def _two_string_schema() -> dict:
     pytest.importorskip("jsonschema")
     pydantic = pytest.importorskip("pydantic")
