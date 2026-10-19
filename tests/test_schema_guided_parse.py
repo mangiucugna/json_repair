@@ -498,6 +498,86 @@ def test_schema_pydantic_v2_defaults():
 
 @pytest.mark.parametrize(
     ("raw", "expected"),
+    [('{displayName: "Alice"}', {"displayName": "Alice"}), ('{"displayName": 42}', {"displayName": "42"})],
+)
+def test_schema_pydantic_alias_defaults_do_not_add_python_field_name(raw, expected):
+    pydantic = pytest.importorskip("pydantic")
+    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
+    if int(version.split(".")[0]) < 2:
+        pytest.skip("pydantic v2 required")
+
+    class Payload(pydantic.BaseModel):
+        model_config = pydantic.ConfigDict(extra="forbid")
+        display_name: str = pydantic.Field(default="unknown", alias="displayName")
+
+    repaired = repair_json(raw, schema=Payload, return_objects=True)
+    assert repaired == expected
+    assert Payload.model_validate(repaired).display_name == expected["displayName"]
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected", "validated_value"),
+    [
+        ('{"display_name": "Bob"}', {"displayName": "Bob"}, "Bob"),
+        ('{display_name: "Bob"}', {"displayName": "Bob"}, "Bob"),
+        ('{display_name: "Bob", displayName: "Alice"}', {"displayName": "Alice"}, "Alice"),
+        (
+            '{"display_name": "Bob", "displayName": "Alice"}',
+            {"displayName": "Alice"},
+            "Alice",
+        ),
+        ("{}", {}, "unknown"),
+    ],
+)
+def test_schema_pydantic_populate_by_name_preserves_input_and_alias_precedence(raw, expected, validated_value):
+    pydantic = pytest.importorskip("pydantic")
+    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
+    if int(version.split(".")[0]) < 2:
+        pytest.skip("pydantic v2 required")
+
+    class Payload(pydantic.BaseModel):
+        model_config = pydantic.ConfigDict(extra="forbid", populate_by_name=True)
+        display_name: str = pydantic.Field(default="unknown", alias="displayName")
+
+    repaired = repair_json(raw, schema=Payload, return_objects=True)
+    assert repaired == expected
+    assert Payload.model_validate(repaired).display_name == validated_value
+
+
+def test_schema_pydantic_populate_by_name_logs_field_name_mapping():
+    pydantic = pytest.importorskip("pydantic")
+    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
+    if int(version.split(".")[0]) < 2:
+        pytest.skip("pydantic v2 required")
+
+    class Payload(pydantic.BaseModel):
+        model_config = pydantic.ConfigDict(extra="forbid", populate_by_name=True)
+        display_name: str = pydantic.Field(default="unknown", alias="displayName")
+
+    repaired, logs = repair_json('{"display_name": "Bob"}', schema=Payload, return_objects=True, logging=True)
+
+    assert repaired == {"displayName": "Bob"}
+    assert any(log["text"] == "Mapped field name to validation alias 'displayName'" for log in logs)
+
+
+def test_schema_pydantic_populate_by_name_accepts_malformed_required_field():
+    pydantic = pytest.importorskip("pydantic")
+    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
+    if int(version.split(".")[0]) < 2:
+        pytest.skip("pydantic v2 required")
+
+    class Payload(pydantic.BaseModel):
+        model_config = pydantic.ConfigDict(extra="forbid", populate_by_name=True)
+        display_name: str = pydantic.Field(alias="displayName")
+
+    repaired = repair_json('{display_name: "Bob"}', schema=Payload, return_objects=True)
+
+    assert repaired == {"displayName": "Bob"}
+    assert Payload.model_validate(repaired).display_name == "Bob"
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
     [
         ('{\n"a": "\n```{}```\n",\n"b": "x",\n}', {"a": "\n```{}```", "b": "x"}),
         ('{\n"a": "\n```{}```\n"\n",\n"b": "x",\n}', {"a": '\n```{}```\n"', "b": "x"}),

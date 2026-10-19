@@ -29,6 +29,7 @@
 - `load(fd)` should behave like `json.load(fd)` and repair from the descriptor's current position.
 - When adding repair heuristics, keep `strict=True` conservative and emit parser logs for automatic corrections.
 - When a schema is provided, apply schema repair and validation for both valid and invalid JSON inputs.
+- For top-level Pydantic model fields with simple string aliases, preserve field-name keys during schema-guided parsing when the model accepts them, even when `additionalProperties` is false; canonicalize after parsing so explicit aliases retain precedence.
 - Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`.
 - `patternProperties` matching is intentionally limited to a safe subset; do not execute user-supplied regexes.
 - Preserve schema dict identity in `SchemaRepairer.resolve_schema` whenever possible so validator caching remains effective.

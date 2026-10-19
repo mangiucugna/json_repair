@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 def _finalize_object(
     obj: dict[str, JSONReturnType],
+    schema: dict[str, Any] | bool | None,
     schema_repairer: "SchemaRepairer | None",
     schema_config: ObjectSchemaConfig | None,
     path: str,
@@ -19,12 +20,26 @@ def _finalize_object(
     if schema_repairer is None or schema_config is None:
         return obj
 
-    missing_required = [key for key in schema_config.required if key not in obj]
+    resolved_schema = schema_repairer.resolve_schema(schema)
+    property_aliases = (
+        resolved_schema.get("x-json-repair-property-aliases", {}) if isinstance(resolved_schema, dict) else {}
+    )
+    aliases_with_field_name = set()
+    if isinstance(property_aliases, dict):
+        aliases_with_field_name = {
+            alias
+            for alias, field_names in property_aliases.items()
+            if isinstance(alias, str)
+            and isinstance(field_names, list)
+            and any(isinstance(name, str) and name in obj for name in field_names)
+        }
+
+    missing_required = [key for key in schema_config.required if key not in obj and key not in aliases_with_field_name]
     if missing_required and schema_repairer.schema_repair_mode != "salvage":
         raise ValueError(f"Missing required properties at {path}: {', '.join(missing_required)}")
 
     for key, prop_schema in schema_config.properties.items():
-        if key in obj or key in schema_config.required:
+        if key in obj or key in schema_config.required or key in aliases_with_field_name:
             continue
         if isinstance(prop_schema, dict) and "default" in prop_schema:
             obj[key] = schema_repairer._copy_json_value(prop_schema["default"], f"{path}.{key}", "default")
@@ -227,6 +242,7 @@ def _split_object_on_duplicate_key(self: "JSONParser", rollback_index: int) -> N
 def _resolve_object_property_schema(
     self: "JSONParser",
     schema_repairer: "SchemaRepairer | None",
+    schema: dict[str, Any] | bool | None,
     schema_config: ObjectSchemaConfig | None,
     key: str,
 ) -> tuple[dict[str, Any] | bool | None, list[dict[str, Any] | bool | None], bool]:
@@ -241,6 +257,16 @@ def _resolve_object_property_schema(
             raise ValueError("Schema must be an object.")
         prop_schema = cast("dict[str, Any] | bool | None", schema_value)
         return prop_schema, extra_schemas, False
+
+    resolved_schema = schema_repairer.resolve_schema(schema)
+    property_aliases = (
+        resolved_schema.get("x-json-repair-property-aliases", {}) if isinstance(resolved_schema, dict) else {}
+    )
+    if isinstance(property_aliases, dict):
+        for alias, field_names in property_aliases.items():
+            if isinstance(alias, str) and isinstance(field_names, list) and key in field_names:
+                schema_value = schema_config.properties.get(alias)
+                return cast("dict[str, Any] | bool | None", schema_value), extra_schemas, False
 
     matched: list[Any] = []
     unsupported_patterns: list[str] = []
@@ -373,7 +399,7 @@ def _complete_object_parse(
             if isinstance(additional_obj, dict):
                 obj.update(additional_obj)
 
-    return _finalize_object(obj, schema_repairer, schema_config, path)
+    return _finalize_object(obj, schema, schema_repairer, schema_config, path)
 
 
 def parse_object(
@@ -431,6 +457,7 @@ def parse_object(
         prop_schema, extra_schemas, drop_property = _resolve_object_property_schema(
             self,
             schema_repairer,
+            schema,
             schema_config,
             key,
         )

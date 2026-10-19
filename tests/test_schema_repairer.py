@@ -178,6 +178,17 @@ def test_schema_repairer_validate_and_prepare():
         repairer._prepare_schema_for_validation(invalid_schema)
 
 
+def test_schema_repairer_ignores_invalid_pydantic_alias_metadata():
+    schema = {
+        "type": "object",
+        "properties": {"name": {"type": "string"}},
+        "x-json-repair-property-aliases": {"name": "not-a-list"},
+    }
+    repairer = SchemaRepairer(schema, None)
+
+    assert repairer.repair_value({"name": "Ada"}, schema, "$") == {"name": "Ada"}
+
+
 def test_schema_repairer_resolve_schema_and_refs():
     root = {"defs": {"node": {"type": "string"}}, "flag": True, "flag_false": False, "bad": 1}
     repairer = SchemaRepairer(root, None)

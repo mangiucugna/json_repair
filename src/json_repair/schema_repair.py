@@ -42,6 +42,38 @@ def _require_pydantic() -> Any:
         raise ValueError("pydantic is required when using schema models.") from exc
 
 
+def _add_pydantic_field_metadata(schema_dict: dict[str, Any], model: type[Any]) -> None:
+    properties = schema_dict.setdefault("properties", {})
+    if not isinstance(properties, dict):
+        properties = {}
+        schema_dict["properties"] = properties
+    model_config = getattr(model, "model_config", {})
+    accepts_field_names = model_config.get("populate_by_name", False) or model_config.get("validate_by_name", False)
+    property_aliases: dict[str, list[str]] = {}
+    for name, field in model.model_fields.items():
+        validation_alias = getattr(field, "validation_alias", None)
+        alias = validation_alias if isinstance(validation_alias, str) else getattr(field, "alias", None)
+        candidates = [candidate for candidate in (alias, name) if isinstance(candidate, str)]
+        property_name = next((candidate for candidate in candidates if candidate in properties), None)
+        if property_name is None:
+            property_name = candidates[0] if candidates else name
+        if accepts_field_names and property_name != name:
+            property_aliases.setdefault(property_name, []).append(name)
+        if field.is_required():
+            continue
+        property_schema = properties.setdefault(property_name, {})
+        if not isinstance(property_schema, dict):
+            property_schema = {}
+            properties[property_name] = property_schema
+        if "default" not in property_schema:
+            if field.default_factory is not None:
+                property_schema["default"] = field.default_factory()
+            else:
+                property_schema["default"] = field.default
+    if property_aliases:
+        schema_dict["x-json-repair-property-aliases"] = property_aliases
+
+
 def _prepare_schema_for_validation_node(node: Any) -> Any:
     if isinstance(node, dict):
         normalized = {key: _prepare_schema_for_validation_node(value) for key, value in node.items()}
@@ -100,23 +132,7 @@ def schema_from_input(schema: Any) -> dict[str, Any] | bool:
             raise ValueError("pydantic v2 is required for schema models.")
         schema_dict: dict[str, Any] = schema.model_json_schema()
         if hasattr(schema, "model_fields"):
-            properties = schema_dict.setdefault("properties", {})
-            if not isinstance(properties, dict):
-                properties = {}
-                schema_dict["properties"] = properties
-            for name, field in schema.model_fields.items():
-                if field.is_required():
-                    continue
-                property_schema = properties.setdefault(name, {})
-                if not isinstance(property_schema, dict):
-                    property_schema = {}
-                    properties[name] = property_schema
-                if "default" in property_schema:
-                    continue
-                if field.default_factory is not None:
-                    property_schema["default"] = field.default_factory()
-                else:
-                    property_schema["default"] = field.default
+            _add_pydantic_field_metadata(schema_dict, schema)
         return schema_dict
     raise ValueError("Schema must be a JSON Schema dict, boolean schema, or pydantic v2 model.")
 
@@ -448,6 +464,24 @@ class SchemaRepairer:
         )
         if not isinstance(value, dict):
             raise ValueError(f"Expected object at {path}, got {type(value).__name__}.")
+
+        property_aliases = schema.get("x-json-repair-property-aliases", {})
+        if isinstance(property_aliases, dict):
+            normalized_value = dict(value)
+            for alias, field_names in property_aliases.items():
+                if not isinstance(alias, str) or not isinstance(field_names, list):
+                    continue
+                provided_names = [name for name in field_names if isinstance(name, str) and name in normalized_value]
+                if alias in normalized_value:
+                    for name in provided_names:
+                        normalized_value.pop(name)
+                        self._log(f"Dropped field-name key because alias '{alias}' is present", f"{path}.{name}")
+                    continue
+                if provided_names:
+                    name = provided_names[0]
+                    normalized_value[alias] = normalized_value.pop(name)
+                    self._log(f"Mapped field name to validation alias '{alias}'", f"{path}.{name}")
+            value = normalized_value
 
         schema_config = object_schema_config(schema)
 
