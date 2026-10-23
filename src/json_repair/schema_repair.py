@@ -244,7 +244,7 @@ class SchemaRepairer:
             return True
         if isinstance(schema_type, list) and "array" in schema_type:
             return True
-        return "items" in schema
+        return "items" in schema or "prefixItems" in schema
 
     def _allows_schema_type(self, schema: dict[str, Any], schema_type: str) -> bool:
         declared_type = schema.get("type")

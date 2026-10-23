@@ -67,6 +67,11 @@ def object_schema_config(schema: dict[str, Any]) -> ObjectSchemaConfig:
 
 
 def array_schema_config(schema: dict[str, Any]) -> ArraySchemaConfig:
+    if isinstance(schema.get("prefixItems"), list):
+        return ArraySchemaConfig(
+            items_schema=schema["prefixItems"],
+            additional_items=schema.get("items"),
+        )
     return ArraySchemaConfig(
         items_schema=schema.get("items"),
         additional_items=schema.get("additionalItems"),

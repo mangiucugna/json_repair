@@ -480,6 +480,43 @@ def test_schema_non_string_ref_raises_definition_error():
         repair_json("{}", schema={"$ref": 123}, return_objects=True)
 
 
+@pytest.mark.parametrize("raw", ['{"point": ["1", "2"]}', '{"point": ["1", "2"]'])
+def test_schema_pydantic_fixed_tuple_coerces_positions(raw):
+    pydantic = pytest.importorskip("pydantic")
+    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
+    if int(version.split(".")[0]) < 2:
+        pytest.skip("pydantic v2 required")
+
+    class Coordinates(pydantic.BaseModel):
+        point: tuple[int, int]
+
+    result, logs = repair_json(raw, schema=Coordinates, return_objects=True, logging=True)
+    assert result == {"point": [1, 2]}
+    assert Coordinates.model_validate(result).point == (1, 2)
+    assert sum("Coerced string to integer" in entry["text"] for entry in logs) == 2
+
+
+@pytest.mark.parametrize("closing", ["]", ""])
+@pytest.mark.parametrize(
+    ("schema", "expected"),
+    [
+        ({"prefixItems": [{"type": "integer"}]}, [1, "2"]),
+        ({"prefixItems": [{"type": "integer"}], "items": True}, [1, "2"]),
+        ({"prefixItems": [{"type": "integer"}], "items": False}, [1]),
+        (
+            {"prefixItems": [{"type": "string"}], "items": {"type": "integer"}},
+            ["1", 2],
+        ),
+        (
+            {"prefixItems": [{"type": "integer"}], "additionalItems": False},
+            [1, "2"],
+        ),
+    ],
+)
+def test_schema_prefix_items_and_tail(schema, expected, closing):
+    assert repair_json('["1", "2"' + closing, schema=schema, return_objects=True) == expected
+
+
 def test_schema_pydantic_v2_defaults():
     pydantic = pytest.importorskip("pydantic")
     version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))

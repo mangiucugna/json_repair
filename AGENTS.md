@@ -31,6 +31,7 @@
 - When a schema is provided, apply schema repair and validation for both valid and invalid JSON inputs.
 - For top-level Pydantic model fields with simple string aliases, preserve field-name keys during schema-guided parsing when the model accepts them, even when `additionalProperties` is false; canonicalize after parsing so explicit aliases retain precedence.
 - Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`.
+- For modern tuple schemas, `prefixItems` defines positional schemas and `items` constrains only the tail; keep this mapping shared by parsing and post-parse repair while preserving legacy list-valued `items`/`additionalItems` behavior.
 - `patternProperties` matching is intentionally limited to a safe subset; do not execute user-supplied regexes.
 - Preserve schema dict identity in `SchemaRepairer.resolve_schema` whenever possible so validator caching remains effective.
 - When validating a detached `anyOf` or `oneOf` branch, retain the original root schema's resolver scope so root-relative `$ref` values can resolve `$defs`.
