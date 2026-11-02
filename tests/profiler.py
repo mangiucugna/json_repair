@@ -291,7 +291,7 @@ m = """
     """
 
 
-def benchmark(name, m, ro, sjl):
+def benchmark(name: str, m: str, ro: bool, sjl: bool) -> None:
     start = time.time()
     for _ in range(10000):
         repair_json(json_str=m, return_objects=ro, skip_json_loads=sjl)

@@ -1,4 +1,6 @@
 import copy
+from collections.abc import Callable
+from pathlib import Path
 from typing import Any, ClassVar
 
 import pytest
@@ -14,11 +16,11 @@ from src.json_repair.schema_repair import (
 from src.json_repair.utils.constants import MISSING_VALUE
 
 
-def test_missing_value_deepcopy():
+def test_missing_value_deepcopy() -> None:
     assert copy.deepcopy(MISSING_VALUE) is MISSING_VALUE
 
 
-def test_normalize_missing_values_nested_and_invalid():
+def test_normalize_missing_values_nested_and_invalid() -> None:
     assert normalize_missing_values(MISSING_VALUE) == ""
     assert normalize_missing_values({"a": MISSING_VALUE, "b": [MISSING_VALUE, 1]}) == {"a": "", "b": ["", 1]}
     with pytest.raises(ValueError, match="Object keys must be strings"):
@@ -27,7 +29,7 @@ def test_normalize_missing_values_nested_and_invalid():
         normalize_missing_values(object())
 
 
-def test_load_schema_model_errors_and_success(tmp_path, monkeypatch):
+def test_load_schema_model_errors_and_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(ValueError, match="Schema model must be in the form"):
         load_schema_model("invalid")
 
@@ -40,7 +42,7 @@ def test_load_schema_model_errors_and_success(tmp_path, monkeypatch):
         load_schema_model("schema_mod:Missing")
 
 
-def test_schema_from_input_basic_and_invalid():
+def test_schema_from_input_basic_and_invalid() -> None:
     assert schema_from_input({"type": "string"}) == {"type": "string"}
     assert schema_from_input(True) is True
     assert schema_from_input(False) is False
@@ -48,7 +50,7 @@ def test_schema_from_input_basic_and_invalid():
         schema_from_input(1)
 
 
-def test_schema_repair_mode_validation():
+def test_schema_repair_mode_validation() -> None:
     assert normalize_schema_repair_mode(None) == "standard"
     assert normalize_schema_repair_mode("standard") == "standard"
     assert normalize_schema_repair_mode("salvage") == "salvage"
@@ -56,24 +58,26 @@ def test_schema_repair_mode_validation():
         normalize_schema_repair_mode("unknown")
 
 
-def test_schema_from_input_model_defaults_and_required():
+def test_schema_from_input_model_defaults_and_required() -> None:
     pydantic = pytest.importorskip("pydantic")
     version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
     if int(version.split(".")[0]) < 2:
         pytest.skip("pydantic v2 required")
 
     class DummyField:
-        def __init__(self, default, default_factory=None, required=False):
+        def __init__(
+            self, default: object, default_factory: Callable[[], object] | None = None, required: bool = False
+        ) -> None:
             self.default = default
             self.default_factory = default_factory
             self._required = required
 
-        def is_required(self):
+        def is_required(self) -> bool:
             return self._required
 
     class DummyModel:
         @staticmethod
-        def model_json_schema():
+        def model_json_schema() -> dict[str, object]:
             return {"properties": {"name": "not-a-dict"}}
 
         model_fields: ClassVar[dict[str, DummyField]] = {
@@ -90,7 +94,7 @@ def test_schema_from_input_model_defaults_and_required():
 
     class DummyModelWithDefaults:
         @staticmethod
-        def model_json_schema():
+        def model_json_schema() -> dict[str, object]:
             return {"properties": {"name": {"default": "keep"}}}
 
         model_fields: ClassVar[dict[str, DummyField]] = {"name": DummyField(default="x")}
@@ -100,23 +104,23 @@ def test_schema_from_input_model_defaults_and_required():
     assert schema_with_default["properties"]["name"]["default"] == "keep"
 
 
-def test_schema_from_input_non_dict_properties():
+def test_schema_from_input_non_dict_properties() -> None:
     pydantic = pytest.importorskip("pydantic")
     version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
     if int(version.split(".")[0]) < 2:
         pytest.skip("pydantic v2 required")
 
     class DummyField:
-        def __init__(self, default):
+        def __init__(self, default: object) -> None:
             self.default = default
             self.default_factory = None
 
-        def is_required(self):
+        def is_required(self) -> bool:
             return False
 
     class DummyModel:
         @staticmethod
-        def model_json_schema():
+        def model_json_schema() -> dict[str, object]:
             return {"properties": []}
 
         model_fields: ClassVar[dict[str, DummyField]] = {"value": DummyField(default=1)}
@@ -126,20 +130,20 @@ def test_schema_from_input_non_dict_properties():
     assert schema["properties"]["value"]["default"] == 1
 
 
-def test_schema_from_input_requires_pydantic_v2(monkeypatch):
+def test_schema_from_input_requires_pydantic_v2(monkeypatch: pytest.MonkeyPatch) -> None:
     pydantic = pytest.importorskip("pydantic")
     monkeypatch.setattr(pydantic, "VERSION", "1.0")
 
     class DummyModel:
         @staticmethod
-        def model_json_schema():
+        def model_json_schema() -> dict[str, object]:
             return {}
 
     with pytest.raises(ValueError, match="pydantic v2"):
         schema_from_input(DummyModel)
 
 
-def test_schema_repairer_validate_and_prepare():
+def test_schema_repairer_validate_and_prepare() -> None:
     pytest.importorskip("jsonschema")
     repairer = SchemaRepairer({}, [])
     assert repairer.is_valid(1, True) is True
@@ -178,7 +182,7 @@ def test_schema_repairer_validate_and_prepare():
         repairer._prepare_schema_for_validation(invalid_schema)
 
 
-def test_schema_repairer_ignores_invalid_pydantic_alias_metadata():
+def test_schema_repairer_ignores_invalid_pydantic_alias_metadata() -> None:
     schema = {
         "type": "object",
         "properties": {"name": {"type": "string"}},
@@ -189,7 +193,7 @@ def test_schema_repairer_ignores_invalid_pydantic_alias_metadata():
     assert repairer.repair_value({"name": "Ada"}, schema, "$") == {"name": "Ada"}
 
 
-def test_schema_repairer_resolve_schema_and_refs():
+def test_schema_repairer_resolve_schema_and_refs() -> None:
     root = {"defs": {"node": {"type": "string"}}, "flag": True, "flag_false": False, "bad": 1}
     repairer = SchemaRepairer(root, None)
     assert repairer.resolve_schema(None) is True
@@ -211,7 +215,7 @@ def test_schema_repairer_resolve_schema_and_refs():
         repairer._resolve_ref("#/bad")
 
 
-def test_schema_repairer_copy_json_value_edges():
+def test_schema_repairer_copy_json_value_edges() -> None:
     repairer = SchemaRepairer({}, [])
     assert repairer._copy_json_value({"a": {"b": 1}}, "$", "default") == {"a": {"b": 1}}
     with pytest.raises(ValueError, match="non-string key"):
@@ -220,7 +224,7 @@ def test_schema_repairer_copy_json_value_edges():
         repairer._copy_json_value(object(), "$", "default")
 
 
-def test_schema_repairer_object_and_array_helpers():
+def test_schema_repairer_object_and_array_helpers() -> None:
     repairer = SchemaRepairer({}, None)
     assert repairer.is_object_schema({"type": "object"}) is True
     assert repairer.is_object_schema({"type": ["null", "object"]}) is True
@@ -236,7 +240,7 @@ def test_schema_repairer_object_and_array_helpers():
     assert repairer.is_array_schema(False) is False
 
 
-def test_repair_value_missing_and_unions():
+def test_repair_value_missing_and_unions() -> None:
     repairer = SchemaRepairer({}, [])
     assert repairer.repair_value(MISSING_VALUE, {"const": 1}, "$") == 1
     assert repairer.repair_value(MISSING_VALUE, {"enum": [2, 3]}, "$") == 2
@@ -271,7 +275,7 @@ def test_repair_value_missing_and_unions():
     assert repairer.repair_value({"a": "1"}, schema_obj_union, "$") == {"a": 1}
 
 
-def test_type_union_validates_branch_before_returning():
+def test_type_union_validates_branch_before_returning() -> None:
     pytest.importorskip("jsonschema")
     standard_repairer = SchemaRepairer({}, [])
     salvage_repairer = SchemaRepairer({}, [], schema_repair_mode="salvage")
@@ -285,7 +289,7 @@ def test_type_union_validates_branch_before_returning():
     assert salvage_repairer.repair_value(["bbb"], schema, "$") == ["bbb"]
 
 
-def test_salvage_skips_object_mapping_for_mixed_object_array_schema():
+def test_salvage_skips_object_mapping_for_mixed_object_array_schema() -> None:
     pytest.importorskip("jsonschema")
     salvage_repairer = SchemaRepairer({}, [], schema_repair_mode="salvage")
     schema = {
@@ -297,7 +301,7 @@ def test_salvage_skips_object_mapping_for_mixed_object_array_schema():
     assert salvage_repairer.repair_value([1, 2], schema, "$") == [1, 2]
 
 
-def test_can_salvage_list_as_object_requires_object_without_array():
+def test_can_salvage_list_as_object_requires_object_without_array() -> None:
     repairer = SchemaRepairer({}, [], schema_repair_mode="salvage")
     assert repairer._can_salvage_list_as_object({"properties": {"a": {"type": "integer"}}}) is True
     assert repairer._can_salvage_list_as_object({"items": {"type": "integer"}}) is False
@@ -307,7 +311,7 @@ def test_can_salvage_list_as_object_requires_object_without_array():
     )
 
 
-def test_repair_object_and_array_paths():
+def test_repair_object_and_array_paths() -> None:
     repairer = SchemaRepairer({}, [])
     schema_obj = {
         "type": "object",
@@ -408,7 +412,7 @@ def test_repair_object_and_array_paths():
         salvage_repairer._map_list_to_object([1], {"type": "object", "properties": {1: {"type": "integer"}}}, "$")
 
 
-def test_fill_missing_and_coerce_scalar_paths():
+def test_fill_missing_and_coerce_scalar_paths() -> None:
     repairer = SchemaRepairer({}, [])
     assert repairer._fill_missing({"type": "integer"}, "$") == 0
     assert repairer._fill_missing({"type": "number"}, "$") == 0
@@ -484,7 +488,7 @@ def test_fill_missing_and_coerce_scalar_paths():
         repairer.repair_value(1, False, "$")
 
 
-def test_repair_object_skips_unsupported_pattern_regex_with_fallback_and_log():
+def test_repair_object_skips_unsupported_pattern_regex_with_fallback_and_log() -> None:
     log: list[dict[str, str]] = []
     repairer = SchemaRepairer({}, log)
     schema = {
@@ -499,7 +503,7 @@ def test_repair_object_skips_unsupported_pattern_regex_with_fallback_and_log():
     assert any("Skipped unsupported patternProperties regex '^x[0-9]+$'" in entry["text"] for entry in log)
 
 
-def test_apply_enum_const_mismatch_raises():
+def test_apply_enum_const_mismatch_raises() -> None:
     repairer = SchemaRepairer({}, [])
     with pytest.raises(ValueError, match="does not match const"):
         repairer.repair_value("b", {"const": "a"}, "$")
@@ -507,5 +511,5 @@ def test_apply_enum_const_mismatch_raises():
         repairer.repair_value("b", {"enum": ["a"]}, "$")
 
 
-def test_repair_json_valid_empty_string_returns_empty():
+def test_repair_json_valid_empty_string_returns_empty() -> None:
     assert repair_json('""') == ""

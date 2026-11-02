@@ -10,7 +10,7 @@ import pytest
 from src.json_repair.json_repair import cli
 
 
-def test_cli(capsys):
+def test_cli(capsys: pytest.CaptureFixture[str]) -> None:
     # Create a temporary file
     temp_fd, temp_path = tempfile.mkstemp(suffix=".json")
     _, tempout_path = tempfile.mkstemp(suffix=".json")
@@ -52,7 +52,7 @@ def test_cli(capsys):
     assert captured.out == expected_output
 
 
-def test_cli_inline_requires_filename(capsys):
+def test_cli_inline_requires_filename(capsys: pytest.CaptureFixture[str]) -> None:
     """cli() should exit with an error when --inline is passed without a filename."""
     with pytest.raises(SystemExit) as exc:
         cli(inline_args=["--inline"])
@@ -61,7 +61,7 @@ def test_cli_inline_requires_filename(capsys):
     assert exc.value.code != 0
 
 
-def test_cli_inline_and_output_error(tmp_path, capsys):
+def test_cli_inline_and_output_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """cli() should exit with an error when --inline and --output are used together."""
     outfile = tmp_path / "out.json"
     with pytest.raises(SystemExit) as exc:
@@ -71,7 +71,7 @@ def test_cli_inline_and_output_error(tmp_path, capsys):
     assert exc.value.code != 0
 
 
-def test_cli_schema_file_guides_repair(tmp_path, capsys):
+def test_cli_schema_file_guides_repair(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     pytest.importorskip("jsonschema")
     schema_path = tmp_path / "schema.json"
     schema = {
@@ -88,7 +88,7 @@ def test_cli_schema_file_guides_repair(tmp_path, capsys):
     assert captured.out == '{\n"value": 0\n}\n'
 
 
-def test_cli_schema_applies_to_valid_json(tmp_path, capsys):
+def test_cli_schema_applies_to_valid_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     pytest.importorskip("jsonschema")
     schema_path = tmp_path / "schema.json"
     schema = {
@@ -118,7 +118,9 @@ def test_cli_schema_applies_to_valid_json(tmp_path, capsys):
     assert captured.out == '{\n"value": 1\n}\n'
 
 
-def test_cli_schema_model_guides_repair(tmp_path, capsys, monkeypatch):
+def test_cli_schema_model_guides_repair(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
     pytest.importorskip("jsonschema")
     pydantic = pytest.importorskip("pydantic")
     version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
@@ -146,7 +148,7 @@ def test_cli_schema_model_guides_repair(tmp_path, capsys, monkeypatch):
     assert captured.out == '{\n"value": 1\n}\n'
 
 
-def test_cli_schema_and_strict_error(tmp_path, capsys):
+def test_cli_schema_and_strict_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     schema_path = tmp_path / "schema.json"
     schema_path.write_text(json.dumps({"type": "integer"}))
     input_path = tmp_path / "input.json"
@@ -159,7 +161,7 @@ def test_cli_schema_and_strict_error(tmp_path, capsys):
     assert exc.value.code != 0
 
 
-def test_cli_schema_and_schema_model_are_mutually_exclusive(tmp_path, capsys):
+def test_cli_schema_and_schema_model_are_mutually_exclusive(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     schema_path = tmp_path / "schema.json"
     schema_path.write_text(json.dumps({"type": "integer"}))
 
@@ -178,7 +180,7 @@ def test_cli_schema_and_schema_model_are_mutually_exclusive(tmp_path, capsys):
     assert exc.value.code != 0
 
 
-def test_cli_schema_repair_mode_salvage_requires_schema(capsys):
+def test_cli_schema_repair_mode_salvage_requires_schema(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as exc:
         cli(inline_args=["--schema-repair-mode", "salvage"])
     captured = capsys.readouterr()
@@ -186,7 +188,7 @@ def test_cli_schema_repair_mode_salvage_requires_schema(capsys):
     assert exc.value.code != 0
 
 
-def test_cli_schema_repair_mode_salvage_drops_invalid_items(tmp_path, capsys):
+def test_cli_schema_repair_mode_salvage_drops_invalid_items(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     pytest.importorskip("jsonschema")
     schema_path = tmp_path / "schema.json"
     schema = {

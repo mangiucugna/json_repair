@@ -81,10 +81,10 @@ class JSONParser:
         # When the json to be repaired is the accumulation of streaming json at a certain moment.
         # e.g. json obtained from llm response.
         # If this parameter to True will keep the repair results stable. For example:
-        #   case 1:  '{"key": "val\\' => '{"key": "val"}'
-        #   case 2:  '{"key": "val\\n' => '{"key": "val\\n"}'
-        #   case 3:  '{"key": "val\\n123,`key2:value2' => '{"key": "val\\n123,`key2:value2"}'
-        #   case 4:  '{"key": "val\\n123,`key2:value2`"}' => '{"key": "val\\n123,`key2:value2`"}'
+        #   case 1:  '{"key": "val\\' => '{"key": "val"}'  # noqa: ERA001
+        #   case 2:  '{"key": "val\\n' => '{"key": "val\\n"}'  # noqa: ERA001
+        #   case 3:  '{"key": "val\\n123,`key2:value2' => '{"key": "val\\n123,`key2:value2"}'  # noqa: ERA001
+        #   case 4:  '{"key": "val\\n123,`key2:value2`"}' => '{"key": "val\\n123,`key2:value2`"}'  # noqa: ERA001
         self.stream_stable = stream_stable
         # Over time the library got more and more complex heuristics to repair JSON. Some of these heuristics
         # may not be desirable in some use cases and the user would prefer json_repair to return an exception.
@@ -163,9 +163,8 @@ class JSONParser:
                     if not is_comma_separated and ObjectComparer.is_same_object(json[-1], j):
                         # Treat repeated objects as updates: keep the newest value.
                         json.pop()
-                    else:
-                        if not json[-1]:
-                            json.pop()
+                    elif not json[-1]:
+                        json.pop()
                     json.append(j)
                 else:
                     self.index += 1
@@ -338,7 +337,7 @@ class JSONParser:
                     value, repairer, schema, path, finalize_schema, record_top_level_value
                 )
             # <number> starts with [0-9] or minus
-            if not self.context.empty and (char.isdigit() or char == "-" or char == "."):
+            if not self.context.empty and (char.isdigit() or char in {"-", "."}):
                 value = self.parse_number()
                 return self._finalize_parsed_value(
                     value, repairer, schema, path, finalize_schema, record_top_level_value

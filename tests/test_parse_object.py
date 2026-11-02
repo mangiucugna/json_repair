@@ -1,7 +1,7 @@
 from src.json_repair.json_repair import repair_json
 
 
-def test_parse_object():
+def test_parse_object() -> None:
     assert repair_json("{}", return_objects=True) == {}
     assert repair_json('{ "key": "value", "key2": 1, "key3": True }', return_objects=True) == {
         "key": "value",
@@ -20,7 +20,7 @@ def test_parse_object():
     assert repair_json('{"') == "{}"
 
 
-def test_parse_object_edge_cases():
+def test_parse_object_edge_cases() -> None:
     assert repair_json("{foo: [}") == '{"foo": []}'
     assert repair_json('{"": "value"') == '{"": "value"}'
     assert repair_json('{"key": "v"alue"}') == '{"key": "v\\"alue\\""}'
@@ -105,7 +105,7 @@ def test_parse_object_edge_cases():
     ]
 
 
-def test_parse_object_preserves_backslash_escaped_keys():
+def test_parse_object_preserves_backslash_escaped_keys() -> None:
     raw = '{\\"key\\": \\"value\\"}'
 
     repaired, logs = repair_json(raw, return_objects=True, skip_json_loads=True, logging=True)
@@ -115,7 +115,7 @@ def test_parse_object_preserves_backslash_escaped_keys():
     assert repair_json(raw, skip_json_loads=True) == '{"key": "value"}'
 
 
-def test_parse_object_empty_object_classifier_keeps_objectish_inputs():
+def test_parse_object_empty_object_classifier_keeps_objectish_inputs() -> None:
     repaired, logs = repair_json("{:}", return_objects=True, skip_json_loads=True, logging=True)
 
     assert repaired == {}
@@ -127,18 +127,18 @@ def test_parse_object_empty_object_classifier_keeps_objectish_inputs():
     assert logs == []
 
 
-def test_parse_object_empty_object_classifier_keeps_array_fallback_for_backslash_noise():
+def test_parse_object_empty_object_classifier_keeps_array_fallback_for_backslash_noise() -> None:
     repaired, logs = repair_json(r"{foo\bar}", return_objects=True, skip_json_loads=True, logging=True)
 
     assert isinstance(repaired, list)
     assert any("try to parse this as an array instead" in entry["text"] for entry in logs)
 
 
-def test_parse_object_empty_object_array_fallback_preserves_legacy_key_context():
+def test_parse_object_empty_object_array_fallback_preserves_legacy_key_context() -> None:
     assert repair_json("[{5}s ", return_objects=True, skip_json_loads=True) == [[5]]
 
 
-def test_parse_object_merge_at_the_end():
+def test_parse_object_merge_at_the_end() -> None:
     assert repair_json('{"key": "value"}, "key2": "value2"}') == '{"key": "value", "key2": "value2"}'
     assert repair_json('{"key": "value"}, "key2": }') == '{"key": "value", "key2": ""}'
     assert repair_json('{"key": "value"}, []') == '{"key": "value"}'

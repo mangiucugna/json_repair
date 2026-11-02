@@ -340,7 +340,7 @@ def _normalize_escape_sequence(
             _rebuild_unmatched_opening_braces(state)
             self.index += 1 + num_chars
             return True, self.get_char_at()
-    elif char == "„" or char in STRING_DELIMITERS and char != active_rstring_delimiter:
+    elif char == "„" or (char in STRING_DELIMITERS and char != active_rstring_delimiter):
         self.log("Found a delimiter that was escaped but shouldn't be escaped, removing the escape")
         state.string_acc = state.string_acc[:-1] + char
         _rebuild_unmatched_opening_braces(state)

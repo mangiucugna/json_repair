@@ -1,3 +1,12 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from flask.testing import FlaskClient  # type: ignore[import-not-found]  # ty: ignore[unresolved-import]
+
 import pytest
 
 pytest.importorskip("flask")
@@ -6,13 +15,13 @@ from docs.app import app
 
 
 @pytest.fixture
-def client():
+def client() -> Iterator[FlaskClient]:
     app.testing = True
     with app.test_client() as test_client:
         yield test_client
 
 
-def test_docs_api_without_schema_keeps_existing_behavior(client):
+def test_docs_api_without_schema_keeps_existing_behavior(client: FlaskClient) -> None:
     response = client.post(
         "/api/repair-json",
         json={"malformedJSON": '{"value": "1"}'},
@@ -23,7 +32,7 @@ def test_docs_api_without_schema_keeps_existing_behavior(client):
     assert payload == [{"value": "1"}, []]
 
 
-def test_docs_api_schema_null_is_treated_as_missing(client):
+def test_docs_api_schema_null_is_treated_as_missing(client: FlaskClient) -> None:
     response = client.post(
         "/api/repair-json",
         json={"malformedJSON": '{"value": "1"}', "schema": None},
@@ -34,7 +43,7 @@ def test_docs_api_schema_null_is_treated_as_missing(client):
     assert payload == [{"value": "1"}, []]
 
 
-def test_docs_api_schema_guides_coercion(client):
+def test_docs_api_schema_guides_coercion(client: FlaskClient) -> None:
     pytest.importorskip("jsonschema")
     schema = {
         "type": "object",
@@ -55,7 +64,7 @@ def test_docs_api_schema_guides_coercion(client):
     assert payload[1]
 
 
-def test_docs_api_rejects_invalid_schema_type(client):
+def test_docs_api_rejects_invalid_schema_type(client: FlaskClient) -> None:
     response = client.post(
         "/api/repair-json",
         json={"malformedJSON": '{"value": "1"}', "schema": []},
@@ -65,7 +74,7 @@ def test_docs_api_rejects_invalid_schema_type(client):
     assert response.get_json() == {"error": "schema must be a JSON object or boolean."}
 
 
-def test_docs_api_schema_validation_error_returns_400(client):
+def test_docs_api_schema_validation_error_returns_400(client: FlaskClient) -> None:
     pytest.importorskip("jsonschema")
     response = client.post(
         "/api/repair-json",
@@ -82,7 +91,7 @@ def test_docs_api_schema_validation_error_returns_400(client):
     assert "does not match" in payload["error"]
 
 
-def test_docs_api_rejects_circular_schema_ref(client):
+def test_docs_api_rejects_circular_schema_ref(client: FlaskClient) -> None:
     pytest.importorskip("jsonschema")
     schema = {
         "$ref": "#/definitions/a",
@@ -100,7 +109,7 @@ def test_docs_api_rejects_circular_schema_ref(client):
     assert response.get_json() == {"error": "Circular $ref detected: #/definitions/a"}
 
 
-def test_docs_api_rejects_invalid_schema_repair_mode_type(client):
+def test_docs_api_rejects_invalid_schema_repair_mode_type(client: FlaskClient) -> None:
     response = client.post(
         "/api/repair-json",
         json={"malformedJSON": '{"value": "1"}', "schemaRepairMode": True},
@@ -110,7 +119,7 @@ def test_docs_api_rejects_invalid_schema_repair_mode_type(client):
     assert response.get_json() == {"error": "schemaRepairMode must be a string."}
 
 
-def test_docs_api_rejects_invalid_schema_repair_mode_value(client):
+def test_docs_api_rejects_invalid_schema_repair_mode_value(client: FlaskClient) -> None:
     response = client.post(
         "/api/repair-json",
         json={"malformedJSON": '{"value": "1"}', "schemaRepairMode": "unknown"},
@@ -120,7 +129,7 @@ def test_docs_api_rejects_invalid_schema_repair_mode_value(client):
     assert response.get_json() == {"error": "schemaRepairMode must be 'standard' or 'salvage'."}
 
 
-def test_docs_api_rejects_salvage_mode_without_schema(client):
+def test_docs_api_rejects_salvage_mode_without_schema(client: FlaskClient) -> None:
     response = client.post(
         "/api/repair-json",
         json={"malformedJSON": '{"value": "1"}', "schemaRepairMode": "salvage"},
@@ -130,7 +139,7 @@ def test_docs_api_rejects_salvage_mode_without_schema(client):
     assert response.get_json() == {"error": "schemaRepairMode='salvage' requires schema."}
 
 
-def test_docs_api_salvage_mode_drops_invalid_array_items(client):
+def test_docs_api_salvage_mode_drops_invalid_array_items(client: FlaskClient) -> None:
     pytest.importorskip("jsonschema")
     schema = {
         "type": "object",
@@ -165,7 +174,7 @@ def test_docs_api_salvage_mode_drops_invalid_array_items(client):
     assert payload[0] == {"items": [{"id": 1, "score": 85.6}]}
 
 
-def test_docs_api_deep_schema_returns_400_instead_of_500(client):
+def test_docs_api_deep_schema_returns_400_instead_of_500(client: FlaskClient) -> None:
     pytest.importorskip("jsonschema")
     schema = {"type": "object"}
     for _ in range(550):

@@ -98,6 +98,10 @@ target-version = "py313"
 # Flake8-builtins - A
 # Flake8-comprehensions  - C4
 # Flake8-blind-except - BLE
+# Flake8-datetimez - DTZ
+# Flake8-debugger - T10
+# Flake8-executable - EXE
+# Flake8-logging and logging-format - LOG, G
 # Flake8-commas - COM
 # Flake8-implicit-str-concat - ISC
 # Flake8-print - T20
@@ -120,25 +124,33 @@ target-version = "py313"
 # Pylint - PLC, PLE, PLR, PLW
 # PyTest - PT
 # Pyupgrade – safe modernization (e.g., str() → f"") - UP
+# Flake8-2020 - YTT
+# Eradicate - ERA
+# Flake8-annotations - ANN
 # Ruff specific - RUF
 # Simplifications (e.g., if x == True → if x) - SIM
-select = ['A', 'ARG', 'B', 'BLE', 'C4', 'COM', 'C90', 'E', 'F', 'FURB', 'I', 'INP', 'ISC', 'N', 'PERF', 'PGH', 'PIE', 'PLC', 'PLE', 'PLW', 'PT', 'PTH', 'Q', 'RET', 'RSE', 'S', 'SIM', 'T20', 'TC', 'TID', 'UP', 'W']
-# Only enable these RUF rules
+select = ['A', 'ANN', 'ARG', 'B', 'BLE', 'C4', 'COM', 'C90', 'DTZ', 'E', 'ERA', 'EXE', 'F', 'FURB', 'G', 'I', 'INP', 'ISC', 'LOG', 'N', 'PERF', 'PGH', 'PIE', 'PLC', 'PLE', 'PLW', 'PT', 'PTH', 'Q', 'RET', 'RSE', 'S', 'SIM', 'T10', 'T20', 'TC', 'TID', 'UP', 'W', 'YTT']
+# Additional individual rules
 extend-select = [
   "RUF001",  # ambiguous Unicode
   "RUF100",  # unused noqa
-  "RUF012",  # mutable default arguments
-  "RUF013",  # unnecessary super()
-  "RUF016",  # unnecessary else after return (optional)
-  "RUF018",  # unnecessary else after raise (optional)
-  "RUF005",  # avoid list concatenation in membership checks
+  "RUF012",  # mutable class defaults
+  "RUF013",  # implicit optional annotations
+  "RUF016",  # invalid index types
+  "RUF018",  # assignment expressions in assertions
+  "RUF005",  # collection literal concatenation
   "RUF010",  # prefer explicit conversion flags in f-strings
   "RUF019",  # prefer dict.get over redundant key checks
+  "RUF021",  # clarify mixed and/or precedence
   "RUF022",  # keep __all__ sorted
   "RUF043",  # make pytest.raises regex intent explicit
+  "RUF200",  # validate pyproject.toml metadata
+  "PLR1714", # repeated equality comparisons
+  "PLR5501", # collapsible else-if
   "TRY300",  # keep returns out of try blocks
 ]
 ignore = [
+  "ANN401", # Allow Any; mypy and ty handle type checking.
   "S101",   # assert: Use of assert detected. We like assert
   "COM812", # Ruff: The following rule may cause conflicts when used with the formatter
   "E501",   # Line too long
@@ -165,5 +177,6 @@ line-ending = "auto"
 "__init__.py" = ["PLC0414"]
 "src/json_repair/json_repair.py" = ["T201"]
 "tests/profiler.py" = ["T201"]
+"!{src,tests}/**.py" = ["ANN"]
 [tool.mypy]
 strict = true

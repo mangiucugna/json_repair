@@ -9,7 +9,7 @@ from src.json_repair.json_repair import from_file, load
 
 
 @pytest.mark.parametrize("skip_json_loads", [False, True])
-def test_load_repairs_missing_opening_brace_from_current_position(skip_json_loads):
+def test_load_repairs_missing_opening_brace_from_current_position(skip_json_loads: bool) -> None:
     prefix = '{"stale": true}\n'
     fd = StringIO(prefix + '\n"a": {"b": "你好"}}\n')
     fd.seek(len(prefix))
@@ -20,16 +20,16 @@ def test_load_repairs_missing_opening_brace_from_current_position(skip_json_load
     assert any("opening object brace" in entry["text"] for entry in logs)
 
 
-def test_load_declines_missing_opening_brace_with_trailing_content():
+def test_load_declines_missing_opening_brace_with_trailing_content() -> None:
     assert load(StringIO('"a": 1} {"b": 2}'), chunk_length=2) == {"b": 2}
 
 
-def test_load_strict_rejects_missing_opening_brace():
+def test_load_strict_rejects_missing_opening_brace() -> None:
     with pytest.raises(ValueError, match="Missing opening object brace"):
         load(StringIO('"a": 1}'), strict=True, chunk_length=2)
 
 
-def test_load_repairs_from_current_file_position():
+def test_load_repairs_from_current_file_position() -> None:
     prefix = '{"stale": true}\n'
     raw = prefix + '{"key": }'
 
@@ -40,7 +40,7 @@ def test_load_repairs_from_current_file_position():
         assert load(fd, skip_json_loads=skip_json_loads, chunk_length=2) == {"key": ""}
 
 
-def test_repair_json_from_file():
+def test_repair_json_from_file() -> None:
     path = pathlib.Path(__file__).parent.resolve()
 
     # Use chunk_length 2 to test the buffering feature

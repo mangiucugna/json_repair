@@ -2,14 +2,14 @@ from src.json_repair.json_parser import JSONParser
 from src.json_repair.json_repair import repair_json
 
 
-def test_parse_array():
+def test_parse_array() -> None:
     assert repair_json("[]", return_objects=True) == []
     assert repair_json("[1, 2, 3, 4]", return_objects=True) == [1, 2, 3, 4]
     assert repair_json("[", return_objects=True) == []
     assert repair_json("[[1\n\n]") == "[[1]]"
 
 
-def test_parse_array_edge_cases():
+def test_parse_array_edge_cases() -> None:
     assert repair_json("[{]") == "[]"
     assert repair_json("[") == "[]"
     assert repair_json('["') == "[]"
@@ -50,7 +50,7 @@ def test_parse_array_edge_cases():
     assert repair_json("{'key1', 'key2'}") == '["key1", "key2"]'
 
 
-def test_parse_array_closes_before_object_member_after_scalar_items():
+def test_parse_array_closes_before_object_member_after_scalar_items() -> None:
     raw = '{"outer": ["a", "b", "next": "value"}'
 
     assert repair_json(raw, return_objects=True) == {
@@ -59,21 +59,21 @@ def test_parse_array_closes_before_object_member_after_scalar_items():
     }
 
 
-def test_parse_array_contextually_closes_in_strict_mode():
+def test_parse_array_contextually_closes_in_strict_mode() -> None:
     assert repair_json('{"outer": ["a", "b", "next": "value"}', return_objects=True, strict=True) == {
         "outer": ["a", "b"],
         "next": "value",
     }
 
 
-def test_parse_array_python_tuple_literals():
+def test_parse_array_python_tuple_literals() -> None:
     assert repair_json('("a", "b", "c")', return_objects=True) == ["a", "b", "c"]
     assert repair_json("((1, 2), (3, 4))", return_objects=True) == [[1, 2], [3, 4]]
     assert repair_json('{"coords": (1, 2), "ok": true}', return_objects=True) == {"coords": [1, 2], "ok": True}
     assert repair_json('{"empty": ()}', return_objects=True) == {"empty": []}
 
 
-def test_parse_array_python_tuple_literals_accept_boolean_and_null_values():
+def test_parse_array_python_tuple_literals_accept_boolean_and_null_values() -> None:
     assert repair_json("(true, false, null)", return_objects=True, skip_json_loads=True) == [True, False, None]
     assert repair_json("(True, False, None)", return_objects=True, skip_json_loads=True) == [True, False, None]
     assert repair_json('{"coords": (True, None)}', return_objects=True, skip_json_loads=True) == {
@@ -81,21 +81,21 @@ def test_parse_array_python_tuple_literals_accept_boolean_and_null_values():
     }
 
 
-def test_parse_array_parenthesized_scalar_keeps_scalar_shape():
+def test_parse_array_parenthesized_scalar_keeps_scalar_shape() -> None:
     assert repair_json("(1)", return_objects=True) == 1
     assert repair_json('("x")', return_objects=True) == "x"
     assert repair_json('{"scalar_group": (1)}', return_objects=True) == {"scalar_group": 1}
     assert repair_json('{"string_group": ("x")}', return_objects=True) == {"string_group": "x"}
 
 
-def test_parse_array_mismatched_parenthesis_still_logs_missing_bracket():
+def test_parse_array_mismatched_parenthesis_still_logs_missing_bracket() -> None:
     repaired, logs = repair_json("[1, 2)", return_objects=True, logging=True)
 
     assert repaired == [1, 2]
     assert any("closing ]" in entry["text"] for entry in logs)
 
 
-def test_parenthesized_tuple_classifier_handles_nested_delimiters_and_missing_close():
+def test_parenthesized_tuple_classifier_handles_nested_delimiters_and_missing_close() -> None:
     parser = JSONParser('({"text": "a\\\\b", "items": [1]})', None, False)
     assert parser.parenthesized_is_explicit_tuple() is False
 
@@ -103,7 +103,7 @@ def test_parenthesized_tuple_classifier_handles_nested_delimiters_and_missing_cl
     assert parser.parenthesized_is_explicit_tuple() is False
 
 
-def test_top_level_parenthesized_value_gate_rejects_prose_and_accepts_standalone_jsonish_values():
+def test_top_level_parenthesized_value_gate_rejects_prose_and_accepts_standalone_jsonish_values() -> None:
     parser = JSONParser("(", None, False)
     assert parser.top_level_parenthesized_can_start_value() is False
 
@@ -117,7 +117,7 @@ def test_top_level_parenthesized_value_gate_rejects_prose_and_accepts_standalone
     assert parser.top_level_parenthesized_can_start_value() is True
 
 
-def test_parse_array_missing_quotes():
+def test_parse_array_missing_quotes() -> None:
     assert repair_json('["value1" value2", "value3"]') == '["value1", "value2", "value3"]'
     assert (
         repair_json('{"bad_one":["Lorem Ipsum", "consectetur" comment" ], "good_one":[ "elit", "sed", "tempor"]}')

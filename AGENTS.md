@@ -6,6 +6,7 @@
 - Dependency groups live in `pyproject.toml`; update `uv.lock` when dependencies change.
 
 ## Validation
+- Keep Ruff's `ANN401` disabled; use mypy and ty for type checking instead.
 - Run the full test suite with `uv run pytest`.
 - Run the full hook stack with `pre-commit run --all-files`.
 - The hook stack may rewrite `uv.lock` or `.pre-commit-config.yaml`; if hook-managed files change during commit flows, restage the resulting updates instead of repeatedly restoring them.

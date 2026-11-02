@@ -5,7 +5,7 @@ import pytest
 from src.json_repair.json_repair import load, repair_json
 
 
-def test_parse_number():
+def test_parse_number() -> None:
     assert repair_json("1", return_objects=True) == 1
     assert repair_json("1.2", return_objects=True) == 1.2
     assert repair_json('{"value": 82_461_110}', return_objects=True) == {"value": 82461110}
@@ -22,17 +22,17 @@ def test_parse_number():
     ],
 )
 @pytest.mark.parametrize("skip_json_loads", [False, True])
-def test_parse_number_positive_exponent(raw, expected, skip_json_loads):
+def test_parse_number_positive_exponent(raw: str, expected: object, skip_json_loads: bool) -> None:
     assert repair_json(raw, return_objects=True, skip_json_loads=skip_json_loads) == expected
     assert load(StringIO(raw), skip_json_loads=skip_json_loads, chunk_length=2) == expected
 
 
-def test_parse_number_plus_outside_exponent():
+def test_parse_number_plus_outside_exponent() -> None:
     assert repair_json("[1+2]", return_objects=True) == [1, 2]
     assert repair_json("[1e+]", return_objects=True) == repair_json("[1e-]", return_objects=True)
 
 
-def test_parse_number_edge_cases():
+def test_parse_number_edge_cases() -> None:
     assert (
         repair_json(' - { "test_key": ["test_value", "test_value2"] }') == '{"test_key": ["test_value", "test_value2"]}'
     )
@@ -57,7 +57,7 @@ def test_parse_number_edge_cases():
     assert repair_json("[1, 2notanumber]") == '[1, "2notanumber"]'
 
 
-def test_numeric_prefix_identifiers_preserve_underscored_digits():
+def test_numeric_prefix_identifiers_preserve_underscored_digits() -> None:
     assert repair_json('{"sku": 123_456ABC}', return_objects=True) == {"sku": "123_456ABC"}
     assert repair_json("[1_2_3ABC]", return_objects=True) == ["1_2_3ABC"]
     assert repair_json('{"value": 123_456}', return_objects=True) == {"value": 123456}

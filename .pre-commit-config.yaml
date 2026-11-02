@@ -23,6 +23,12 @@ repos:
     - id: ruff-check
       args: [--fix]
       types: [python]
+    - id: ruff-check
+      name: ruff check pyproject.toml
+      args: [--fix]
+      types: [file]
+      types_or: [file]
+      files: ^pyproject\.toml$
     # Run the formatter.
     - id: ruff-format
       types: [python]

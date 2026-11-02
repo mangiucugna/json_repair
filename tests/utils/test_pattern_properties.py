@@ -1,7 +1,7 @@
 from src.json_repair.utils.pattern_properties import match_pattern_properties
 
 
-def test_match_pattern_properties_exact_anchor_contains():
+def test_match_pattern_properties_exact_anchor_contains() -> None:
     pattern_properties = {
         "^abc$": {"name": "exact"},
         "bc": {"name": "contains"},
@@ -13,7 +13,7 @@ def test_match_pattern_properties_exact_anchor_contains():
     assert unsupported == []
 
 
-def test_match_pattern_properties_marks_unsupported_regex_patterns():
+def test_match_pattern_properties_marks_unsupported_regex_patterns() -> None:
     pattern_properties = {
         "^x[0-9]+$": {"name": "unsupported"},
         "^x": {"name": "supported"},
@@ -25,7 +25,7 @@ def test_match_pattern_properties_marks_unsupported_regex_patterns():
     assert unsupported == ["^x[0-9]+$"]
 
 
-def test_match_pattern_properties_empty_mapping():
+def test_match_pattern_properties_empty_mapping() -> None:
     matched, unsupported = match_pattern_properties({}, "any-key")
     assert matched == []
     assert unsupported == []

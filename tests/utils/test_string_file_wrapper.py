@@ -1,9 +1,11 @@
+from pathlib import Path
+
 import pytest
 
 from src.json_repair.utils.string_file_wrapper import StringFileWrapper
 
 
-def test_string_file_wrapper_handles_multibyte(tmp_path):
+def test_string_file_wrapper_handles_multibyte(tmp_path: Path) -> None:
     text = "\u0800"
     file_path = tmp_path / "multibyte.json"
     file_path.write_text(text, encoding="utf-8")
@@ -14,7 +16,7 @@ def test_string_file_wrapper_handles_multibyte(tmp_path):
         assert wrapper[0] == text
 
 
-def test_string_file_wrapper_invalid_buffer_access(tmp_path):
+def test_string_file_wrapper_invalid_buffer_access(tmp_path: Path) -> None:
     file_path = tmp_path / "buffer.json"
     file_path.write_text("ab", encoding="utf-8")
     with file_path.open("r", encoding="utf-8") as handle:
@@ -27,7 +29,7 @@ def test_string_file_wrapper_invalid_buffer_access(tmp_path):
             wrapper.get_buffer(2)
 
 
-def test_string_file_wrapper_slice_variations(tmp_path):
+def test_string_file_wrapper_slice_variations(tmp_path: Path) -> None:
     file_path = tmp_path / "slice.json"
     file_path.write_text("abcd", encoding="utf-8")
     with file_path.open("r", encoding="utf-8") as handle:
@@ -40,7 +42,7 @@ def test_string_file_wrapper_slice_variations(tmp_path):
             _ = wrapper[::0]
 
 
-def test_string_file_wrapper_negative_indices(tmp_path):
+def test_string_file_wrapper_negative_indices(tmp_path: Path) -> None:
     file_path = tmp_path / "index.json"
     file_path.write_text("xyz", encoding="utf-8")
     with file_path.open("r", encoding="utf-8") as handle:
@@ -50,7 +52,7 @@ def test_string_file_wrapper_negative_indices(tmp_path):
             _ = wrapper[-10]
 
 
-def test_string_file_wrapper_ensure_chunk_position_raises(tmp_path):
+def test_string_file_wrapper_ensure_chunk_position_raises(tmp_path: Path) -> None:
     file_path = tmp_path / "ensure.json"
     file_path.write_text("foo", encoding="utf-8")
     with file_path.open("r", encoding="utf-8") as handle:
