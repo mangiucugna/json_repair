@@ -46,6 +46,8 @@ typecheck = [
     "mypy",
     "ty",
 ]
+[tool.uv.dependency-groups]
+dev = { requires-python = ">=3.13" }
 [tool.pytest.ini_options]
 pythonpath = [
   "."
