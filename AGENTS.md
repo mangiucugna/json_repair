@@ -1,57 +1,18 @@
-# Repo Notes for Codex
+# Repository guidance
 
-## Environment
-- Use the uv-managed environment at `.venv`; install dev dependencies with `uv sync --group dev`.
-- Prefer `uv run ...` for Python tooling.
-- Dependency groups live in `pyproject.toml`; update `uv.lock` when dependencies change.
+## Workflow
+- Use `.venv` via `uv run`; install development dependencies with `uv sync --group dev` and update `uv.lock` when dependencies change.
+- For code changes, run `uv run pytest` and `pre-commit run --all-files`. Skip pre-commit for Markdown-only changes unless requested. If hooks update files, retain and restage those updates in commit flows.
+- Keep Ruff `ANN401` disabled; use mypy and ty. Keep CI's `ruff format` aligned with the Python-only pre-commit hook.
+- Keep `README.zh.md` aligned with `README.md` when behavior or contributor guidance changes. `README.md` is the PyPI description; avoid relative links. Store demo share state in the URL hash.
+- For releases, align `pyproject.toml` and `CITATION.cff`, use semantic versioning, and run `uvx twine check dist/*` after building. Preserve sdist test exclusion and the `json_repair` package-data key for `py.typed`.
 
-## Validation
-- Keep Ruff's `ANN401` disabled; use mypy and ty for type checking instead.
-- Run the full test suite with `uv run pytest`.
-- Run the full hook stack with `pre-commit run --all-files`.
-- The hook stack may rewrite `uv.lock` or `.pre-commit-config.yaml`; if hook-managed files change during commit flows, restage the resulting updates instead of repeatedly restoring them.
-- Keep CI's direct `ruff format` invocation aligned with the Python-only `ruff-format` pre-commit hook; Markdown is globally excluded because documentation code examples are not formatter input.
-
-## Release And Packaging
-- Project version lives in `pyproject.toml` under `[project].version`; use semantic versioning, with patch bumps for bug fixes.
-- Keep `CITATION.cff` aligned with the released version metadata in `pyproject.toml`.
-- Keep `MANIFEST.in` pruning `tests` so test modules are not shipped in the sdist.
-- In `[tool.setuptools.package-data]`, use the real package key `json_repair` so `py.typed` remains included.
-- Run `uvx twine check dist/*` after building and before publishing.
-
-## Docs
-- Keep `README.zh.md` aligned with `README.md` when behavior or contributor guidance changes.
-- `README.md` is the PyPI long description via `pyproject.toml`; avoid relative file or image links there.
-- Keep docs demo share state in the URL hash, not query params.
-
-## Durable Implementation Notes
-- Keep valid-JSON fast paths on the standard library path; `strict=True` must not second-guess inputs that `json.loads` already accepts.
-- Treat `skip_json_loads=True` as an explicit opt-out for inputs already known to be invalid; do not assume behavior must match the stdlib-preserving path for valid JSON.
-- `load(fd)` should behave like `json.load(fd)` and repair from the descriptor's current position.
-- When adding repair heuristics, keep `strict=True` conservative and emit parser logs for automatic corrections.
-- Treat comments as whitespace at structural value boundaries, before array item schema selection and quoted-key recovery; reuse comment logging without representing comments as parsed values.
-- Keep comment consumption separate from top-level value continuation so `skip_whitespace_and_comments` only advances past trivia, including when the parser context is empty.
-- When a schema is provided, apply schema repair and validation for both valid and invalid JSON inputs.
-- For top-level Pydantic model fields with simple string aliases, preserve field-name keys during schema-guided parsing when the model accepts them, even when `additionalProperties` is false; canonicalize after parsing so explicit aliases retain precedence.
-- Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`.
-- For modern tuple schemas, `prefixItems` defines positional schemas and `items` constrains only the tail; keep this mapping shared by parsing and post-parse repair while preserving legacy list-valued `items`/`additionalItems` behavior.
-- `patternProperties` matching is intentionally limited to a safe subset; do not execute user-supplied regexes.
-- Preserve schema dict identity in `SchemaRepairer.resolve_schema` whenever possible so validator caching remains effective.
-- When validating a detached `anyOf` or `oneOf` branch, retain the original root schema's resolver scope so root-relative `$ref` values can resolve `$defs`.
-- `schema_repair_mode` supports only `standard` and opt-in `salvage`; salvage may recover strongly evidenced structural mismatches, but must not silently coerce or infer semantic property renames (for example, `results` to `patterns`).
-- For sequential top-level fragments, salvage may skip candidates that fail schema repair or validation and return the first schema-valid fragment; never select an item from an actual top-level JSON array.
-- Treat user-supplied schemas as an attacker-controlled input surface: deep nesting in schema normalization, validation, and repair paths needs an explicit depth limit or controlled `ValueError`, not an uncaught `RecursionError`.
-
-## Refactor Pitfalls
-- In `repair_json`, keep a single shared output-finalization path for logging, `return_objects`, empty-string handling, and `json.dumps`.
-- Parser refactors are sensitive to context lifetimes and heuristic branch ordering; preserve malformed-input behavior when restructuring `parse_string` or `parse_object`.
-- Recognize unquoted literals only as complete tokens followed by a JSON separator or end-of-input; support case-insensitive `none` as null, but keep quoted values and other barewords as strings.
-- Treat comma-separated parenthesized sequences as Python-style tuples that normalize to arrays, while preserving a single parenthesized value as a scalar; Python-style literals are supported only within arrays, objects, and tuples, not as bare top-level values.
-- Preserve bare quotes inside compact regex character classes such as `['"]` and `[^'"]`; do not let them split the enclosing JSON value into separate top-level elements.
-- For an object value beginning with a doubled quote, retain the second quote only when non-whitespace inner content and a distinct valid outer terminator evidence a quoted span; preserve ordinary redundant-leading-quote and doubled-ending normalization.
-- When an object property contains an unclosed array of scalar values followed by a quoted `key: value` member, close the array and resume the enclosing object; preserve direct-array and pre-scalar missing-object recovery (`["key": "value"] -> [{"key": "value"}]`).
-- Top-level raw decoding may discard a valid prefix only when non-comma garbage follows; preserve complete-input heuristics and defer comma-prefixed continuations to structural object repair.
-- Probe a missing opening object brace at most once per input, only in the final dispatch fallback for an initial quoted key followed by a colon and a final `}` ignoring trailing whitespace, and accept only when one insertion makes the entire input a valid object; limit the decoder remainder check to JSON whitespace, log the correction, and reject it in strict mode.
-- Performance regressions often hide in repeated `parse_string` lookahead scans on long malformed object values; include cases with many commas or `}` characters before a far quote, and retain only inputs with a meaningful baseline slowdown (roughly one second or more).
-- In `parse_number`, a `+` is valid only immediately after an exponent marker (`e`/`E`); do not broaden plus handling for unrelated malformed arithmetic-like tokens.
-- Normalize top-level `RecursionError` into `ValueError`.
+## Parser and schema contracts
+- Preserve standard-library behavior for valid JSON, including in strict mode; `skip_json_loads=True` explicitly opts out. `load(fd)` starts at the descriptor's current position.
+- Keep repair heuristics conservative in strict mode and log automatic corrections. Preserve malformed-input behavior and context lifetimes when refactoring; use existing regression tests to cover specific cases.
+- Treat comments as whitespace at structural value boundaries; consuming trivia must not continue top-level parsing. Keep one shared output-finalization path in `repair_json`.
+- Apply schema repair and validation to valid and invalid inputs, with dispatch centralized in `JSONParser.parse_json(schema, path)`. Preserve accepted Pydantic field names and explicit-alias precedence.
+- Share tuple schema mapping between parsing and repair: `prefixItems` is positional and `items` constrains the tail; preserve legacy `items`/`additionalItems` behavior. Retain root resolver scope for detached schema branches and schema identity for validator caching.
+- Treat schemas as untrusted: limit recursion or raise controlled `ValueError`; never execute user-supplied `patternProperties` regexes. Normalize top-level `RecursionError` to `ValueError`.
+- Schema repair modes are `standard` and opt-in `salvage`. Salvage requires strong structural evidence, never infers semantic property renames, and may select the first schema-valid sequential fragment but not an item from an actual top-level array.
+- Guard against repeated string lookahead scans on long malformed inputs; test meaningful performance regressions when changing that code.
