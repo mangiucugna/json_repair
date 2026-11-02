@@ -52,10 +52,16 @@ def parse_array(
 
     arr: list[JSONReturnType] = []
     with self.context.enter(ContextValues.ARRAY):
-        self.skip_whitespaces()
-        char = self.get_char_at()
         idx = 0
-        while char and char not in [closing_delimiter, "}"]:
+        while True:
+            self.skip_whitespace_and_comments()
+            char = self.get_char_at()
+            if char is None or char in [closing_delimiter, "}"]:
+                break
+            if char == ",":
+                self.index += 1
+                continue
+
             item_schema, drop_item = _resolve_array_item_schema(schema_config, idx)
             item_path = f"{path}[{idx}]"
             active_schema_repairer = (
@@ -103,10 +109,6 @@ def parse_array(
                 schema_repairer._log("Dropped extra array item not covered by schema", item_path)
 
             idx += 1
-            char = self.get_char_at()
-            while char and char != closing_delimiter and (char.isspace() or char == ","):
-                self.index += 1
-                char = self.get_char_at()
 
         if char != closing_delimiter:
             self.log(

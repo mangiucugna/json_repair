@@ -186,10 +186,10 @@ def _merge_object_array_continuation(
             else:
                 prev_value.extend(new_array[0] if len(new_array) == 1 and isinstance(new_array[0], list) else new_array)
 
-    self.skip_whitespaces()
+    self.skip_whitespace_and_comments()
     if self.get_char_at() == ",":
         self.index += 1
-    self.skip_whitespaces()
+    self.skip_whitespace_and_comments()
     return True
 
 
@@ -210,7 +210,7 @@ def _parse_object_key(
             assert isinstance(raw_key, str)
             key = raw_key
             if key == "":
-                self.skip_whitespaces()
+                self.skip_whitespace_and_comments()
             if key != "" or (key == "" and self.get_char_at() in [":", "}"]):
                 if key == "" and self.strict:
                     self.log(
@@ -302,7 +302,7 @@ def _parse_object_value(
 ) -> JSONReturnType:
     self.context.set(ContextValues.OBJECT_VALUE)
     try:
-        self.skip_whitespaces()
+        self.skip_whitespace_and_comments()
         char = self.get_char_at()
         if char in [",", "}"]:
             self.log(
@@ -328,6 +328,10 @@ def _repair_empty_object_result(
     schema_repairer: "SchemaRepairer | None",
 ) -> tuple[bool, JSONReturnType]:
     if obj or self.index - start_index <= 2:
+        return False, None
+
+    body = self.json_str[start_index : self.index - 1]
+    if self.get_char_at(-1) == "}" and not _strip_comments_for_empty_object_classification(body).strip():
         return False, None
 
     if self.strict:
@@ -413,10 +417,16 @@ def parse_object(
     parsing_object_value = self.context.current == ContextValues.OBJECT_VALUE
     schema_repairer, schema, schema_config = resolve_parser_object_schema(self.schema_repairer, schema)
 
-    while (self.get_char_at() or "}") != "}":
-        self.skip_whitespaces()
+    while True:
+        self.skip_whitespace_and_comments()
+        char = self.get_char_at()
+        if char is None or char == "}":
+            break
+        if char == ",":
+            self.index += 1
+            continue
 
-        if self.get_char_at() == ":":
+        if char == ":":
             self.log(
                 "While parsing an object we found a : before a key, ignoring",
             )
@@ -438,12 +448,12 @@ def parse_object(
                     "While parsing an object we found a duplicate key with a normal comma separator, keeping duplicate-key overwrite behavior",
                 )
 
-        self.skip_whitespaces()
-        if (self.get_char_at() or "}") == "}":
+        self.skip_whitespace_and_comments()
+        char = self.get_char_at()
+        if char is None or char == "}":
             continue
 
-        self.skip_whitespaces()
-        if self.get_char_at() != ":":
+        if char != ":":
             if self.strict:
                 self.log(
                     "Missing ':' after key in strict mode while parsing object, raising an error",
@@ -487,8 +497,6 @@ def parse_object(
             )
             self.index -= 1
             break
-        self.skip_whitespaces()
-
     self.index += 1
 
     repaired_empty_object, repaired_value = _repair_empty_object_result(

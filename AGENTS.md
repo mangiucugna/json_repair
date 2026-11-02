@@ -28,6 +28,8 @@
 - Treat `skip_json_loads=True` as an explicit opt-out for inputs already known to be invalid; do not assume behavior must match the stdlib-preserving path for valid JSON.
 - `load(fd)` should behave like `json.load(fd)` and repair from the descriptor's current position.
 - When adding repair heuristics, keep `strict=True` conservative and emit parser logs for automatic corrections.
+- Treat comments as whitespace at structural value boundaries, before array item schema selection and quoted-key recovery; reuse comment logging without representing comments as parsed values.
+- Keep comment consumption separate from top-level value continuation so `skip_whitespace_and_comments` only advances past trivia, including when the parser context is empty.
 - When a schema is provided, apply schema repair and validation for both valid and invalid JSON inputs.
 - For top-level Pydantic model fields with simple string aliases, preserve field-name keys during schema-guided parsing when the model accepts them, even when `additionalProperties` is false; canonicalize after parsing so explicit aliases retain precedence.
 - Keep schema-guided dispatch centralized in `JSONParser.parse_json(schema, path)`.

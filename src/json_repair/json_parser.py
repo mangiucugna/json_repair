@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, TextIO
 
 from .parse_array import parse_array as _parse_array
 from .parse_comment import parse_comment as _parse_comment
+from .parse_comment import skip_comment as _skip_comment
 from .parse_number import parse_number as _parse_number
 from .parse_object import parse_object as _parse_object
 from .parse_string import parse_string as _parse_string
@@ -405,6 +406,15 @@ class JSONParser:
                 char = self.json_str[self.index]
         except IndexError:
             pass
+
+    def skip_whitespace_and_comments(self) -> None:
+        """Skip whitespace and recognized comments without parsing a value."""
+        while True:
+            self.skip_whitespaces()
+            char = self.get_char_at()
+            if char != "#" and not (char == "/" and self.get_char_at(1) in ("/", "*")):
+                return
+            _skip_comment(self)
 
     def scroll_whitespaces(self, idx: int = 0, *, backwards: bool = False) -> int:
         """
