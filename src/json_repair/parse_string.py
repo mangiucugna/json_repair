@@ -140,18 +140,10 @@ def _quote_belongs_to_regex_character_class(
     return self.get_char_at(closing_bracket_idx) == "]"
 
 
-def _rebuild_unmatched_opening_braces(state: StringParseState) -> None:
-    state.object_value_unmatched_opening_braces = 0
-    state.regex_character_class_start = None
-    for index, char in enumerate(state.string_acc):
-        if char == "{":
-            state.object_value_unmatched_opening_braces += 1
-        elif char == "}" and state.object_value_unmatched_opening_braces:
-            state.object_value_unmatched_opening_braces -= 1
-        elif char == "[":
-            state.regex_character_class_start = index + 1
-        elif char == "]":
-            state.regex_character_class_start = None
+def _replace_trailing_backslash(state: StringParseState, content: str) -> None:
+    # A backslash never changes the brace/bracket state, so only the replacement needs scanning.
+    state.string_acc = state.string_acc[:-1]
+    _append_string_content(state, content)
 
 
 def _cached_skip_to_character(
@@ -296,8 +288,7 @@ def _normalize_escape_sequence(
     self.log("Found a stray escape sequence, normalizing it")
     active_rstring_delimiter = _active_rstring_delimiter(state)
     if _in_low_smart_quote_span(state) and char == '"':
-        state.string_acc = state.string_acc[:-1] + char
-        _rebuild_unmatched_opening_braces(state)
+        _replace_trailing_backslash(state, char)
         _pop_low_smart_quote_span(state)
         self.index += 1
         return True, self.get_char_at()
@@ -309,15 +300,12 @@ def _normalize_escape_sequence(
         run_length = run_end - run_start
         next_char = self.get_char_at(run_end - self.index)
         if run_length % 2 == 0 and next_char != active_rstring_delimiter:
-            state.string_acc = state.string_acc[:-1] + ("\\" * (run_length // 2))
-            _rebuild_unmatched_opening_braces(state)
+            _replace_trailing_backslash(state, "\\" * (run_length // 2))
             self.index = run_end
             return True, self.get_char_at()
     if char in [active_rstring_delimiter, "t", "n", "r", "b", "\\"]:
-        state.string_acc = state.string_acc[:-1]
         escape_seqs = {"t": "\t", "n": "\n", "r": "\r", "b": "\b"}
-        state.string_acc += escape_seqs.get(char, char)
-        _rebuild_unmatched_opening_braces(state)
+        _replace_trailing_backslash(state, escape_seqs.get(char, char))
         self.index += 1
         next_char = self.get_char_at()
         while (
@@ -326,8 +314,7 @@ def _normalize_escape_sequence(
             and state.string_acc[-1] == "\\"
             and next_char in [active_rstring_delimiter, "\\"]
         ):
-            state.string_acc = state.string_acc[:-1] + next_char
-            _rebuild_unmatched_opening_braces(state)
+            _replace_trailing_backslash(state, next_char)
             self.index += 1
             next_char = self.get_char_at()
         return True, next_char
@@ -336,14 +323,12 @@ def _normalize_escape_sequence(
         next_chars = self.json_str[self.index + 1 : self.index + 1 + num_chars]
         if len(next_chars) == num_chars and all(c in "0123456789abcdefABCDEF" for c in next_chars):
             self.log("Found a unicode escape sequence, normalizing it")
-            state.string_acc = state.string_acc[:-1] + chr(int(next_chars, 16))
-            _rebuild_unmatched_opening_braces(state)
+            _replace_trailing_backslash(state, chr(int(next_chars, 16)))
             self.index += 1 + num_chars
             return True, self.get_char_at()
     elif char == "„" or (char in STRING_DELIMITERS and char != active_rstring_delimiter):
         self.log("Found a delimiter that was escaped but shouldn't be escaped, removing the escape")
-        state.string_acc = state.string_acc[:-1] + char
-        _rebuild_unmatched_opening_braces(state)
+        _replace_trailing_backslash(state, char)
         self.index += 1
         return True, self.get_char_at()
     return False, char
@@ -843,7 +828,6 @@ def _scan_string_body(
         if char is None:
             if self.stream_stable and state.string_acc and state.string_acc[-1] == "\\":
                 state.string_acc = state.string_acc[:-1]
-                _rebuild_unmatched_opening_braces(state)
             break
         if state.string_acc and state.string_acc[-1] == "\\":
             handled_escape, char = _normalize_escape_sequence(self, state, char)

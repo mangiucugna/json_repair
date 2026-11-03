@@ -235,6 +235,20 @@ def test_parse_string_keeps_bare_quotes_inside_regex_character_classes(fenced: b
     }
 
 
+@pytest.mark.parametrize(
+    ("raw", "expected", "inside_class"),
+    [
+        (r'{"a":"\u005bx"z] tail", "b":1}', '[x"z] tail', True),
+        (r'{"a":"[x\u005dy"z] tail", "b":1}', '[x]y"z] tail', False),
+    ],
+)
+def test_unicode_escaped_brackets_update_regex_class_state(raw: str, expected: str, inside_class: bool) -> None:
+    result, logs = repair_json(raw, return_objects=True, skip_json_loads=True, logging=True)
+
+    assert result == {"a": expected, "b": 1}
+    assert any("bare quote inside a regex character class" in entry["text"] for entry in logs) is inside_class
+
+
 def test_parse_string_still_closes_regular_object_members_after_quoted_values() -> None:
     assert repair_json('{"first": "value", "second": "next"}', return_objects=True, skip_json_loads=True) == {
         "first": "value",
@@ -478,6 +492,17 @@ def test_parse_string_object_value_brace_heuristics() -> None:
 
     for raw, expected in cases:
         assert repair_json(raw, return_objects=True, skip_json_loads=True) == expected
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (r'{"a":"\u007bvalue} key2: value2}', {"a": "{value} key2: value2"}),
+        (r'{"a":"{x\u007d} key2: value2}', {"a": "{x}"}),
+    ],
+)
+def test_unicode_escaped_braces_update_object_value_state(raw: str, expected: object) -> None:
+    assert repair_json(raw, return_objects=True, skip_json_loads=True) == expected
 
 
 def test_parse_string_far_quote_comma_payload_keeps_existing_repair_shape() -> None:
