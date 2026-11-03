@@ -4,6 +4,7 @@ import pytest
 
 from src.json_repair import repair_json
 from src.json_repair.utils.constants import JSONReturnType
+from tests.utils.string_cases import FENCED_SNIPPET_CASES, FENCED_SNIPPET_IDS
 
 
 def repair_with_schema(
@@ -39,10 +40,7 @@ def test_schema_applied_after_missing_opening_brace(
 
 def _two_string_schema() -> dict:
     pytest.importorskip("jsonschema")
-    pydantic = pytest.importorskip("pydantic")
-    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
-    if int(version.split(".")[0]) < 2:
-        pytest.skip("pydantic v2 required")
+    pydantic = pytest.importorskip("pydantic", minversion="2")
 
     class SchemaModel(pydantic.BaseModel):
         a: str
@@ -73,7 +71,8 @@ def test_schema_guides_missing_value_type_defaults() -> None:
         "required": ["text", "count", "ratio", "flag", "items", "payload", "nothing"],
     }
     raw = '{ "text": , "count": , "ratio": , "flag": , "items": , "payload": , "nothing": }'
-    assert repair_with_schema(raw, schema) == {
+    repaired = repair_with_schema(raw, schema)
+    assert repaired == {
         "text": "",
         "count": 0,
         "ratio": 0,
@@ -82,6 +81,8 @@ def test_schema_guides_missing_value_type_defaults() -> None:
         "payload": {},
         "nothing": None,
     }
+    assert isinstance(repaired, dict)
+    assert repaired["flag"] is False
 
 
 def test_schema_missing_required_property_raises() -> None:
@@ -111,7 +112,6 @@ Final answer:
 
 Alternative: {"name": "Bob", "age": 40}"""
 
-    assert repair_with_schema(raw, schema, schema_repair_mode="salvage") == {"name": "Alice", "age": 30}
     repaired, logs = cast(
         "tuple[object, list[dict[str, str]]]",
         repair_json(raw, schema=schema, skip_json_loads=True, logging=True, schema_repair_mode="salvage"),
@@ -275,7 +275,6 @@ def test_schema_unwraps_double_serialized_object_in_all_modes() -> None:
     raw = '{"summary": "{\\"verdict\\": \\"malicious\\", \\"confidence\\": \\"high\\"}"}'
     expected = {"summary": {"verdict": "malicious", "confidence": "high"}}
 
-    assert repair_json(raw, schema=schema, return_objects=True, schema_repair_mode="standard") == expected
     assert repair_json(raw, schema=schema, return_objects=True, schema_repair_mode="salvage") == expected
 
     repaired, logs = repair_json(raw, schema=schema, logging=True, schema_repair_mode="standard")
@@ -305,8 +304,6 @@ def test_schema_salvage_repairs_malformed_double_serialized_object_string() -> N
     with pytest.raises(ValueError, match=r"Expected object at \$.summary, got str\."):
         repair_json(raw, schema=schema, return_objects=True, schema_repair_mode="standard")
 
-    assert repair_json(raw, schema=schema, return_objects=True, schema_repair_mode="salvage") == expected
-
     repaired, logs = repair_json(raw, schema=schema, logging=True, schema_repair_mode="salvage")
     assert repaired == expected
     assert any(log["text"] == "Repaired malformed JSON string to object to match schema" for log in logs)
@@ -327,7 +324,6 @@ def test_schema_unwraps_double_serialized_array_in_all_modes() -> None:
     raw = '{"items": "[\\"a\\", \\"b\\"]"}'
     expected = {"items": ["a", "b"]}
 
-    assert repair_json(raw, schema=schema, return_objects=True, schema_repair_mode="standard") == expected
     assert repair_json(raw, schema=schema, return_objects=True, schema_repair_mode="salvage") == expected
 
     repaired, logs = repair_json(raw, schema=schema, logging=True, schema_repair_mode="standard")
@@ -352,7 +348,6 @@ def test_schema_salvage_repairs_malformed_double_serialized_array_string() -> No
     salvage_expected = {"items": ["a", "b"]}
 
     assert repair_json(raw, schema=schema, return_objects=True, schema_repair_mode="standard") == standard_expected
-    assert repair_json(raw, schema=schema, return_objects=True, schema_repair_mode="salvage") == salvage_expected
 
     repaired, logs = repair_json(raw, schema=schema, logging=True, schema_repair_mode="salvage")
     assert repaired == salvage_expected
@@ -489,10 +484,7 @@ def test_schema_non_string_ref_raises_definition_error() -> None:
 
 @pytest.mark.parametrize("raw", ['{"point": ["1", "2"]}', '{"point": ["1", "2"]'])
 def test_schema_pydantic_fixed_tuple_coerces_positions(raw: str) -> None:
-    pydantic = pytest.importorskip("pydantic")
-    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
-    if int(version.split(".")[0]) < 2:
-        pytest.skip("pydantic v2 required")
+    pydantic = pytest.importorskip("pydantic", minversion="2")
 
     class Coordinates(pydantic.BaseModel):
         point: tuple[int, int]
@@ -525,10 +517,7 @@ def test_schema_prefix_items_and_tail(schema: dict[str, object], expected: objec
 
 
 def test_schema_pydantic_v2_defaults() -> None:
-    pydantic = pytest.importorskip("pydantic")
-    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
-    if int(version.split(".")[0]) < 2:
-        pytest.skip("pydantic v2 required")
+    pydantic = pytest.importorskip("pydantic", minversion="2")
 
     base_model = pydantic.BaseModel
     field = pydantic.Field
@@ -545,10 +534,7 @@ def test_schema_pydantic_v2_defaults() -> None:
     [('{displayName: "Alice"}', {"displayName": "Alice"}), ('{"displayName": 42}', {"displayName": "42"})],
 )
 def test_schema_pydantic_alias_defaults_do_not_add_python_field_name(raw: str, expected: dict[str, str]) -> None:
-    pydantic = pytest.importorskip("pydantic")
-    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
-    if int(version.split(".")[0]) < 2:
-        pytest.skip("pydantic v2 required")
+    pydantic = pytest.importorskip("pydantic", minversion="2")
 
     class Payload(pydantic.BaseModel):
         model_config = pydantic.ConfigDict(extra="forbid")
@@ -576,41 +562,21 @@ def test_schema_pydantic_alias_defaults_do_not_add_python_field_name(raw: str, e
 def test_schema_pydantic_populate_by_name_preserves_input_and_alias_precedence(
     raw: str, expected: object, validated_value: object
 ) -> None:
-    pydantic = pytest.importorskip("pydantic")
-    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
-    if int(version.split(".")[0]) < 2:
-        pytest.skip("pydantic v2 required")
+    pydantic = pytest.importorskip("pydantic", minversion="2")
 
     class Payload(pydantic.BaseModel):
         model_config = pydantic.ConfigDict(extra="forbid", populate_by_name=True)
         display_name: str = pydantic.Field(default="unknown", alias="displayName")
 
-    repaired = repair_json(raw, schema=Payload, return_objects=True)
+    repaired, logs = repair_json(raw, schema=Payload, return_objects=True, logging=True)
     assert repaired == expected
     assert Payload.model_validate(repaired).display_name == validated_value
-
-
-def test_schema_pydantic_populate_by_name_logs_field_name_mapping() -> None:
-    pydantic = pytest.importorskip("pydantic")
-    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
-    if int(version.split(".")[0]) < 2:
-        pytest.skip("pydantic v2 required")
-
-    class Payload(pydantic.BaseModel):
-        model_config = pydantic.ConfigDict(extra="forbid", populate_by_name=True)
-        display_name: str = pydantic.Field(default="unknown", alias="displayName")
-
-    repaired, logs = repair_json('{"display_name": "Bob"}', schema=Payload, return_objects=True, logging=True)
-
-    assert repaired == {"displayName": "Bob"}
-    assert any(log["text"] == "Mapped field name to validation alias 'displayName'" for log in logs)
+    if "display_name" in raw and "displayName" not in raw:
+        assert any(log["text"] == "Mapped field name to validation alias 'displayName'" for log in logs)
 
 
 def test_schema_pydantic_populate_by_name_accepts_malformed_required_field() -> None:
-    pydantic = pytest.importorskip("pydantic")
-    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
-    if int(version.split(".")[0]) < 2:
-        pytest.skip("pydantic v2 required")
+    pydantic = pytest.importorskip("pydantic", minversion="2")
 
     class Payload(pydantic.BaseModel):
         model_config = pydantic.ConfigDict(extra="forbid", populate_by_name=True)
@@ -622,54 +588,7 @@ def test_schema_pydantic_populate_by_name_accepts_malformed_required_field() -> 
     assert Payload.model_validate(repaired).display_name == "Bob"
 
 
-@pytest.mark.parametrize(
-    ("raw", "expected"),
-    [
-        ('{\n"a": "\n```{}```\n",\n"b": "x",\n}', {"a": "\n```{}```", "b": "x"}),
-        ('{\n"a": "\n```{}```\n"\n",\n"b": "x",\n}', {"a": '\n```{}```\n"', "b": "x"}),
-        ('{\n"a": "\n```{}```\n"\n",\n\'b\': "x",\n}', {"a": '\n```{}```\n"', "b": "x"}),
-        ('{\n"a": "\n```{}```\n"\n", // c\n"b": "x",\n}', {"a": '\n```{}```\n"', "b": "x"}),
-        ('{\n"a": "\n```{}```\n"\n",\n b: "x",\n}', {"a": '\n```{}```\n"', "b": "x"}),
-        ('{"a":"```}```"a","b":"x"}', {"a": '```}```"a', "b": "x"}),
-        ('{"a":"x}``` [1,2]\n","b":"y"}', {"a": "x}``` [1,2]", "b": "y"}),
-        ('{"a":"x}``` [http://x]\n","b":"y"}', {"a": "x}``` [http://x]", "b": "y"}),
-        ('{"a":"x}``` [foo[bar]\n","b":"y"}', {"a": "x}``` [foo[bar]", "b": "y"}),
-        ('{"a":"x}``` [{\n","b":"y"}', {"a": "x}``` [{", "b": "y"}),
-        ('{"a":"x}``` [foo, [bar]\n","b":"y"}', {"a": "x}``` [foo, [bar]", "b": "y"}),
-        ('{"a":"x}``` [1,"z"]\n","b":"y"}', {"a": 'x}``` [1,"z"]', "b": "y"}),
-        ('{"a":"x}``` [1, [2]]\n","b":"y"}', {"a": "x}``` [1, [2]]", "b": "y"}),
-        ('{"a":"x}``` [1,[2],k:v]\n","b":"y"}', {"a": "x}``` [1,[2],k:v]", "b": "y"}),
-        ('{"a":"x}``` (1,(2),k:v)\n","b":"y"}', {"a": "x}``` (1,(2),k:v)", "b": "y"}),
-        ('{"a":"x}``` [1,2],\n","b":"y"}', {"a": "x}``` [1,2],", "b": "y"}),
-        ('{"a":"x}``` // c\n [1,2]\n","b":"y"}', {"a": "x}``` // c\n [1,2]", "b": "y"}),
-        ('{"a":"x}``` // c\n [1,2],\n","b":"y"}', {"a": "x}``` // c\n [1,2],", "b": "y"}),
-        (
-            '{\n"a": "\n```c\nint main() {\n}\n```\nImplementation: "xxx", xxx\n",\n"b": "x",\n}',
-            {"a": '\n```c\nint main() {\n}\n```\nImplementation: "xxx", xxx', "b": "x"},
-        ),
-    ],
-    ids=[
-        "multiline-string",
-        "stray-quote-line",
-        "single-quoted-next-key",
-        "comment-prefixed-next-key",
-        "bare-next-key",
-        "inline-quoted-prose",
-        "inline-array-literal",
-        "url-like-inline-array",
-        "unmatched-inner-delimiter",
-        "unbalanced-inline-array-like-prose",
-        "unmatched-inner-delimiter-after-comma",
-        "quoted-item-inline-array",
-        "balanced-nested-inline-array",
-        "nested-numeric-inline-array-with-bare-key-like-prose",
-        "nested-numeric-parenthesized-value-with-bare-key-like-prose",
-        "inline-array-with-trailing-comma",
-        "comment-prefixed-inline-array",
-        "comment-prefixed-inline-array-with-trailing-comma",
-        "fenced-code-block-before-inline-quoted-prose",
-    ],
-)
+@pytest.mark.parametrize(("raw", "expected"), FENCED_SNIPPET_CASES, ids=FENCED_SNIPPET_IDS)
 def test_schema_pydantic_model_keeps_literal_fenced_snippet_cases(raw: str, expected: dict) -> None:
     _assert_two_string_schema_repairs(raw, expected)
 
@@ -710,10 +629,11 @@ def test_schema_boolean_coercion_accepts_number_tokens() -> None:
         "properties": {"flag": {"type": "boolean"}},
         "required": ["flag"],
     }
-    assert repair_with_schema('{"flag": 1}', schema) == {"flag": True}
-    assert repair_with_schema('{"flag": 0}', schema) == {"flag": False}
-    assert repair_with_schema('{"flag": 1.0}', schema) == {"flag": True}
-    assert repair_with_schema('{"flag": 0.0}', schema) == {"flag": False}
+    for token, expected in [("1", True), ("0", False), ("1.0", True), ("0.0", False)]:
+        repaired = repair_with_schema(f'{{"flag": {token}}}', schema)
+        assert repaired == {"flag": expected}
+        assert isinstance(repaired, dict)
+        assert repaired["flag"] is expected
 
 
 def test_schema_salvage_mode_drops_invalid_array_items() -> None:
@@ -739,15 +659,6 @@ def test_schema_salvage_mode_drops_invalid_array_items() -> None:
 
     with pytest.raises(ValueError, match="Expected number"):
         repair_with_schema(raw, schema)
-
-    repaired = repair_json(
-        raw,
-        schema=schema,
-        skip_json_loads=True,
-        return_objects=True,
-        schema_repair_mode="salvage",
-    )
-    assert repaired == {"items": [{"id": 1, "score": 85.6}]}
 
     repaired_with_logs, logs = repair_json(
         raw,
@@ -823,13 +734,6 @@ def test_schema_salvage_mode_maps_set_like_object_members_to_null_valued_keys() 
     with pytest.raises(ValueError, match="Expected object"):
         repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True, schema_repair_mode="standard")
 
-    assert repair_json(
-        raw,
-        schema=schema,
-        skip_json_loads=True,
-        return_objects=True,
-        schema_repair_mode="salvage",
-    ) == {"a": None, "b": None}
     assert (
         repair_json(
             raw,
@@ -902,7 +806,8 @@ def test_schema_salvage_mode_set_like_members_require_string_keys() -> None:
         )
 
 
-def test_schema_salvage_mode_mapping_rejects_length_mismatch() -> None:
+@pytest.mark.parametrize("raw", ['["hello"]', '[["a", "b"], "hello"]'], ids=["length", "type"])
+def test_schema_salvage_mode_mapping_rejects_mismatches(raw: str) -> None:
     pytest.importorskip("jsonschema")
     schema = {
         "type": "object",
@@ -914,27 +819,7 @@ def test_schema_salvage_mode_mapping_rejects_length_mismatch() -> None:
     }
     with pytest.raises(ValueError, match="Expected object"):
         repair_json(
-            '["hello"]',
-            schema=schema,
-            skip_json_loads=True,
-            return_objects=True,
-            schema_repair_mode="salvage",
-        )
-
-
-def test_schema_salvage_mode_mapping_rejects_type_mismatch() -> None:
-    pytest.importorskip("jsonschema")
-    schema = {
-        "type": "object",
-        "properties": {
-            "name": {"type": "string"},
-            "tags": {"type": "array", "items": {"type": "string"}},
-        },
-        "required": ["name", "tags"],
-    }
-    with pytest.raises(ValueError, match="Expected object"):
-        repair_json(
-            '[["a", "b"], "hello"]',
+            raw,
             schema=schema,
             skip_json_loads=True,
             return_objects=True,
@@ -965,14 +850,6 @@ def test_schema_salvage_mode_union_object_array_does_not_remap_valid_array() -> 
         "items": {"type": "integer"},
     }
     raw = "[1,2]"
-
-    assert repair_json(
-        raw,
-        schema=schema,
-        skip_json_loads=True,
-        return_objects=True,
-        schema_repair_mode="salvage",
-    ) == [1, 2]
 
     repaired_with_logs, logs = cast(
         "tuple[object, list[dict[str, str]]]",
@@ -1036,16 +913,6 @@ def test_schema_salvage_mode_unwraps_root_single_item_array_and_fills_required_a
             return_objects=True,
             schema_repair_mode="standard",
         )
-
-    assert repair_json(
-        raw,
-        schema=schema,
-        return_objects=True,
-        schema_repair_mode="salvage",
-    ) == {
-        "type": "food_sport_card",
-        "content": {"food": ["mantou"], "sports": []},
-    }
 
     repaired_with_logs, logs = cast(
         "tuple[object, list[dict[str, str]]]",

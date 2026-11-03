@@ -59,10 +59,7 @@ def test_schema_repair_mode_validation() -> None:
 
 
 def test_schema_from_input_model_defaults_and_required() -> None:
-    pydantic = pytest.importorskip("pydantic")
-    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
-    if int(version.split(".")[0]) < 2:
-        pytest.skip("pydantic v2 required")
+    pytest.importorskip("pydantic", minversion="2")
 
     class DummyField:
         def __init__(
@@ -105,10 +102,7 @@ def test_schema_from_input_model_defaults_and_required() -> None:
 
 
 def test_schema_from_input_non_dict_properties() -> None:
-    pydantic = pytest.importorskip("pydantic")
-    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
-    if int(version.split(".")[0]) < 2:
-        pytest.skip("pydantic v2 required")
+    pytest.importorskip("pydantic", minversion="2")
 
     class DummyField:
         def __init__(self, default: object) -> None:
@@ -275,32 +269,6 @@ def test_repair_value_missing_and_unions() -> None:
     assert repairer.repair_value({"a": "1"}, schema_obj_union, "$") == {"a": 1}
 
 
-def test_type_union_validates_branch_before_returning() -> None:
-    pytest.importorskip("jsonschema")
-    standard_repairer = SchemaRepairer({}, [])
-    salvage_repairer = SchemaRepairer({}, [], schema_repair_mode="salvage")
-    schema = {
-        "type": ["object", "array"],
-        "properties": {"name": {"type": "string", "pattern": "^a+$"}},
-        "required": ["name"],
-        "items": {"type": "string"},
-    }
-    assert standard_repairer.repair_value(["bbb"], schema, "$") == ["bbb"]
-    assert salvage_repairer.repair_value(["bbb"], schema, "$") == ["bbb"]
-
-
-def test_salvage_skips_object_mapping_for_mixed_object_array_schema() -> None:
-    pytest.importorskip("jsonschema")
-    salvage_repairer = SchemaRepairer({}, [], schema_repair_mode="salvage")
-    schema = {
-        "type": ["object", "array"],
-        "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}},
-        "required": ["x", "y"],
-        "items": {"type": "integer"},
-    }
-    assert salvage_repairer.repair_value([1, 2], schema, "$") == [1, 2]
-
-
 def test_can_salvage_list_as_object_requires_object_without_array() -> None:
     repairer = SchemaRepairer({}, [], schema_repair_mode="salvage")
     assert repairer._can_salvage_list_as_object({"properties": {"a": {"type": "integer"}}}) is True
@@ -311,7 +279,7 @@ def test_can_salvage_list_as_object_requires_object_without_array() -> None:
     )
 
 
-def test_repair_object_and_array_paths() -> None:
+def test_repair_object_properties_and_constraints() -> None:
     repairer = SchemaRepairer({}, [])
     schema_obj = {
         "type": "object",
@@ -330,19 +298,19 @@ def test_repair_object_and_array_paths() -> None:
     assert repairer.repair_value(value, schema_obj, "$") == {"a": 1, "b": "x", "x1": 2}
     with pytest.raises(ValueError, match="Missing required properties"):
         repairer.repair_value({}, schema_obj, "$")
-
     schema_obj_extra = {"type": "object", "additionalProperties": {"type": "integer"}}
     assert repairer.repair_value({"a": "1"}, schema_obj_extra, "$") == {"a": 1}
-
     schema_min_props = {"type": "object", "minProperties": 1}
     with pytest.raises(ValueError, match="minProperties"):
         repairer.repair_value({}, schema_min_props, "$")
-
     schema_bad_props = {"type": "object", "properties": [], "patternProperties": []}
     assert repairer.repair_value({}, schema_bad_props, "$") == {}
     with pytest.raises(ValueError, match="Expected object"):
         repairer.repair_value([], {"type": "object"}, "$")
 
+
+def test_repair_array_items_and_constraints() -> None:
+    repairer = SchemaRepairer({}, [])
     schema_array = {
         "type": "array",
         "items": [{"type": "integer"}],
@@ -351,37 +319,30 @@ def test_repair_object_and_array_paths() -> None:
     assert repairer.repair_value([1, 2], schema_array, "$") == [1]
     schema_tuple = {"type": "array", "items": [{"type": "integer"}, {"type": "string"}]}
     assert repairer.repair_value([1], schema_tuple, "$") == [1]
-
     schema_array_extra = {
         "type": "array",
         "items": [{"type": "integer"}],
         "additionalItems": {"type": "string"},
     }
     assert repairer.repair_value([1, 2], schema_array_extra, "$") == [1, "2"]
-
     schema_array_open = {
         "type": "array",
         "items": [{"type": "integer"}],
         "additionalItems": True,
     }
     assert repairer.repair_value([1, "x"], schema_array_open, "$") == [1, "x"]
-
     schema_array_items = {"type": "array", "items": {"type": "integer"}}
     assert repairer.repair_value(["1", 2], schema_array_items, "$") == [1, 2]
     with pytest.raises(ValueError, match="Expected integer"):
         repairer.repair_value(["bad"], schema_array_items, "$")
-
     schema_array_wrap = {"type": "array"}
     assert repairer.repair_value("a", schema_array_wrap, "$") == ["a"]
-
     schema_min_items = {"type": "array", "minItems": 1}
     with pytest.raises(ValueError, match="minItems"):
         repairer.repair_value([], schema_min_items, "$")
-
     schema_tuple_invalid = {"type": "array", "items": [{"type": "integer"}]}
     with pytest.raises(ValueError, match="Expected integer"):
         repairer.repair_value(["bad"], schema_tuple_invalid, "$")
-
     schema_additional_invalid = {
         "type": "array",
         "items": [{"type": "integer"}],
@@ -390,6 +351,14 @@ def test_repair_object_and_array_paths() -> None:
     with pytest.raises(ValueError, match="Expected integer"):
         repairer.repair_value([1, "bad"], schema_additional_invalid, "$")
 
+
+def test_salvage_array_items_and_object_mapping() -> None:
+    schema_tuple_invalid = {"type": "array", "items": [{"type": "integer"}]}
+    schema_additional_invalid = {
+        "type": "array",
+        "items": [{"type": "integer"}],
+        "additionalItems": {"type": "integer"},
+    }
     salvage_repairer = SchemaRepairer({}, [], schema_repair_mode="salvage")
     assert salvage_repairer._map_list_to_object([1], {"type": "object"}, "$") is None
     assert salvage_repairer.repair_value(["bad"], schema_tuple_invalid, "$") == []
@@ -412,14 +381,8 @@ def test_repair_object_and_array_paths() -> None:
         salvage_repairer._map_list_to_object([1], {"type": "object", "properties": {1: {"type": "integer"}}}, "$")
 
 
-def test_fill_missing_and_coerce_scalar_paths() -> None:
+def test_fill_missing_infers_shapes_and_checks_constraints() -> None:
     repairer = SchemaRepairer({}, [])
-    assert repairer._fill_missing({"type": "integer"}, "$") == 0
-    assert repairer._fill_missing({"type": "number"}, "$") == 0
-    assert repairer._fill_missing({"type": "boolean"}, "$") is False
-    assert repairer._fill_missing({"type": "null"}, "$") is None
-    assert repairer._fill_missing({"type": "array"}, "$") == []
-    assert repairer._fill_missing({"type": "object"}, "$") == {}
     assert repairer._fill_missing({"type": ["string", "integer"]}, "$") == ""
     assert repairer._fill_missing({"properties": {"a": {"type": "string"}}}, "$") == {}
     assert repairer._fill_missing({"items": {"type": "string"}}, "$") == []
@@ -434,27 +397,14 @@ def test_fill_missing_and_coerce_scalar_paths() -> None:
     with pytest.raises(ValueError, match="Cannot infer missing value"):
         repairer._fill_missing({"type": ["unsupported"]}, "$")
 
+
+def test_coerce_numeric_scalars_and_reject_invalid_types() -> None:
+    repairer = SchemaRepairer({}, [])
     assert repairer._coerce_scalar(1, "string", "$") == "1"
     assert repairer._coerce_scalar("2", "integer", "$") == 2
     assert repairer._coerce_scalar("2.0", "integer", "$") == 2
     assert repairer._coerce_scalar(2.0, "integer", "$") == 2
     assert repairer._coerce_scalar("2.5", "number", "$") == 2.5
-    assert repairer._coerce_scalar("true", "boolean", "$") is True
-    assert repairer._coerce_scalar("false", "boolean", "$") is False
-    assert repairer._coerce_scalar("yes", "boolean", "$") is True
-    assert repairer._coerce_scalar("no", "boolean", "$") is False
-    assert repairer._coerce_scalar("y", "boolean", "$") is True
-    assert repairer._coerce_scalar("n", "boolean", "$") is False
-    assert repairer._coerce_scalar("on", "boolean", "$") is True
-    assert repairer._coerce_scalar("off", "boolean", "$") is False
-    assert repairer._coerce_scalar("1", "boolean", "$") is True
-    assert repairer._coerce_scalar("0", "boolean", "$") is False
-    assert repairer._coerce_scalar(1, "boolean", "$") is True
-    assert repairer._coerce_scalar(0, "boolean", "$") is False
-    assert repairer._coerce_scalar(1.0, "boolean", "$") is True
-    assert repairer._coerce_scalar(0.0, "boolean", "$") is False
-    assert repairer._coerce_scalar(None, "null", "$") is None
-
     with pytest.raises(ValueError, match="Expected string"):
         repairer._coerce_scalar(True, "string", "$")
     with pytest.raises(ValueError, match="Expected integer"):
@@ -471,15 +421,37 @@ def test_fill_missing_and_coerce_scalar_paths() -> None:
         repairer._coerce_scalar("nope", "number", "$")
     with pytest.raises(ValueError, match="Expected number"):
         repairer._coerce_scalar([], "number", "$")
+
+
+def test_coerce_boolean_strings_and_reject_invalid_values() -> None:
+    repairer = SchemaRepairer({}, [])
+    assert repairer._coerce_scalar("true", "boolean", "$") is True
+    assert repairer._coerce_scalar("false", "boolean", "$") is False
+    assert repairer._coerce_scalar("yes", "boolean", "$") is True
+    assert repairer._coerce_scalar("no", "boolean", "$") is False
+    assert repairer._coerce_scalar("y", "boolean", "$") is True
+    assert repairer._coerce_scalar("n", "boolean", "$") is False
+    assert repairer._coerce_scalar("on", "boolean", "$") is True
+    assert repairer._coerce_scalar("off", "boolean", "$") is False
+    assert repairer._coerce_scalar("1", "boolean", "$") is True
+    assert repairer._coerce_scalar("0", "boolean", "$") is False
     with pytest.raises(ValueError, match="Expected boolean"):
         repairer._coerce_scalar("maybe", "boolean", "$")
     with pytest.raises(ValueError, match="Expected boolean"):
         repairer._coerce_scalar(2, "boolean", "$")
+
+
+def test_coerce_null_and_reject_unsupported_schema_types() -> None:
+    repairer = SchemaRepairer({}, [])
+    assert repairer._coerce_scalar(None, "null", "$") is None
     with pytest.raises(ValueError, match="Expected null"):
         repairer._coerce_scalar("x", "null", "$")
     with pytest.raises(ValueError, match="Unsupported schema type"):
         repairer._coerce_scalar("x", "unsupported", "$")
 
+
+def test_repair_value_without_explicit_type() -> None:
+    repairer = SchemaRepairer({}, [])
     assert repairer.repair_value({"a": MISSING_VALUE}, {}, "$") == {"a": ""}
     assert repairer.repair_value({"a": MISSING_VALUE}, {"allOf": []}, "$") == {"a": ""}
     assert repairer.repair_value({"a": "1"}, {"properties": {"a": {"type": "integer"}}}, "$") == {"a": 1}

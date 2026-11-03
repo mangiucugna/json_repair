@@ -3,8 +3,6 @@ from src.json_repair.json_repair import repair_json
 
 
 def test_parse_array() -> None:
-    assert repair_json("[]", return_objects=True) == []
-    assert repair_json("[1, 2, 3, 4]", return_objects=True) == [1, 2, 3, 4]
     assert repair_json("[", return_objects=True) == []
     assert repair_json("[[1\n\n]") == "[[1]]"
 

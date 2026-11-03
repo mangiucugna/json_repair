@@ -29,7 +29,8 @@ def test_parse_number_positive_exponent(raw: str, expected: object, skip_json_lo
 
 def test_parse_number_plus_outside_exponent() -> None:
     assert repair_json("[1+2]", return_objects=True) == [1, 2]
-    assert repair_json("[1e+]", return_objects=True) == repair_json("[1e-]", return_objects=True)
+    assert repair_json("[1e+]", return_objects=True) == ["1e"]
+    assert repair_json("[1e-]", return_objects=True) == ["1e"]
 
 
 def test_parse_number_edge_cases() -> None:

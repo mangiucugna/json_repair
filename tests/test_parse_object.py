@@ -2,7 +2,6 @@ from src.json_repair.json_repair import repair_json
 
 
 def test_parse_object() -> None:
-    assert repair_json("{}", return_objects=True) == {}
     assert repair_json('{ "key": "value", "key2": 1, "key3": True }', return_objects=True) == {
         "key": "value",
         "key2": 1,

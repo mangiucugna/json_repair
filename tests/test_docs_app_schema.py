@@ -5,11 +5,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from flask.testing import FlaskClient  # type: ignore[import-not-found]  # ty: ignore[unresolved-import]
+    from flask.testing import FlaskClient
 
 import pytest
-
-pytest.importorskip("flask")
 
 from docs.app import app
 

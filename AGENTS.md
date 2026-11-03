@@ -4,6 +4,9 @@
 - Use `.venv` via `uv run`; install development dependencies with `uv sync --group dev` and update `uv.lock` when dependencies change.
 - For code changes, run `uv run pytest` and `pre-commit run --all-files`. Skip pre-commit for Markdown-only changes unless requested. If hooks update files, retain and restage those updates in commit flows.
 - Keep Ruff `ANN401` disabled; use mypy and ty. Keep CI's `ruff format` aligned with the Python-only pre-commit hook.
+- When consolidating tests, preserve coverage across stdlib fast paths, forced repair, schema modes, and file buffering. CI's Python-version matrix runs only `tests/test_json_repair.py`; moving its cases elsewhere changes matrix coverage.
+- The docs API tests require Flask and Flask-CORS, and the overload-inference tests require mypy. Full-suite CI needs the `test`, `schema`, and `typecheck` groups; missing test dependencies should fail collection rather than silently skip these modules.
+- Keep Python 3.10 support best effort without expanding CI or adding compatibility work for it. Retain performance tests and dependency-update hooks in normal pre-commit runs.
 - Keep `README.zh.md` aligned with `README.md` when behavior or contributor guidance changes. `README.md` is the PyPI description; avoid relative links. Store demo share state in the URL hash.
 - For releases, align `pyproject.toml` and `CITATION.cff`, use semantic versioning, and run `uvx twine check dist/*` after building. Preserve sdist test exclusion and the `json_repair` package-data key for `py.typed`.
 

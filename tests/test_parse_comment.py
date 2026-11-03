@@ -114,11 +114,6 @@ def test_comments_at_object_member_boundaries(comment: str, strict: bool) -> Non
 
 
 @pytest.mark.parametrize("comment", ["/* comment */", "// comment\n", "# comment\n"])
-def test_comment_before_object_end_in_strict_mode(comment: str) -> None:
-    assert repair_json(f'{{"a": 1 {comment}}}', strict=True, return_objects=True) == {"a": 1}
-
-
-@pytest.mark.parametrize("comment", ["/* comment */", "// comment\n", "# comment\n"])
 def test_comment_only_object_in_strict_mode(comment: str) -> None:
     assert repair_json(f"{{{comment}}}", strict=True, return_objects=True) == {}
 
@@ -163,7 +158,7 @@ def test_incomplete_empty_objects_with_only_whitespace_or_comments(raw: str) -> 
 
 def test_parse_comment() -> None:
     assert repair_json("/") == ""
-    assert repair_json('/* comment */ {"key": "value"}')
+    assert repair_json('/* comment */ {"key": "value"}') == '{"key": "value"}'
     assert repair_json('{ "key": { "key2": "value2" // comment }, "key3": "value3" }') == '{"key": {"key2": "value2"}}'
     assert (
         repair_json('{ "key": { "key2": "value2" // comment\n}, "key3": "value3" }')

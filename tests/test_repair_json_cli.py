@@ -1,7 +1,5 @@
 import io
 import json
-import os
-import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -10,46 +8,25 @@ import pytest
 from src.json_repair.json_repair import cli
 
 
-def test_cli(capsys: pytest.CaptureFixture[str]) -> None:
-    # Create a temporary file
-    temp_fd, temp_path = tempfile.mkstemp(suffix=".json")
-    _, tempout_path = tempfile.mkstemp(suffix=".json")
-    temp_path = Path(temp_path)
-    tempout_path = Path(tempout_path)
-    try:
-        # Write content to the temporary file
-        with os.fdopen(temp_fd, "w") as tmp:
-            tmp.write("{key:value")
-        cli(inline_args=[str(temp_path), "--indent", "0", "--ensure_ascii"])
-        captured = capsys.readouterr()
-        assert captured.out == '{\n"key": "value"\n}\n'
+def test_cli(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    input_path = tmp_path / "input.json"
+    output_path = tmp_path / "output.json"
+    raw = "{key:value"
+    expected = '{\n"key": "value"\n}'
+    input_path.write_text(raw)
 
-        # Test the output option
-        cli(inline_args=[str(temp_path), "--indent", "0", "-o", str(tempout_path)])
-        with tempout_path.open() as tmp:
-            out = tmp.read()
-        assert out == '{\n"key": "value"\n}'
+    cli(inline_args=[str(input_path), "--indent", "0", "--ensure_ascii"])
+    assert capsys.readouterr().out == expected + "\n"
 
-        # Test the inline option
-        cli(inline_args=[str(temp_path), "--indent", "0", "-i"])
-        with temp_path.open() as tmp:
-            out = tmp.read()
-        assert out == '{\n"key": "value"\n}'
+    cli(inline_args=[str(input_path), "--indent", "0", "-o", str(output_path)])
+    assert output_path.read_text() == expected
 
-    finally:
-        # Clean up - delete the temporary file
-        temp_path.unlink()
-        tempout_path.unlink()
+    cli(inline_args=[str(input_path), "--indent", "0", "-i"])
+    assert input_path.read_text() == expected
 
-    # Prepare a JSON string that needs to be repaired.
-    test_input = "{key:value"
-    # Expected output when running cli with --indent 0.
-    expected_output = '{\n"key": "value"\n}\n'
-    # Patch sys.stdin so that cli() reads from it instead of a file.
-    with patch("sys.stdin", new=io.StringIO(test_input)):
+    with patch("sys.stdin", new=io.StringIO(raw)):
         cli(inline_args=["--indent", "0"])
-    captured = capsys.readouterr()
-    assert captured.out == expected_output
+    assert capsys.readouterr().out == expected + "\n"
 
 
 def test_cli_inline_requires_filename(capsys: pytest.CaptureFixture[str]) -> None:
@@ -122,10 +99,7 @@ def test_cli_schema_model_guides_repair(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     pytest.importorskip("jsonschema")
-    pydantic = pytest.importorskip("pydantic")
-    version = getattr(pydantic, "VERSION", getattr(pydantic, "__version__", "0"))
-    if int(version.split(".")[0]) < 2:
-        pytest.skip("pydantic v2 required")
+    pytest.importorskip("pydantic", minversion="2")
 
     module_path = tmp_path / "schema_model.py"
     module_path.write_text("from pydantic import BaseModel\n\n\nclass SchemaModel(BaseModel):\n    value: int\n")

@@ -39,6 +39,8 @@ schema = [
 ]
 test = [
     "coverage",
+    "flask>=3",
+    "flask-cors>=6",
     "pytest",
     "pytest-benchmark",
 ]

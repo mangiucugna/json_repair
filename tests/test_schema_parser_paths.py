@@ -10,22 +10,10 @@ from src.json_repair.utils.json_context import ContextValues
 
 
 def parse_object_direct(
-    raw: str, schema: dict | bool | str, *, strict: bool = False, context: ContextValues | None = None
-) -> JSONReturnType:
-    parser = JSONParser(raw, None, False, 0, False, strict)
-    repairer = SchemaRepairer(schema if isinstance(schema, dict) else {}, None)
-    parser.schema_repairer = repairer
-    if context is not None:
-        parser.context.set(context)
-    parser.index = 1
-    return parser.parse_object(cast("Any", schema), "$")
-
-
-def parse_object_direct_with_mode(
     raw: str,
     schema: dict | bool | str,
-    mode: SchemaRepairMode,
     *,
+    mode: SchemaRepairMode = "standard",
     strict: bool = False,
     context: ContextValues | None = None,
 ) -> JSONReturnType:
@@ -38,15 +26,7 @@ def parse_object_direct_with_mode(
     return parser.parse_object(cast("Any", schema), "$")
 
 
-def parse_array_direct(raw: str, schema: dict | bool | str) -> JSONReturnType:
-    parser = JSONParser(raw, None, False, 0, False, False)
-    repairer = SchemaRepairer(schema if isinstance(schema, dict) else {}, None)
-    parser.schema_repairer = repairer
-    parser.index = 1
-    return parser.parse_array(cast("Any", schema), "$")
-
-
-def parse_array_direct_with_mode(raw: str, schema: dict | bool | str, mode: SchemaRepairMode) -> JSONReturnType:
+def parse_array_direct(raw: str, schema: dict | bool | str, *, mode: SchemaRepairMode = "standard") -> JSONReturnType:
     parser = JSONParser(raw, None, False, 0, False, False)
     repairer = SchemaRepairer(schema if isinstance(schema, dict) else {}, None, schema_repair_mode=mode)
     parser.schema_repairer = repairer
@@ -174,7 +154,7 @@ def test_parse_object_schema_empty_object_falls_back_to_array() -> None:
 
 def test_parse_object_schema_salvage_set_literal_keeps_non_string_members_as_array() -> None:
     schema = {"type": "object"}
-    assert parse_object_direct_with_mode("{1, 2}", schema, "salvage") == [1, 2]
+    assert parse_object_direct("{1, 2}", schema, mode="salvage") == [1, 2]
 
 
 def test_parse_array_schema_true_false_and_non_array() -> None:
@@ -275,10 +255,10 @@ def test_schema_ref_to_true_short_circuits() -> None:
 def test_parse_array_salvage_mode_parses_even_when_item_schema_would_fail() -> None:
     schema = {"type": "array", "items": {"type": "integer"}}
     # In salvage mode parse_array should not fail early on schema mismatch.
-    assert parse_array_direct_with_mode('["bad", "2"]', schema, "salvage") == ["bad", "2"]
+    assert parse_array_direct('["bad", "2"]', schema, mode="salvage") == ["bad", "2"]
 
 
 def test_parse_array_salvage_mode_keeps_object_heuristic_values() -> None:
     schema = {"type": "array", "items": {"type": "object", "properties": {"a": {"type": "integer"}}}}
     # In salvage mode, string+colon heuristic should still parse and keep the object value.
-    assert parse_array_direct_with_mode('["a": 1]', schema, "salvage") == [{"a": 1}]
+    assert parse_array_direct('["a": 1]', schema, mode="salvage") == [{"a": 1}]
