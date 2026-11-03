@@ -1,0 +1,48 @@
+"""Shared inputs for plain and schema-guided string parsing regressions."""
+
+FENCED_SNIPPET_CASES = [
+    ('{\n"a": "\n```{}```\n",\n"b": "x",\n}', {"a": "\n```{}```", "b": "x"}),
+    ('{\n"a": "\n```{}```\n"\n",\n"b": "x",\n}', {"a": '\n```{}```\n"', "b": "x"}),
+    ('{\n"a": "\n```{}```\n"\n",\n\'b\': "x",\n}', {"a": '\n```{}```\n"', "b": "x"}),
+    ('{\n"a": "\n```{}```\n"\n", // c\n"b": "x",\n}', {"a": '\n```{}```\n"', "b": "x"}),
+    ('{\n"a": "\n```{}```\n"\n",\n b: "x",\n}', {"a": '\n```{}```\n"', "b": "x"}),
+    ('{"a":"```}```"a","b":"x"}', {"a": '```}```"a', "b": "x"}),
+    ('{"a":"x}``` [1,2]\n","b":"y"}', {"a": "x}``` [1,2]", "b": "y"}),
+    ('{"a":"x}``` [http://x]\n","b":"y"}', {"a": "x}``` [http://x]", "b": "y"}),
+    ('{"a":"x}``` [foo[bar]\n","b":"y"}', {"a": "x}``` [foo[bar]", "b": "y"}),
+    ('{"a":"x}``` [{\n","b":"y"}', {"a": "x}``` [{", "b": "y"}),
+    ('{"a":"x}``` [foo, [bar]\n","b":"y"}', {"a": "x}``` [foo, [bar]", "b": "y"}),
+    ('{"a":"x}``` [1,"z"]\n","b":"y"}', {"a": 'x}``` [1,"z"]', "b": "y"}),
+    ('{"a":"x}``` [1, [2]]\n","b":"y"}', {"a": "x}``` [1, [2]]", "b": "y"}),
+    ('{"a":"x}``` [1,[2],k:v]\n","b":"y"}', {"a": "x}``` [1,[2],k:v]", "b": "y"}),
+    ('{"a":"x}``` (1,(2),k:v)\n","b":"y"}', {"a": "x}``` (1,(2),k:v)", "b": "y"}),
+    ('{"a":"x}``` [1,2],\n","b":"y"}', {"a": "x}``` [1,2],", "b": "y"}),
+    ('{"a":"x}``` // c\n [1,2]\n","b":"y"}', {"a": "x}``` // c\n [1,2]", "b": "y"}),
+    ('{"a":"x}``` // c\n [1,2],\n","b":"y"}', {"a": "x}``` // c\n [1,2],", "b": "y"}),
+    (
+        '{\n"a": "\n```c\nint main() {\n}\n```\nImplementation: "xxx", xxx\n",\n"b": "x",\n}',
+        {"a": '\n```c\nint main() {\n}\n```\nImplementation: "xxx", xxx', "b": "x"},
+    ),
+]
+
+FENCED_SNIPPET_IDS = [
+    "multiline-object-value",
+    "stray-quote-line",
+    "single-quoted-next-key",
+    "comment-prefixed-next-key",
+    "bare-next-key",
+    "inline-quoted-prose",
+    "inline-array-literal",
+    "url-like-inline-array",
+    "unmatched-inner-delimiter",
+    "unbalanced-inline-array-like-prose",
+    "unmatched-inner-delimiter-after-comma",
+    "quoted-item-inline-array",
+    "balanced-nested-inline-array",
+    "nested-numeric-inline-array-with-bare-key-like-prose",
+    "nested-numeric-parenthesized-value-with-bare-key-like-prose",
+    "inline-array-with-trailing-comma",
+    "comment-prefixed-inline-array",
+    "comment-prefixed-inline-array-with-trailing-comma",
+    "fenced-code-block-before-inline-quoted-prose",
+]
