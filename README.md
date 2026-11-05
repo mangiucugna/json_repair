@@ -248,9 +248,11 @@ repair_json(bad_json_string, strict=True)
 
 The CLI exposes the same behavior with `json_repair --strict input.json` (or piping data via stdin).
 
-In strict mode the parser raises `ValueError` as soon as it encounters structural issues such as duplicate keys, missing `:` separators, empty keys/values introduced by stray commas, multiple top-level elements, or other ambiguous constructs. This is useful when you just need validation with friendlier error messages while still benefiting from json_repair’s resilience elsewhere in your stack.
+In strict mode the repair parser raises `ValueError` for structural issues such as missing `:` separators, empty keys/values introduced by stray commas, multiple top-level elements, or other ambiguous constructs. Duplicate keys are rejected when parsing objects inside arrays, but may be overwritten elsewhere. Strict mode is not a general-purpose JSON validator.
 
 Strict mode still honors `skip_json_loads=True`; combining them lets you skip the initial `json.loads` check but still enforce strict parsing rules.
+
+By default, valid JSON is returned by `json.loads` before strict repair parsing runs. This includes duplicate keys, for which `json.loads` keeps the last value. With `skip_json_loads=True`, the repair parser's duplicate-key behavior described above applies even to valid JSON.
 
 ### Schema-guided repairs
 

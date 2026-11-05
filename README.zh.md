@@ -197,9 +197,11 @@ except orjson.JSONDecodeError:
 from json_repair import repair_json
 repair_json(bad_json_string, strict=True)
 ```
-严格模式会在发现结构问题（重复键、缺少冒号、空键/值、多个顶层元素等）时立刻抛出 `ValueError`。CLI 也支持 `json_repair --strict input.json`。
+严格模式下，修复解析器遇到缺少冒号、空键/值、多个顶层元素等结构问题时会抛出 `ValueError`。解析数组内的对象时会拒绝重复键；其他位置的重复键可能被覆盖。严格模式并非通用的 JSON 校验器。CLI 也支持 `json_repair --strict input.json`。
 
 严格模式可与 `skip_json_loads=True` 组合：跳过初始 `json.loads` 检查，但仍执行严格解析规则。
+
+默认情况下，有效 JSON 会由 `json.loads` 直接解析，不会进入严格修复解析。对于重复键，`json.loads` 会保留最后一个值。使用 `skip_json_loads=True` 时，上述修复解析器的重复键行为也适用于有效 JSON。
 
 ### Schema 引导修复
 Schema 引导修复目前处于 beta 阶段，仍可能出现 bug。

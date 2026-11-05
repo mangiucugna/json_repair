@@ -509,6 +509,18 @@ def test_parse_string_preserves_repeated_escaped_backslashes_during_repair(
         assert repair_json(raw, skip_json_loads=skip_json_loads) == serialized
 
 
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (r'{"path": "C:\\"', {"path": "C:\\"}),
+        (r'["R\\"]', ["R\\"]),
+        (r'["R\\\\"]', ["R\\\\"]),
+    ],
+)
+def test_parse_string_preserves_backslashes_before_quote(raw: str, expected: object) -> None:
+    assert repair_json(raw, return_objects=True, skip_json_loads=True) == expected
+
+
 def test_parse_string_preserves_latex_command_after_bracketed_comma() -> None:
     raw = r'{ "key": "x [0,2] f(-\\frac{3}{4})" }'
 

@@ -299,7 +299,8 @@ def _normalize_escape_sequence(
             run_end += 1
         run_length = run_end - run_start
         next_char = self.get_char_at(run_end - self.index)
-        if run_length % 2 == 0 and next_char != active_rstring_delimiter:
+        after_quote = self.get_char_at(self.scroll_whitespaces(idx=run_end - self.index + 1))
+        if run_length % 2 == 0 and (next_char != active_rstring_delimiter or after_quote in [",", ":", "}", "]", None]):
             _replace_trailing_backslash(state, "\\" * (run_length // 2))
             self.index = run_end
             return True, self.get_char_at()
