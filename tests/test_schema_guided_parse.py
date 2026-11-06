@@ -3,6 +3,8 @@ from typing import Literal, cast
 import pytest
 
 from src.json_repair import repair_json
+from src.json_repair.json_parser import JSONParser
+from src.json_repair.schema_repair import SchemaRepairer
 from src.json_repair.utils.constants import JSONReturnType
 from tests.utils.string_cases import FENCED_SNIPPET_CASES, FENCED_SNIPPET_IDS
 
@@ -415,6 +417,18 @@ def test_deep_properties_schema_raises_value_error_instead_of_recursion_error() 
         repair_json("{}", schema=schema, return_objects=True)
 
 
+@pytest.mark.parametrize("skip_json_loads", [False, True])
+def test_schema_recursion_during_parsing_is_normalized(monkeypatch: pytest.MonkeyPatch, skip_json_loads: bool) -> None:
+    def raise_recursion(*_args: object, **_kwargs: object) -> None:
+        raise RecursionError
+
+    if not skip_json_loads:
+        monkeypatch.setattr(SchemaRepairer, "is_valid", raise_recursion)
+    monkeypatch.setattr(JSONParser, "parse_with_schema", raise_recursion)
+    with pytest.raises(ValueError, match="supported schema recursion depth"):
+        repair_json("{}", schema={}, skip_json_loads=skip_json_loads)
+
+
 def test_schema_applies_to_valid_json_fast_path_outputs_and_logging() -> None:
     pytest.importorskip("jsonschema")
     schema = {
@@ -455,6 +469,45 @@ def test_schema_applies_to_valid_empty_string() -> None:
     assert repair_json('""', schema={"type": "string"}) == '""'
 
 
+@pytest.mark.parametrize("keyword", ["const", "enum", "default", "examples"])
+def test_schema_literal_values_are_not_normalized_as_schemas(keyword: str) -> None:
+    literal = {"items": [1, 2], "additionalItems": False}
+    value = [literal] if keyword in ("enum", "examples") else literal
+    schema = {keyword: value}
+    assert repair_json('{"items":[1,2],"additionalItems":false}', schema=schema, return_objects=True) == literal
+
+
+@pytest.mark.parametrize("schema", [{"type": "bogus"}, {"type": "string", "pattern": "["}])
+def test_invalid_schema_definition_raises_value_error(schema: dict[str, object]) -> None:
+    with pytest.raises(ValueError, match="Invalid schema"):
+        repair_json('"x"', schema=schema)
+
+
+@pytest.mark.parametrize(
+    ("keyword", "value"),
+    [("additionalItems", "bad"), ("additionalItems", None), ("prefixItems", 123), ("prefixItems", [{"type": "bogus"}])],
+)
+@pytest.mark.parametrize("nested", [False, True])
+def test_legacy_tuple_rejects_invalid_shadowed_keywords(keyword: str, value: object, nested: bool) -> None:
+    schema = {"items": [{"type": "integer"}], keyword: value}
+    if nested:
+        schema = {"type": "object", "properties": {"value": schema}}
+    with pytest.raises(ValueError, match="Invalid schema"):
+        repair_json('{"value": [1]}' if nested else "[1]", schema=schema)
+
+
+def test_schema_validation_rechecks_mutated_schema() -> None:
+    schema = {"type": "string"}
+    assert repair_json('"x"', schema=schema) == '"x"'
+    schema["type"] = "bogus"
+    with pytest.raises(ValueError, match="Invalid schema"):
+        repair_json('"x"', schema=schema)
+
+
+def test_schema_with_non_json_default_can_be_validated() -> None:
+    assert repair_json('"x"', schema={"type": "string", "default": object()}) == '"x"'
+
+
 def test_schema_skip_json_loads_keeps_parser_path_for_scalars() -> None:
     pytest.importorskip("jsonschema")
     assert repair_json("True", schema={"type": "string"}, skip_json_loads=True, return_objects=True) == ""
@@ -478,7 +531,7 @@ def test_schema_circular_ref_raises_definition_error() -> None:
 def test_schema_non_string_ref_raises_definition_error() -> None:
     pytest.importorskip("jsonschema")
 
-    with pytest.raises(ValueError, match=r"\$ref must be a string"):
+    with pytest.raises(ValueError, match="Invalid schema"):
         repair_json("{}", schema={"$ref": 123}, return_objects=True)
 
 
@@ -692,7 +745,7 @@ def test_schema_salvage_mode_still_enforces_min_items() -> None:
 def test_schema_salvage_mode_does_not_hide_schema_definition_errors() -> None:
     pytest.importorskip("jsonschema")
     schema = {"type": "array", "items": {"type": "bogus"}}
-    with pytest.raises(ValueError, match="Unsupported schema type bogus"):
+    with pytest.raises(ValueError, match="Invalid schema"):
         repair_json(
             "[1]",
             schema=schema,

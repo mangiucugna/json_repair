@@ -16,6 +16,7 @@
 - Treat comments as whitespace at structural value boundaries; consuming trivia must not continue top-level parsing. Keep one shared output-finalization path in `repair_json`.
 - Apply schema repair and validation to valid and invalid inputs, with dispatch centralized in `JSONParser.parse_json(schema, path)`. Preserve accepted Pydantic field names and explicit-alias precedence.
 - Share tuple schema mapping between parsing and repair: `prefixItems` is positional and `items` constrains the tail; preserve legacy `items`/`additionalItems` behavior. Retain root resolver scope for detached schema branches and schema identity for validator caching.
+- Normalize only schema-bearing locations; preserve literal values in keywords such as `const`, `enum`, `default`, and `examples`. Validate schema definitions before repair and keep repeated validation efficient.
 - Treat schemas as untrusted: limit recursion or raise controlled `ValueError`; never execute user-supplied `patternProperties` regexes. Normalize top-level `RecursionError` to `ValueError`.
 - Schema repair modes are `standard` and opt-in `salvage`. Salvage requires strong structural evidence, never infers semantic property renames, and may select the first schema-valid sequential fragment but not an item from an actual top-level array.
 - Guard against repeated string lookahead scans on long malformed inputs; test meaningful performance regressions when changing that code.

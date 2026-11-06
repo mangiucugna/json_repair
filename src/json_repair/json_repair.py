@@ -164,6 +164,11 @@ def repair_json(
         if schema_obj is not None
         else None
     )
+    if repairer is not None and isinstance(schema_obj, dict):
+        try:
+            repairer._get_root_validator()
+        except RecursionError as exc:
+            raise ValueError("Input schema nesting exceeds the supported schema recursion depth.") from exc
 
     # Fast path for valid JSON: schema-aware mode still applies repair+validation.
     parsed_json: JSONReturnType = None

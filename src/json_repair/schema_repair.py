@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import importlib
 import json
+from functools import lru_cache
 from typing import Any, Literal, cast
 
 from .parser_schema import array_schema_config, object_schema_config
@@ -33,6 +34,22 @@ def _require_jsonschema() -> Any:
         return importlib.import_module("jsonschema")
     except ImportError as exc:  # pragma: no cover - optional dependency
         raise ValueError("jsonschema is required when using schema-aware repair.") from exc
+
+
+@lru_cache(maxsize=128)
+def _check_serialized_schema(serialized_schema: str) -> None:
+    jsonschema = _require_jsonschema()
+    schema = json.loads(serialized_schema)
+    jsonschema.validators.validator_for(schema).check_schema(schema)
+
+
+def _check_schema(schema: dict[str, Any], validator_cls: Any) -> None:
+    try:
+        serialized_schema = json.dumps(schema, sort_keys=True)
+    except (TypeError, ValueError):
+        validator_cls.check_schema(schema)
+    else:
+        _check_serialized_schema(serialized_schema)
 
 
 def _require_pydantic() -> Any:
@@ -76,9 +93,47 @@ def _add_pydantic_field_metadata(schema_dict: dict[str, Any], model: type[Any]) 
 
 def _prepare_schema_for_validation_node(node: Any) -> Any:
     if isinstance(node, dict):
-        normalized = {key: _prepare_schema_for_validation_node(value) for key, value in node.items()}
+        normalized = dict(node)
+        for key in ("properties", "patternProperties", "$defs", "definitions", "dependentSchemas"):
+            if isinstance(node.get(key), dict):
+                normalized[key] = {
+                    name: _prepare_schema_for_validation_node(value) for name, value in node[key].items()
+                }
+        for key in ("allOf", "anyOf", "oneOf", "prefixItems"):
+            if isinstance(node.get(key), list):
+                normalized[key] = [_prepare_schema_for_validation_node(value) for value in node[key]]
+        for key in (
+            "items",
+            "additionalItems",
+            "additionalProperties",
+            "unevaluatedProperties",
+            "unevaluatedItems",
+            "contains",
+            "propertyNames",
+            "not",
+            "if",
+            "then",
+            "else",
+            "contentSchema",
+        ):
+            if isinstance(node.get(key), (dict, bool, list)):
+                normalized[key] = _prepare_schema_for_validation_node(node[key])
+        if isinstance(node.get("dependencies"), dict):
+            normalized["dependencies"] = {
+                name: _prepare_schema_for_validation_node(value) if isinstance(value, (dict, bool)) else value
+                for name, value in node["dependencies"].items()
+            }
         items = normalized.get("items")
         if isinstance(items, list):
+            if "additionalItems" in node and not isinstance(node["additionalItems"], (dict, bool)):
+                raise SchemaDefinitionError("Invalid schema: additionalItems must be an object or boolean.")
+            if "prefixItems" in normalized:
+                jsonschema = _require_jsonschema()
+                shadowed_schema = {"prefixItems": normalized["prefixItems"]}
+                try:
+                    _check_schema(shadowed_schema, jsonschema.validators.validator_for(shadowed_schema))
+                except jsonschema.exceptions.SchemaError as exc:
+                    raise SchemaDefinitionError(f"Invalid schema: {exc.message}") from exc
             normalized.pop("items", None)
             normalized["prefixItems"] = items
             additional_items = normalized.pop("additionalItems", None)
@@ -173,6 +228,10 @@ class SchemaRepairer:
         prepared_root_schema = self._prepare_schema_for_validation(self.root_schema)
         jsonschema = _require_jsonschema()
         validator_cls = jsonschema.validators.validator_for(prepared_root_schema)
+        try:
+            _check_schema(prepared_root_schema, validator_cls)
+        except jsonschema.exceptions.SchemaError as exc:
+            raise SchemaDefinitionError(f"Invalid schema: {exc.message}") from exc
         self._root_validator = validator_cls(prepared_root_schema)
         return self._root_validator
 

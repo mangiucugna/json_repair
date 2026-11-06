@@ -175,6 +175,30 @@ def test_schema_repairer_validate_and_prepare() -> None:
         repairer._prepare_schema_for_validation(invalid_schema)
 
 
+def test_schema_normalization_only_visits_schema_locations() -> None:
+    literal = {"items": [1, 2], "additionalItems": False}
+    schema = {
+        "default": literal,
+        "enum": [literal],
+        "examples": [literal],
+        "dependencies": {"dependent": {"items": [{"type": "integer"}]}, "names": ["a"]},
+        "properties": {
+            "items": {"const": literal},
+            "nested": {"items": [{"type": "integer"}], "additionalItems": False},
+        },
+    }
+    prepared = SchemaRepairer(schema, None)._prepare_schema_for_validation(schema)
+    assert prepared["default"] == literal
+    assert prepared["enum"] == [literal]
+    assert prepared["examples"] == [literal]
+    assert prepared["dependencies"] == {"dependent": {"prefixItems": [{"type": "integer"}]}, "names": ["a"]}
+    assert prepared["properties"]["items"]["const"] == literal
+    assert prepared["properties"]["nested"] == {"prefixItems": [{"type": "integer"}], "items": False}
+    assert schema["properties"]["nested"]["items"] == [{"type": "integer"}]
+    with pytest.raises(ValueError, match=r"\$ref must be a string"):
+        SchemaRepairer({}, None).resolve_schema({"$ref": 123})
+
+
 def test_schema_repairer_ignores_invalid_pydantic_alias_metadata() -> None:
     schema = {
         "type": "object",

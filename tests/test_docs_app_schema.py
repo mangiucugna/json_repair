@@ -72,6 +72,13 @@ def test_docs_api_rejects_invalid_schema_type(client: FlaskClient) -> None:
     assert response.get_json() == {"error": "schema must be a JSON object or boolean."}
 
 
+@pytest.mark.parametrize("schema", [{"type": "bogus"}, {"type": "string", "pattern": "["}])
+def test_docs_api_rejects_invalid_schema_definition(client: FlaskClient, schema: dict[str, object]) -> None:
+    response = client.post("/api/repair-json", json={"malformedJSON": '"x"', "schema": schema})
+    assert response.status_code == 400
+    assert "schema" in response.get_json()["error"].lower()
+
+
 def test_docs_api_schema_validation_error_returns_400(client: FlaskClient) -> None:
     pytest.importorskip("jsonschema")
     response = client.post(
