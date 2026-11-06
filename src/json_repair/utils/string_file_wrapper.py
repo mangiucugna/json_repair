@@ -85,8 +85,6 @@ class StringFileWrapper:
         if isinstance(index, slice):
             start, stop, step = self._normalize_slice(index)
 
-            if step == 0:
-                raise ValueError("slice step cannot be zero")
             if step != 1:
                 return "".join(self[i] for i in range(start, stop, step))
 
@@ -116,19 +114,7 @@ class StringFileWrapper:
         return self.length
 
     def _normalize_slice(self, index: slice) -> tuple[int, int, int]:
-        total_len = len(self)
-        start = 0 if index.start is None else index.start
-        stop = total_len if index.stop is None else index.stop
-        step = 1 if index.step is None else index.step
-
-        if start < 0:
-            start += total_len
-        if stop < 0:
-            stop += total_len
-
-        start = max(start, 0)
-        stop = min(stop, total_len)
-        return start, stop, step
+        return index.indices(len(self))
 
     def _slice_from_buffers(self, start: int, stop: int) -> str:
         buffer_index = start // self.buffer_length

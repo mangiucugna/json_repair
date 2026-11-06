@@ -90,6 +90,8 @@ good_json_string = repair_json(bad_json_string)
 # 如果输入极度损坏，可能返回空字符串
 ```
 
+有效的 JSON 空字符串（`""`）会以 JSON 文本返回。当 `skip_json_loads=True` 或 schema 修复回退到修复解析器时，空结果仍可能表示未找到值。
+
 替代 `json.loads()`：
 ```python
 import json_repair
@@ -130,6 +132,7 @@ decoded_object = load(open(fname, "rb"))
 decoded_object = from_file(fname)
 ```
 I/O 异常不会被库捕获，需要由调用方处理。
+支持不可定位的文本流；修复时会将其剩余内容读入内存。
 
 ### 非拉丁字符
 处理中文/日文/韩文等时，传入 `ensure_ascii=False` 保留原文：

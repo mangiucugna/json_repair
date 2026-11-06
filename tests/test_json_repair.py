@@ -80,6 +80,18 @@ def test_valid_top_level_string_preserved_with_strict_mode() -> None:
     assert loads('"a: 1}"', skip_json_loads=True, logging=True) == ("", [])
 
 
+@pytest.mark.parametrize("strict", [False, True])
+def test_valid_empty_string_serializes_as_json(strict: bool) -> None:
+    assert repair_json('""', strict=strict) == '""'
+    assert repair_json('""', strict=strict, return_objects=True) == ""
+    assert repair_json('""', strict=strict, logging=True) == ("", [])
+
+
+def test_unrecoverable_input_still_returns_empty_string() -> None:
+    assert repair_json('"unterminated') == ""
+    assert repair_json('""', skip_json_loads=True) == ""
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [

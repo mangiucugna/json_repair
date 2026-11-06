@@ -452,7 +452,7 @@ def test_schema_preserves_prefixed_valid_json_string_content() -> None:
 
 def test_schema_applies_to_valid_empty_string() -> None:
     pytest.importorskip("jsonschema")
-    assert repair_json('""', schema={"type": "string"}) == ""
+    assert repair_json('""', schema={"type": "string"}) == '""'
 
 
 def test_schema_skip_json_loads_keeps_parser_path_for_scalars() -> None:

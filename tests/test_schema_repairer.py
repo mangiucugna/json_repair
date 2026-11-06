@@ -5,7 +5,6 @@ from typing import Any, ClassVar
 
 import pytest
 
-from src.json_repair import repair_json
 from src.json_repair.schema_repair import (
     SchemaRepairer,
     load_schema_model,
@@ -481,7 +480,3 @@ def test_apply_enum_const_mismatch_raises() -> None:
         repairer.repair_value("b", {"const": "a"}, "$")
     with pytest.raises(ValueError, match="does not match enum"):
         repairer.repair_value("b", {"enum": ["a"]}, "$")
-
-
-def test_repair_json_valid_empty_string_returns_empty() -> None:
-    assert repair_json('""') == ""

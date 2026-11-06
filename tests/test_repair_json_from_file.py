@@ -88,3 +88,20 @@ def test_repair_json_from_large_file(tmp_path: pathlib.Path) -> None:
     input_path.write_text("x" * 5 * 1024 * 1024)
 
     assert from_file(filename=input_path, logging=True) == ("", [])
+
+
+@pytest.mark.parametrize("raw", ['{"key": 1}', '{"key": }'])
+@pytest.mark.parametrize("skip_json_loads", [False, True])
+def test_load_non_seekable_stream(raw: str, skip_json_loads: bool) -> None:
+    class NonSeekableStream(StringIO):
+        def seekable(self) -> bool:
+            return False
+
+        def tell(self) -> int:
+            raise OSError("not seekable")
+
+    fd = NonSeekableStream("ignored" + raw)
+    fd.read(len("ignored"))
+    assert load(fd, skip_json_loads=skip_json_loads, logging=True) == load(
+        StringIO(raw), skip_json_loads=skip_json_loads, logging=True
+    )

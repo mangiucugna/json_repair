@@ -59,3 +59,12 @@ def test_string_file_wrapper_ensure_chunk_position_raises(tmp_path: Path) -> Non
         wrapper = StringFileWrapper(handle, chunk_length=1)
         with pytest.raises(IndexError):
             wrapper._ensure_chunk_position(10)
+
+
+@pytest.mark.parametrize("item", [slice(None, None, -1), slice(20, -20, -2), slice(None, None, -2), slice(-20, 20, 2)])
+def test_string_file_wrapper_slices_match_strings(tmp_path: Path, item: slice) -> None:
+    text = "a你好def"
+    file_path = tmp_path / "slices.txt"
+    file_path.write_text(text, encoding="utf-8")
+    with file_path.open(encoding="utf-8") as handle:
+        assert StringFileWrapper(handle, chunk_length=2)[item] == text[item]

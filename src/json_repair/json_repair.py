@@ -136,6 +136,11 @@ def repair_json(
     if schema is not None and strict:
         raise ValueError("schema and strict cannot be used together.")
 
+    # Repair requires random access; buffer streams that cannot be rewound.
+    if json_fd is not None and not json_fd.seekable():
+        json_str = json_fd.read()
+        json_fd = None
+
     parser: JSONParser | None = None
     repair_log: list[dict[str, str]] = []
     # ``skip_json_loads`` only skips the initial whole-input validation.  Once
@@ -220,8 +225,8 @@ def repair_json(
         return parsed_json, repair_log
     if return_objects:
         return parsed_json
-    # Avoid returning only a pair of quotes if it's an empty string
-    if parsed_json == "":
+    # Preserve the empty result used when repair could not find a value.
+    if parsed_json == "" and not is_valid_json:
         return ""
     return json.dumps(parsed_json, **json_dumps_args)
 
