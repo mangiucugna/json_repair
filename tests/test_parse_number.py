@@ -28,6 +28,18 @@ def test_object_number_followed_by_consecutive_commas_and_digits() -> None:
     assert repair_json('{"a": -1.5,,, "b": 2}', return_objects=True) == {"a": -1.5, "b": 2}
 
 
+@pytest.mark.parametrize("skip_json_loads", [False, True])
+def test_stray_number_after_consecutive_commas_preserves_next_key(skip_json_loads: bool) -> None:
+    raw = '{"a":1,,2,"b":3}'
+    expected = {"a": 1, "b": 3}
+    result, logs = repair_json(raw, logging=True, skip_json_loads=skip_json_loads)
+    assert result == expected
+    assert any("comma" in entry["text"].lower() for entry in logs)
+    assert load(StringIO(raw), skip_json_loads=skip_json_loads, chunk_length=2) == expected
+    assert repair_json('{"a":1,, 2 , "b":3}', return_objects=True, skip_json_loads=skip_json_loads) == expected
+    assert repair_json('{"a":1,,2:3}', return_objects=True, skip_json_loads=skip_json_loads) == {"a": 1, "2": 3}
+
+
 def test_comma_containing_object_value_remains_a_string() -> None:
     assert repair_json('{"value": 105,12,', return_objects=True) == {"value": "105,12"}
 
@@ -49,8 +61,22 @@ def test_parse_number_positive_exponent(raw: str, expected: object, skip_json_lo
 
 def test_parse_number_plus_outside_exponent() -> None:
     assert repair_json("[1+2]", return_objects=True) == [1, 2]
-    assert repair_json("[1e+]", return_objects=True) == ["1e"]
-    assert repair_json("[1e-]", return_objects=True) == ["1e"]
+    assert repair_json("[1.1.1e+]", return_objects=True) == ["1.1.1e"]
+
+
+@pytest.mark.parametrize("suffix", ["e", "E", "e+", "E-", "e-"])
+@pytest.mark.parametrize("skip_json_loads", [False, True])
+def test_dangling_exponent_is_consumed(suffix: str, skip_json_loads: bool) -> None:
+    for raw, expected in [
+        (f"[1{suffix}, 2]", [1, 2]),
+        (f'{{"n": 1{suffix}, "next": 2}}', {"n": 1, "next": 2}),
+    ]:
+        result, logs = repair_json(raw, logging=True, skip_json_loads=skip_json_loads)
+        assert result == expected
+        assert any("exponent" in entry["text"].lower() for entry in logs)
+        assert load(StringIO(raw), skip_json_loads=skip_json_loads, chunk_length=2) == expected
+        with pytest.raises(ValueError, match="exponent"):
+            repair_json(raw, strict=True, skip_json_loads=skip_json_loads)
 
 
 def test_parse_number_edge_cases() -> None:
