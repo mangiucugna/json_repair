@@ -21,6 +21,11 @@ def parse_number(self: "JSONParser") -> JSONReturnType:
         and (char in NUMBER_CHARS or (char == "+" and number_str.endswith(("e", "E"))))
         and (not is_array or char != ",")
     ):
+        if self.context.current == ContextValues.OBJECT_VALUE and char == "," and self.get_char_at(1) == ",":
+            self.log("Found consecutive commas after an object number")
+            if self.strict:
+                raise ValueError("Consecutive commas after an object number in strict mode.")
+            break
         if char != "_":
             number_str += char
         self.index += 1

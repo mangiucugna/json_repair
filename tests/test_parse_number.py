@@ -12,6 +12,26 @@ def test_parse_number() -> None:
     assert repair_json('{"value": 1_234.5_6}', return_objects=True) == {"value": 1234.56}
 
 
+@pytest.mark.parametrize("skip_json_loads", [False, True])
+def test_object_number_followed_by_empty_item(skip_json_loads: bool) -> None:
+    raw = '{"a": 1,, "b": 2}'
+    result, logs = repair_json(raw, logging=True, skip_json_loads=skip_json_loads)
+    assert result == {"a": 1, "b": 2}
+    assert any("comma" in entry["text"].lower() for entry in logs)
+    assert load(StringIO(raw), skip_json_loads=skip_json_loads, chunk_length=2) == {"a": 1, "b": 2}
+    with pytest.raises(ValueError, match="Consecutive commas"):
+        repair_json(raw, strict=True, skip_json_loads=skip_json_loads)
+
+
+def test_object_number_followed_by_consecutive_commas_and_digits() -> None:
+    assert repair_json('{"a": 1,,2}', return_objects=True) == {"a": 1}
+    assert repair_json('{"a": -1.5,,, "b": 2}', return_objects=True) == {"a": -1.5, "b": 2}
+
+
+def test_comma_containing_object_value_remains_a_string() -> None:
+    assert repair_json('{"value": 105,12,', return_objects=True) == {"value": "105,12"}
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
