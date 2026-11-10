@@ -3,7 +3,7 @@ from io import StringIO
 import pytest
 
 from src.json_repair.json_parser import JSONParser
-from src.json_repair.json_repair import repair_json
+from src.json_repair.json_repair import load, repair_json
 from src.json_repair.parse_string import (
     StringParseState,
     _brace_before_code_fence_belongs_to_string,
@@ -40,6 +40,16 @@ def test_parse_string() -> None:
     assert repair_json(" ") == ""
     assert repair_json("string") == ""
     assert repair_json("stringbeforeobject {}") == "{}"
+
+
+def test_long_unclosed_string_with_escape_in_memory_and_buffered_file() -> None:
+    prefix = "x" * 2048
+    suffix = "y" * 2048
+    raw = '{"a": "' + prefix + "\\n" + suffix
+    expected = {"a": prefix + "\n" + suffix}
+
+    assert repair_json(raw, return_objects=True, skip_json_loads=True) == expected
+    assert load(StringIO(raw), skip_json_loads=True, chunk_length=128) == expected
 
 
 def test_missing_and_mixed_quotes() -> None:
@@ -124,6 +134,35 @@ def test_object_value_bare_key_prose_scans_once() -> None:
 
     assert parser.parse_string() == "value\n" + (", floof: prose" * 100)
     assert parser.skip_to_character_calls == 3
+
+
+def test_array_string_with_many_brackets_reuses_quote_lookahead() -> None:
+    parser = CountingParser('"abc\\n' + ("x]" * 20) + 'end"')
+    parser.context.set(ContextValues.ARRAY)
+
+    assert parser.parse_string() == "abc\n" + ("x]" * 20) + "end"
+    assert parser.skip_to_character_calls <= 2
+
+
+def test_unclosed_string_with_many_braces_reuses_colon_lookahead() -> None:
+    parser = CountingParser('"' + ("text } more " * 20))
+    parser.context.set(ContextValues.OBJECT_VALUE)
+
+    assert parser.parse_string() == ("text } more " * 20).rstrip()
+    assert parser.skip_to_character_calls <= 23
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ('[{"a":"abc\\n' + ("x]" * 20) + 'end"},]', [{"a": "abc\n" + ("x]" * 20) + "end"}]),
+        ('{"a":"' + ("text } more " * 20), {"a": ("text } more " * 20).rstrip()}),
+    ],
+)
+def test_repeated_string_delimiters_match_buffered_input(raw: str, expected: object) -> None:
+    result = repair_json(raw, return_objects=True, skip_json_loads=True, logging=True)
+    assert result[0] == expected
+    assert load(StringIO(raw), skip_json_loads=True, logging=True, chunk_length=16) == result
 
 
 def test_parse_string_keeps_colon_prose_inside_wrapped_valid_json() -> None:
@@ -656,24 +695,24 @@ def test_update_inline_container_stack_keeps_closing_container_character() -> No
 def test_scan_string_body_keeps_closing_inline_container_character() -> None:
     parser = JSONParser(']"', None, False)
     parser.context.set(ContextValues.OBJECT_VALUE)
-    state = StringParseState(string_acc="x", inline_container_stack=["["])
+    state = StringParseState(string_acc=list("x"), inline_container_stack=["["])
 
     char = _scan_string_body(parser, state)
 
     assert char == '"'
-    assert state.string_acc == "x]"
+    assert "".join(state.string_acc) == "x]"
     assert state.inline_container_stack == []
 
 
 def test_scan_string_body_closes_low_smart_quote_span_with_unicode_quote() -> None:
     parser = JSONParser('”"', None, False)
     parser.context.set(ContextValues.OBJECT_VALUE)
-    state = StringParseState(rstring_delimiter='"\0', string_acc="prefix")
+    state = StringParseState(rstring_delimiter='"\0', string_acc=list("prefix"))
 
     char = _scan_string_body(parser, state)
 
     assert char == '"'
-    assert state.string_acc == "prefix”"
+    assert "".join(state.string_acc) == "prefix”"
     assert state.rstring_delimiter == '"'
 
 

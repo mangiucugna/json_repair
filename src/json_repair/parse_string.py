@@ -1,3 +1,5 @@
+import re
+from bisect import bisect_right
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, cast
 
@@ -15,6 +17,8 @@ NO_DIRECT_RESULT = object()
 INLINE_CONTAINER_CLOSING_DELIMITERS = {"[": "]", "{": "}", "(": ")"}
 INLINE_CONTAINER_OPENERS = tuple(INLINE_CONTAINER_CLOSING_DELIMITERS)
 LOW_SMART_QUOTE_SENTINEL = "\0"
+# Characters that no string-body heuristic reacts to, so a run of them can be copied at once.
+PLAIN_STRING_RUN = re.compile(r"[^\"'\\„“”{}\[\](),:`]+")
 
 
 @dataclass
@@ -23,7 +27,8 @@ class StringParseState:
     doubled_quotes: bool = False
     lstring_delimiter: str = '"'
     rstring_delimiter: str = '"'
-    string_acc: str = ""
+    # Characters are collected in a list because appending to a str attribute copies it every time.
+    string_acc: list[str] = field(default_factory=list)
     unmatched_delimiter: bool = False
     pending_inline_container: bool = False
     inline_container_stack: list[str] = field(default_factory=list)
@@ -115,7 +120,7 @@ def _append_literal_char(
 
 def _append_string_content(state: StringParseState, content: str) -> None:
     start_index = len(state.string_acc)
-    state.string_acc += content
+    state.string_acc.extend(content)
     for offset, char in enumerate(content):
         if char == "{":
             state.object_value_unmatched_opening_braces += 1
@@ -142,7 +147,7 @@ def _quote_belongs_to_regex_character_class(
 
 def _replace_trailing_backslash(state: StringParseState, content: str) -> None:
     # A backslash never changes the brace/bracket state, so only the replacement needs scanning.
-    state.string_acc = state.string_acc[:-1]
+    state.string_acc.pop()
     _append_string_content(state, content)
 
 
@@ -632,16 +637,7 @@ def _handle_right_delimiter_candidate(
                 next_char = _append_literal_char(self, state, char)
                 return True, next_char, False
         elif self.context.current == ContextValues.ARRAY:
-            even_delimiters = next_c == outer_rstring_delimiter
-            while next_c == outer_rstring_delimiter:
-                i = self.skip_to_character(character=[outer_rstring_delimiter, "]"], idx=i + 1)
-                next_c = self.get_char_at(i)
-                if next_c != outer_rstring_delimiter:
-                    even_delimiters = False
-                    break
-                i = self.skip_to_character(character=[outer_rstring_delimiter, "]"], idx=i + 1)
-                next_c = self.get_char_at(i)
-            if even_delimiters:
+            if _array_quotes_pair_up(self, outer_rstring_delimiter, i):
                 self.log(
                     "While parsing a string in Array context, we detected a quoted section that would have closed the string but has a different meaning here, ignoring it",
                 )
@@ -781,7 +777,7 @@ def _scan_string_body(
                         if next_c and next_c != ":":
                             rstring_delimiter_missing = False
             else:
-                i = self.skip_to_character(character=":", idx=1)
+                i = _cached_skip_to_character(self, state, ":", idx=1)
                 next_c = self.get_char_at(i)
                 if next_c:
                     break
@@ -800,7 +796,7 @@ def _scan_string_body(
             and ContextValues.ARRAY in self.context.context
             and (not state.string_acc or state.string_acc[-1] != outer_rstring_delimiter)
         ):
-            i = self.skip_to_character(outer_rstring_delimiter)
+            i = _cached_skip_to_character(self, state, outer_rstring_delimiter)
             if not self.get_char_at(i):
                 break
         if self.context.current == ContextValues.OBJECT_VALUE and char == "}":
@@ -825,10 +821,18 @@ def _scan_string_body(
         assert char is not None
         _append_string_content(state, char)
         self.index += 1
+        if (
+            char != "\\"
+            and not (state.missing_quotes and self.context.current == ContextValues.OBJECT_KEY)
+            and isinstance(self.json_str, str)
+            and (plain_run := PLAIN_STRING_RUN.match(self.json_str, self.index))
+        ):
+            state.string_acc.extend(plain_run.group())
+            self.index = plain_run.end()
         char = self.get_char_at()
         if char is None:
             if self.stream_stable and state.string_acc and state.string_acc[-1] == "\\":
-                state.string_acc = state.string_acc[:-1]
+                state.string_acc.pop()
             break
         if state.string_acc and state.string_acc[-1] == "\\":
             handled_escape, char = _normalize_escape_sequence(self, state, char)
@@ -894,19 +898,20 @@ def _finalize_string_result(
         if self.get_char_at() not in [":", ","]:
             return ""
 
+    string_acc = "".join(state.string_acc)
     if char != outer_rstring_delimiter:
         if not self.stream_stable:
             self.log(
                 "While parsing a string, we missed the closing quote, ignoring",
             )
-            state.string_acc = state.string_acc.rstrip()
+            string_acc = string_acc.rstrip()
     else:
         self.index += 1
 
-    if not self.stream_stable and (state.missing_quotes or (state.string_acc and state.string_acc[-1] == "\n")):
-        state.string_acc = state.string_acc.rstrip()
+    if not self.stream_stable and (state.missing_quotes or (string_acc and string_acc[-1] == "\n")):
+        string_acc = string_acc.rstrip()
 
-    return state.string_acc
+    return string_acc
 
 
 def parse_string(self: "JSONParser") -> JSONReturnType:
@@ -917,6 +922,28 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
 
     char = _scan_string_body(self, state)
     return _finalize_string_result(self, state, char)
+
+
+def _array_quotes_pair_up(self: "JSONParser", delimiter: str, quote_idx: int) -> bool:
+    """Return whether the quotes from ``quote_idx`` up to the next ``]`` come in pairs."""
+    quote_index = self.index + quote_idx
+    scan = self.array_quote_scan
+    # Every quote after quote_index up to the same ] was already found by an earlier scan, so reuse it.
+    # Without this, each quote in a long array of strings rescans to the end of the array.
+    if not (
+        scan is not None and scan[0] is self.json_str and scan[1] == delimiter and scan[2] <= quote_index < scan[3]
+    ):
+        positions = []
+        i = quote_idx
+        while True:
+            i = self.skip_to_character(character=[delimiter, "]"], idx=i + 1)
+            if self.get_char_at(i) != delimiter:
+                break
+            positions.append(self.index + i)
+        scan = (self.json_str, delimiter, quote_index, self.index + i, positions)
+        self.array_quote_scan = scan
+    following_quotes = len(scan[4]) - bisect_right(scan[4], quote_index)
+    return following_quotes % 2 == 1
 
 
 def _only_whitespace_until(self: "JSONParser", end: int) -> bool:

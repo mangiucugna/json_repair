@@ -100,7 +100,7 @@ def top_level_parenthesized_can_start_value(parser: "JSONParser") -> bool:
     if first_inner_char is None:
         return False
 
-    inner_text = parser.json_str[parser.index + idx :].lower()
+    inner_text = parser.json_str[parser.index + idx : parser.index + idx + 5].lower()
     if (
         first_inner_char not in [")", "{", "[", "(", *STRING_DELIMITERS]
         and not first_inner_char.isdigit()

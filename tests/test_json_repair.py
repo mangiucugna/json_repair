@@ -1,14 +1,53 @@
 import importlib
 import sys
+from io import StringIO
 from typing import NoReturn
 
 import pytest
 
 from src.json_repair.json_parser import JSONParser
-from src.json_repair.json_repair import loads, repair_json
+from src.json_repair.json_repair import load, loads, repair_json
 from src.json_repair.utils.constants import JSONReturnType
 
 json_repair_module = importlib.import_module("src.json_repair.json_repair")
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("intro 'quoted' prose {\"x\":1}", {"x": 1}),
+        ("note “quoted” text [1,2]", [1, 2]),
+        ('Some prose (clarification): {"x":1}', {"x": 1}),
+        ("prose\n(true, false)", [True, False]),
+        ('text before #comment\n{"x":1}', {"x": 1}),
+        ('text before /* comment */ {"x":1}', {"x": 1}),
+        ('text before ```json\n{"x":1}\n```', {"x": 1}),
+        ('  "a": 1}', {"a": 1}),
+        ("text with no result", ""),
+    ],
+)
+def test_prose_prefix_preserves_repair_and_logs_for_buffered_input(raw: str, expected: object) -> None:
+    result = repair_json(raw, return_objects=True, skip_json_loads=True, logging=True)
+    assert result[0] == expected
+    buffered = load(StringIO(raw), skip_json_loads=True, logging=True, chunk_length=4)
+    assert isinstance(buffered, tuple)
+    assert buffered[0] == expected
+    assert [entry["text"] for entry in buffered[1]] == [entry["text"] for entry in result[1]]
+
+
+def test_top_level_long_prose_skips_non_value_characters() -> None:
+    class CountingParser(JSONParser):
+        def __init__(self, raw: str) -> None:
+            super().__init__(raw, None, False)
+            self.char_reads = 0
+
+        def get_char_at(self, count: int = 0) -> str | None:
+            self.char_reads += 1
+            return super().get_char_at(count)
+
+    parser = CountingParser("prose " * 1000 + '{"x":1}')
+    assert parser.parse() == {"x": 1}
+    assert parser.char_reads < 100
 
 
 @pytest.mark.parametrize("skip_json_loads", [False, True])

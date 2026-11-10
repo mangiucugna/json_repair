@@ -1,5 +1,9 @@
+from io import StringIO
+
+import pytest
+
 from src.json_repair.json_parser import JSONParser
-from src.json_repair.json_repair import repair_json
+from src.json_repair.json_repair import load, repair_json
 
 
 def test_parse_array() -> None:
@@ -46,6 +50,27 @@ def test_parse_array_edge_cases() -> None:
     assert repair_json('[ "key":"value"]') == '[{"key": "value"}]'
     assert repair_json('[{"key": "value", "key') == '[{"key": "value"}, ["key"]]'
     assert repair_json("{'key1', 'key2'}") == '["key1", "key2"]'
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (
+            '{"rows": [["a", "b"], "c", "d"], ["e", "f"], ["g", "h", "i"], ["j", "k"]]}',
+            {"rows": [["a", "b"], ["c", "d"], ["e", "f"], ["g", "h", "i"], "j", "k"]},
+        ),
+        (
+            '{"a": [[1,2], 3,4], [5,6], "b": [[7], 8], [9], [10,11], [12]}',
+            {"a": [[1, 2], [3, 4], [5, 6]], "b": [[7], [8], [9], [10, 11], 12]},
+        ),
+        ('{"rows": [[1,2], 3], [4,5], [6,7]}', {"rows": [[1, 2], 3, [4, 5], [6, 7]]}),
+        ('{"rows": [[], 1,2], [3,4], [5,6]}', {"rows": [[], 1, 2, 3, 4, 5, 6]}),
+    ],
+)
+def test_table_row_continuations_preserve_repair_and_logs(raw: str, expected: object) -> None:
+    result = repair_json(raw, return_objects=True, skip_json_loads=True, logging=True)
+    assert result[0] == expected
+    assert load(StringIO(raw), skip_json_loads=True, logging=True, chunk_length=8) == result
 
 
 def test_parse_array_closes_before_object_member_after_scalar_items() -> None:
@@ -113,6 +138,31 @@ def test_top_level_parenthesized_value_gate_rejects_prose_and_accepts_standalone
 
     parser = JSONParser('(["a\\\\b"], {"k": 1})\n', None, False)
     assert parser.top_level_parenthesized_can_start_value() is True
+
+
+def test_parse_array_inner_quotes_across_items() -> None:
+    assert (
+        repair_json('["he said "hi" to me", "she said "bye" too", "the 12" pipe", "ok"]')
+        == '["he said ", "hi\\" to me\\"", "she said ", "bye\\" too\\"", "the 12", "pipe", "ok"]'
+    )
+    assert (
+        repair_json('{"quotes": ["he said "hi" to me", "the 12" pipe"], "next": ["a "b" c"]}')
+        == '{"quotes": ["he said ", "hi\\" to me\\"", "the 12", "pipe"], "next": ["a \\"b\\" c"]}'
+    )
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ('{"a": ["one "two" three", "four"], "a": ["five "six" seven"]}', {"a": ['five "six" seven']}),
+        ("['one 'two' three', 'four'], [\"five \"six\" seven\"]", [["one 'two' three", "four"], ['five "six" seven']]),
+        ('["a "b" c] suffix", "d "e" f",]', ["a ", "b", "c"]),
+    ],
+)
+def test_array_inner_quotes_across_boundaries_and_buffered_input(raw: str, expected: object) -> None:
+    result = repair_json(raw, return_objects=True, skip_json_loads=True, logging=True)
+    assert result[0] == expected
+    assert load(StringIO(raw), skip_json_loads=True, logging=True, chunk_length=4) == result
 
 
 def test_parse_array_missing_quotes() -> None:

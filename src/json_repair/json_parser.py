@@ -1,4 +1,5 @@
 import json
+import re
 from collections.abc import Callable
 from contextlib import ExitStack
 from typing import TYPE_CHECKING, Any, TextIO
@@ -17,6 +18,10 @@ from .utils.string_file_wrapper import StringFileWrapper
 
 if TYPE_CHECKING:
     from .schema_repair import SchemaRepairer
+
+# Top-level characters that can start a value or a comment.
+TOP_LEVEL_VALUE_START = re.compile(r"[{\[(#/]")
+TOP_LEVEL_VALUE_OR_QUOTE_START = re.compile(r"[{\[(#/" + re.escape("".join(STRING_DELIMITERS)) + "]")
 
 
 class JSONParser:
@@ -94,6 +99,10 @@ class JSONParser:
         self.has_tried_valid_json_suffix = False
         self._last_parse_found_value = False
         self.schema_repairer: SchemaRepairer | None = None
+        # Quote positions found by the last array-string lookahead, reused by the following quotes.
+        self.array_quote_scan: tuple[str | StringFileWrapper, str, int, int, list[int]] | None = None
+        # Remember the rows already checked across successive table continuations.
+        self.row_length_scan: tuple[list[JSONReturnType], int, int | None, bool] | None = None
 
     def parse(
         self,
@@ -356,6 +365,10 @@ class JSONParser:
                     )
             # If everything else fails, we just ignore and move on
             self.index += 1
+            if self.context.empty and isinstance(self.json_str, str):
+                pattern = TOP_LEVEL_VALUE_OR_QUOTE_START if check_initial_quote else TOP_LEVEL_VALUE_START
+                match = pattern.search(self.json_str, self.index)
+                self.index = match.start() if match else len(self.json_str)
 
     def _resolve_schema_for_parse(
         self,

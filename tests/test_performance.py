@@ -34,6 +34,26 @@ mixed_quote_object_string_fragments = _unclosed_object_string_payload(
 far_quote_comma_object_string_fragments = '{"a": "' + ("x," * 10_000) + '" tail'
 far_quote_brace_object_string_fragments = '{"a": "' + ("x}" * 5_000) + '" tail'
 unclosed_object_string_escaped_newlines = '{"a": "' + ("x\\n" * 5_000)
+unclosed_object_string_long_content = '{"a": "' + ("value = compute(item)\\n" * 10_000)
+unquoted_object_value_long_content = '{"a": ' + ("The quick brown fox jumps over the lazy dog " * 5_000) + "}"
+array_strings_with_inner_quotes = "[" + ", ".join(f'"he said "hi {index}" to me"' for index in range(2_000)) + "]"
+array_object_string_with_many_brackets = (
+    '[{"answer": "' + ("Paris is the capital of France [1] and Lyon is big [2].\\n" * 800) + '"},]'
+)
+unclosed_object_string_with_many_braces = '{"a": "' + ("text } more " * 3_000)
+table_rows_after_missing_row_bracket = (
+    '{"headers": ["name", "status"], "rows": [["item 0", "ok"], "item 1", "ok"], '
+    + ", ".join(f'["item {i}", "ok"]' for i in range(2, 4_000))
+    + "]}"
+)
+long_prose_before_json = (
+    "Let me think about this carefully. The user wants a list of cities, so I will check each one. " * 2_000
+    + '```json\n{"cities": ["Paris", "Lyon"]}\n```'
+)
+parenthesized_prose_lines_before_json = (
+    "".join(f"({i}) Step {i}: check the input and compute the value.\n" for i in range(6_000))
+    + '```json\n{"answer": 42}\n```'
+)
 
 schema_perf = {
     "type": "array",
@@ -174,3 +194,25 @@ def test_schema_repair_performance(
     assert benchmark.stats is not None
     median_time = benchmark.stats.get("median")
     assert median_time < max_time, f"Benchmark exceeded threshold: {median_time:.6f}s > {max_time:.6f}s"
+
+
+@pytest.mark.skipif(CI, reason="Performance tests are skipped in CI")
+@pytest.mark.parametrize(
+    ("raw", "skip_json_loads", "max_time"),
+    [
+        pytest.param(unclosed_object_string_long_content, True, 1, id="long-unclosed-string"),
+        pytest.param(unquoted_object_value_long_content, True, 0.25, id="long-unquoted-value"),
+        pytest.param(array_strings_with_inner_quotes, True, 1, id="array-inner-quotes"),
+        pytest.param(array_object_string_with_many_brackets, False, 0.25, id="brackets-in-string"),
+        pytest.param(unclosed_object_string_with_many_braces, True, 1, id="braces-in-string"),
+        pytest.param(table_rows_after_missing_row_bracket, True, 0.25, id="table-row-continuations"),
+        pytest.param(long_prose_before_json, False, 0.01, id="prose-before-json"),
+        pytest.param(parenthesized_prose_lines_before_json, False, 0.25, id="parenthesized-prose"),
+    ],
+)
+def test_long_input_repair_performance(raw: str, skip_json_loads: bool, max_time: float) -> None:
+    start = time.perf_counter()
+    repair_json(raw, return_objects=True, skip_json_loads=skip_json_loads)
+    elapsed = time.perf_counter() - start
+
+    assert elapsed < max_time, f"Performance regression: {elapsed:.3f}s > {max_time:.3f}s"

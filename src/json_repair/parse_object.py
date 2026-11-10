@@ -144,6 +144,26 @@ def _classify_empty_object_repair(
     return "array", None
 
 
+def _shared_row_length(self: "JSONParser", rows: list[JSONReturnType]) -> int | None:
+    """Return the length shared by every list in rows, or None if there is no list or the lengths differ."""
+    # Each continuation appends to the same rows list, so resume the check where the previous call stopped
+    # instead of rescanning every row (quadratic on long tables).
+    scan = self.row_length_scan
+    if scan is None or scan[0] is not rows or scan[1] > len(rows):
+        scan = (rows, 0, None, True)
+    _, checked, row_length, same_length = scan
+    if same_length:
+        for item in rows[checked:]:
+            if isinstance(item, list):
+                if row_length is None:
+                    row_length = len(item)
+                elif len(item) != row_length:
+                    same_length = False
+                    break
+    self.row_length_scan = (rows, len(rows), row_length, same_length)
+    return row_length if same_length else None
+
+
 def _merge_object_array_continuation(
     self: "JSONParser",
     obj: dict[str, JSONReturnType],
@@ -157,15 +177,13 @@ def _merge_object_array_continuation(
     if isinstance(new_array, list):
         prev_value = obj[prev_key]
         if isinstance(prev_value, list):
-            list_lengths = [len(item) for item in prev_value if isinstance(item, list)]
-            expected_len = (
-                list_lengths[0] if list_lengths and all(length == list_lengths[0] for length in list_lengths) else None
-            )
+            expected_len = _shared_row_length(self, prev_value)
             if expected_len:
                 tail = []
                 while prev_value and not isinstance(prev_value[-1], list):
                     tail.append(prev_value.pop())
                 if tail:
+                    self.row_length_scan = None
                     tail.reverse()
                     if len(tail) % expected_len == 0:
                         self.log(
