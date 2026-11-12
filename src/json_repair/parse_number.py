@@ -10,6 +10,27 @@ if TYPE_CHECKING:
     from .json_parser import JSONParser
 
 
+def _skip_stray_number_after_commas(self: "JSONParser") -> None:
+    offset = 2
+    while (next_char := self.get_char_at(offset)) and next_char.isspace():
+        offset += 1
+    digit_start = offset
+    while (next_char := self.get_char_at(offset)) and next_char.isascii() and next_char.isdigit():
+        offset += 1
+    if offset == digit_start:
+        return
+    while (next_char := self.get_char_at(offset)) and next_char.isspace():
+        offset += 1
+    if self.get_char_at(offset) != ",":
+        return
+    next_offset = offset + 1
+    while (next_char := self.get_char_at(next_offset)) and next_char.isspace():
+        next_offset += 1
+    if self.get_char_at(next_offset) in ('"', "'"):
+        self.log("Discarded stray number between object fields")
+        self.index += offset
+
+
 def parse_number(self: "JSONParser") -> JSONReturnType:
     # <number> is a valid real number expressed in one of a number of given formats
     number_start_index = self.index
@@ -25,22 +46,7 @@ def parse_number(self: "JSONParser") -> JSONReturnType:
             self.log("Found consecutive commas after an object number")
             if self.strict:
                 raise ValueError("Consecutive commas after an object number in strict mode.")
-            offset = 2
-            while (next_char := self.get_char_at(offset)) and next_char.isspace():
-                offset += 1
-            digit_start = offset
-            while (next_char := self.get_char_at(offset)) and next_char.isascii() and next_char.isdigit():
-                offset += 1
-            if offset > digit_start:
-                while (next_char := self.get_char_at(offset)) and next_char.isspace():
-                    offset += 1
-                if self.get_char_at(offset) == ",":
-                    next_offset = offset + 1
-                    while (next_char := self.get_char_at(next_offset)) and next_char.isspace():
-                        next_offset += 1
-                    if self.get_char_at(next_offset) in ('"', "'"):
-                        self.log("Discarded stray number between object fields")
-                        self.index += offset
+            _skip_stray_number_after_commas(self)
             break
         if char != "_":
             number_str += char

@@ -35,9 +35,12 @@ def test_stray_number_after_consecutive_commas_preserves_next_key(skip_json_load
     result, logs = repair_json(raw, logging=True, skip_json_loads=skip_json_loads)
     assert result == expected
     assert any("comma" in entry["text"].lower() for entry in logs)
+    assert any(entry["text"] == "Discarded stray number between object fields" for entry in logs)
     assert load(StringIO(raw), skip_json_loads=skip_json_loads, chunk_length=2) == expected
     assert repair_json('{"a":1,, 2 , "b":3}', return_objects=True, skip_json_loads=skip_json_loads) == expected
-    assert repair_json('{"a":1,,2:3}', return_objects=True, skip_json_loads=skip_json_loads) == {"a": 1, "2": 3}
+    result, logs = repair_json('{"a":1,,2:3}', logging=True, skip_json_loads=skip_json_loads)
+    assert result == {"a": 1, "2": 3}
+    assert not any(entry["text"] == "Discarded stray number between object fields" for entry in logs)
 
 
 def test_comma_containing_object_value_remains_a_string() -> None:

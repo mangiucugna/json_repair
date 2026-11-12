@@ -162,6 +162,7 @@ extend-select = [
   "RUF200",  # validate pyproject.toml metadata
   "FBT003",  # make boolean arguments explicit at call sites
   "PLR1714", # repeated equality comparisons
+  "PLR0917", # limit positional arguments
   "PLR5501", # collapsible else-if
   "PLW1514", # require explicit text encoding
   "TRY300",  # keep returns out of try blocks

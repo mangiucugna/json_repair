@@ -53,6 +53,7 @@ class JSONParser:
     def __init__(
         self,
         json_str: str | StringFileWrapper,
+        *,
         json_fd: TextIO | None,
         logging: bool | None,
         json_fd_chunk_length: int = 0,
@@ -312,21 +313,36 @@ class JSONParser:
                 parsed_suffix, value = self._try_parse_valid_json_value()
                 if parsed_suffix:
                     return self._finalize_parsed_value(
-                        value, repairer, schema, path, finalize_schema, record_top_level_value
+                        value,
+                        repairer=repairer,
+                        schema=schema,
+                        path=path,
+                        finalize_schema=finalize_schema,
+                        record_top_level_value=record_top_level_value,
                     )
             # <object> starts with '{'
             if char == "{":
                 self.index += 1
                 value = self.parse_object(schema, path) if repairer else self.parse_object()
                 return self._finalize_parsed_value(
-                    value, repairer, schema, path, finalize_schema, record_top_level_value
+                    value,
+                    repairer=repairer,
+                    schema=schema,
+                    path=path,
+                    finalize_schema=finalize_schema,
+                    record_top_level_value=record_top_level_value,
                 )
             # <array> starts with '['
             if char == "[":
                 self.index += 1
                 value = self.parse_array(schema, path) if repairer else self.parse_array()
                 return self._finalize_parsed_value(
-                    value, repairer, schema, path, finalize_schema, record_top_level_value
+                    value,
+                    repairer=repairer,
+                    schema=schema,
+                    path=path,
+                    finalize_schema=finalize_schema,
+                    record_top_level_value=record_top_level_value,
                 )
             # Python tuple literals and grouped values start with '('
             if char == "(":
@@ -335,7 +351,12 @@ class JSONParser:
                 if not self.context.empty or self.top_level_parenthesized_can_start_value():
                     value = self.parse_parenthesized(schema, path) if repairer else self.parse_parenthesized()
                     return self._finalize_parsed_value(
-                        value, repairer, schema, path, finalize_schema, record_top_level_value
+                        value,
+                        repairer=repairer,
+                        schema=schema,
+                        path=path,
+                        finalize_schema=finalize_schema,
+                        record_top_level_value=record_top_level_value,
                     )
                 self.index += 1
                 continue
@@ -343,17 +364,29 @@ class JSONParser:
             if not self.context.empty and (char in STRING_DELIMITERS or char.isalpha()):
                 value = self.parse_string()
                 return self._finalize_parsed_value(
-                    value, repairer, schema, path, finalize_schema, record_top_level_value
+                    value,
+                    repairer=repairer,
+                    schema=schema,
+                    path=path,
+                    finalize_schema=finalize_schema,
+                    record_top_level_value=record_top_level_value,
                 )
             # <number> starts with [0-9] or minus
             if not self.context.empty and (char.isdigit() or char in {"-", "."}):
                 value = self.parse_number()
                 return self._finalize_parsed_value(
-                    value, repairer, schema, path, finalize_schema, record_top_level_value
+                    value,
+                    repairer=repairer,
+                    schema=schema,
+                    path=path,
+                    finalize_schema=finalize_schema,
+                    record_top_level_value=record_top_level_value,
                 )
             if char in ["#", "/"]:
                 value = self.parse_comment(record_top_level_value)
-                return self._finalize_parsed_value(value, repairer, schema, path, finalize_schema)
+                return self._finalize_parsed_value(
+                    value, repairer=repairer, schema=schema, path=path, finalize_schema=finalize_schema
+                )
             # Only probe a missing brace when normal dispatch would discard the
             # initial quote; later quoted prose must not start this recovery.
             if char in STRING_DELIMITERS and check_initial_quote:
@@ -361,7 +394,12 @@ class JSONParser:
                 parsed_object, value = self._try_parse_missing_opening_object(char)
                 if parsed_object:
                     return self._finalize_parsed_value(
-                        value, repairer, schema, path, finalize_schema, record_top_level_value
+                        value,
+                        repairer=repairer,
+                        schema=schema,
+                        path=path,
+                        finalize_schema=finalize_schema,
+                        record_top_level_value=record_top_level_value,
                     )
             # If everything else fails, we just ignore and move on
             self.index += 1
@@ -388,6 +426,7 @@ class JSONParser:
     def _finalize_parsed_value(
         self,
         value: JSONReturnType,
+        *,
         repairer: "SchemaRepairer | None",
         schema: dict[str, Any] | bool | None,
         path: str,

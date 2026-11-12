@@ -92,7 +92,7 @@ def test_comment_before_missing_object_value_is_rejected_in_strict_mode() -> Non
 
 @pytest.mark.parametrize("comment", ["/* comment */", "// comment\n", "# comment\n"])
 def test_skipping_comments_with_empty_context_leaves_the_next_value_unparsed(comment: str) -> None:
-    parser = JSONParser(f' {comment} {{"a": 1}}', None, logging=True)
+    parser = JSONParser(f' {comment} {{"a": 1}}', json_fd=None, logging=True)
 
     parser.skip_whitespace_and_comments()
 
@@ -125,7 +125,7 @@ def test_unclosed_comment_only_object_is_rejected_in_strict_mode(raw: str) -> No
 
 
 def test_skipping_comments_leaves_a_standalone_slash_unconsumed() -> None:
-    parser = JSONParser("/* comment */ /value", None, logging=True)
+    parser = JSONParser("/* comment */ /value", json_fd=None, logging=True)
 
     parser.skip_whitespace_and_comments()
 

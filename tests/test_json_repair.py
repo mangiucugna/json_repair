@@ -38,7 +38,7 @@ def test_prose_prefix_preserves_repair_and_logs_for_buffered_input(raw: str, exp
 def test_top_level_long_prose_skips_non_value_characters() -> None:
     class CountingParser(JSONParser):
         def __init__(self, raw: str) -> None:
-            super().__init__(raw, None, logging=False)
+            super().__init__(raw, json_fd=None, logging=False)
             self.char_reads = 0
 
         def get_char_at(self, count: int = 0) -> str | None:
@@ -255,13 +255,13 @@ def test_multiple_jsons() -> None:
 
 
 def test_top_level_separator_detects_pending_comma() -> None:
-    parser = JSONParser(' , {"key": "value"}', None, logging=False)
+    parser = JSONParser(' , {"key": "value"}', json_fd=None, logging=False)
 
     assert parser._next_top_level_value_is_comma_separated()
 
 
 def test_initial_container_trailing_content_rejects_mismatched_delimiters() -> None:
-    parser = JSONParser("{]", None, logging=False)
+    parser = JSONParser("{]", json_fd=None, logging=False)
 
     assert parser._initial_container_has_non_comma_trailing_content() is False
 
@@ -435,7 +435,7 @@ def _find_real_recursion_payload() -> str:
     while depth <= recursion_limit:
         payload = _nested_repair_payload(depth)
         try:
-            JSONParser(payload, None, logging=False).parse()
+            JSONParser(payload, json_fd=None, logging=False).parse()
         except RecursionError:
             return payload
         depth *= 2

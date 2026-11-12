@@ -225,64 +225,70 @@ def _prepare_string_entry(
         )
 
     if self.get_char_at() == state.lstring_delimiter:
-        if (
-            (self.context.current == ContextValues.OBJECT_KEY and self.get_char_at(1) == ":")
-            or (self.context.current == ContextValues.OBJECT_VALUE and self.get_char_at(1) in [",", "}"])
-            or (self.context.current == ContextValues.ARRAY and self.get_char_at(1) in [",", "]"])
-        ):
-            self.index += 1
-            return state, ""
-        if self.get_char_at(1) == state.lstring_delimiter:
-            self.log(
-                "While parsing a string, we found a doubled quote and then a quote again, ignoring it",
-            )
-            if self.strict:
-                raise ValueError("Found doubled quotes followed by another quote.")
-            return state, ""
-        i = self.skip_to_character(character=state.rstring_delimiter, idx=1)
-        if self.get_char_at(i + 1) == state.rstring_delimiter:
-            self.log(
-                "While parsing a string, we found a valid starting doubled quote",
-            )
-            state.doubled_quotes = True
-            self.index += 1
-        else:
-            if self.get_char_at(i) == state.rstring_delimiter:
-                outer_quote_idx = self.skip_to_character(character=state.rstring_delimiter, idx=i + 1)
-                after_outer_quote_idx = self.scroll_whitespaces(idx=outer_quote_idx + 1)
-                after_outer_quote = self.get_char_at(after_outer_quote_idx)
-                if (
-                    self.context.current == ContextValues.OBJECT_VALUE
-                    and not _only_whitespace_until(self, i)
-                    and self.get_char_at(outer_quote_idx) == state.rstring_delimiter
-                    and after_outer_quote in [",", "}", None]
-                ):
-                    self.log(
-                        "While parsing a string, we found a leading quote that starts a quoted span, keeping it",
-                    )
-                    _append_string_content(state, state.lstring_delimiter)
-                    state.unmatched_delimiter = True
-                    self.index += 1
-                    return state, NO_DIRECT_RESULT
-            i = self.scroll_whitespaces(idx=1)
-            next_c = self.get_char_at(i)
-            if next_c in [*STRING_DELIMITERS, "{", "["]:
-                self.log(
-                    "While parsing a string, we found a doubled quote but also another quote afterwards, ignoring it",
-                )
-                if self.strict:
-                    raise ValueError(
-                        "Found doubled quotes followed by another quote while parsing a string.",
-                    )
-                self.index += 1
-                return state, ""
-            if next_c not in [",", "]", "}"]:
-                self.log(
-                    "While parsing a string, we found a doubled quote but it was a mistake, removing one quote",
-                )
-                self.index += 1
+        return state, _handle_doubled_quote_entry(self, state)
 
     return state, NO_DIRECT_RESULT
+
+
+def _handle_doubled_quote_entry(self: "JSONParser", state: StringParseState) -> object:
+    if (
+        (self.context.current == ContextValues.OBJECT_KEY and self.get_char_at(1) == ":")
+        or (self.context.current == ContextValues.OBJECT_VALUE and self.get_char_at(1) in [",", "}"])
+        or (self.context.current == ContextValues.ARRAY and self.get_char_at(1) in [",", "]"])
+    ):
+        self.index += 1
+        return ""
+    if self.get_char_at(1) == state.lstring_delimiter:
+        self.log(
+            "While parsing a string, we found a doubled quote and then a quote again, ignoring it",
+        )
+        if self.strict:
+            raise ValueError("Found doubled quotes followed by another quote.")
+        return ""
+    i = self.skip_to_character(character=state.rstring_delimiter, idx=1)
+    if self.get_char_at(i + 1) == state.rstring_delimiter:
+        self.log(
+            "While parsing a string, we found a valid starting doubled quote",
+        )
+        state.doubled_quotes = True
+        self.index += 1
+    else:
+        if self.get_char_at(i) == state.rstring_delimiter:
+            outer_quote_idx = self.skip_to_character(character=state.rstring_delimiter, idx=i + 1)
+            after_outer_quote_idx = self.scroll_whitespaces(idx=outer_quote_idx + 1)
+            after_outer_quote = self.get_char_at(after_outer_quote_idx)
+            if (
+                self.context.current == ContextValues.OBJECT_VALUE
+                and not _only_whitespace_until(self, i)
+                and self.get_char_at(outer_quote_idx) == state.rstring_delimiter
+                and after_outer_quote in [",", "}", None]
+            ):
+                self.log(
+                    "While parsing a string, we found a leading quote that starts a quoted span, keeping it",
+                )
+                _append_string_content(state, state.lstring_delimiter)
+                state.unmatched_delimiter = True
+                self.index += 1
+                return NO_DIRECT_RESULT
+        i = self.scroll_whitespaces(idx=1)
+        next_c = self.get_char_at(i)
+        if next_c in [*STRING_DELIMITERS, "{", "["]:
+            self.log(
+                "While parsing a string, we found a doubled quote but also another quote afterwards, ignoring it",
+            )
+            if self.strict:
+                raise ValueError(
+                    "Found doubled quotes followed by another quote while parsing a string.",
+                )
+            self.index += 1
+            return ""
+        if next_c not in [",", "]", "}"]:
+            self.log(
+                "While parsing a string, we found a doubled quote but it was a mistake, removing one quote",
+            )
+            self.index += 1
+
+    return NO_DIRECT_RESULT
 
 
 def _normalize_escape_sequence(

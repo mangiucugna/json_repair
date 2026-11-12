@@ -212,6 +212,7 @@ def test_schema_applies_to_valid_json_without_skip_json_loads() -> None:
     assert repair_json('"1"', schema={"type": "integer"}, return_objects=True) == 1
     # Fast-path validation fails for a valid scalar and parser fallback returns empty string.
     assert repair_json("true", schema={"type": "string"}, return_objects=True) == ""
+    assert repair_json("true", schema={"type": "string"}, logging=True) == ("", [])
 
     with pytest.raises(ValueError, match="does not match"):
         repair_json('"bbb"', schema={"type": "string", "pattern": "^a+$"}, return_objects=True)
@@ -440,7 +441,7 @@ def test_schema_applies_to_valid_json_fast_path_outputs_and_logging() -> None:
 
     repaired, logs = repair_json('{"value": "1"}', schema=schema, logging=True)
     assert repaired == {"value": 1}
-    assert logs
+    assert logs == [{"text": "Coerced string to integer", "context": "$.value"}]
 
 
 def test_schema_preserves_prefixed_valid_json_string_content() -> None:

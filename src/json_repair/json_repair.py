@@ -33,6 +33,20 @@ from .schema_repair import SchemaRepairer, load_schema_model, normalize_schema_r
 from .utils.constants import JSONReturnType
 
 
+def _try_schema_fast_path(
+    value: JSONReturnType, repairer: SchemaRepairer, schema: dict[str, Any] | bool
+) -> tuple[bool, JSONReturnType]:
+    if repairer.is_valid(value, schema):
+        return True, value
+    try:
+        repaired = repairer.repair_value(value, schema, "$")
+        if repairer.is_valid(repaired, schema):
+            return True, repaired
+    except ValueError:
+        pass
+    return False, value
+
+
 @overload
 def repair_json(
     json_str: str = "",
@@ -66,6 +80,7 @@ def repair_json(
 
 
 @overload
+# Keep public options positional for compatibility with existing callers.
 def repair_json(
     json_str: str = "",
     return_objects: bool = False,
@@ -97,7 +112,8 @@ def repair_json(
 ) -> str | JSONReturnType | tuple[JSONReturnType, list[dict[str, str]]]: ...
 
 
-def repair_json(
+# Keep public options positional for compatibility with existing callers.
+def repair_json(  # noqa: PLR0917
     json_str: str = "",
     return_objects: bool = False,
     skip_json_loads: bool = False,
@@ -150,11 +166,11 @@ def repair_json(
     if json_fd is not None:
         parser = JSONParser(
             json_str,
-            json_fd,
-            logging,
-            chunk_length,
-            stream_stable,
-            strict,
+            json_fd=json_fd,
+            logging=logging,
+            json_fd_chunk_length=chunk_length,
+            stream_stable=stream_stable,
+            strict=strict,
         )
         if logging:
             repair_log = parser.logger
@@ -177,20 +193,8 @@ def repair_json(
         if not skip_json_loads:
             parsed_json = json.load(json_fd) if json_fd else json.loads(json_str)
             if repairer is not None and schema_obj is not None:
-                # Validate here to ensure that we reject values that cannot satisfy the schema and fall back to the more expensive parser+schema repair if needed, instead of just returning the valid but schema-noncompliant JSON.
                 try:
-                    if repairer.is_valid(parsed_json, schema_obj):
-                        is_valid_json = True
-                    else:
-                        try:
-                            # repair_value may mutate containers in place; if validate fails we still
-                            # fall back to parser.parse_with_schema, which fully replaces parsed_json.
-                            repaired_value = repairer.repair_value(parsed_json, schema_obj, "$")
-                            if repairer.is_valid(repaired_value, schema_obj):
-                                parsed_json = repaired_value
-                                is_valid_json = True
-                        except ValueError:
-                            pass
+                    is_valid_json, parsed_json = _try_schema_fast_path(parsed_json, repairer, schema_obj)
                 except RecursionError as exc:
                     raise ValueError("Input schema nesting exceeds the supported schema recursion depth.") from exc
             else:
@@ -201,11 +205,11 @@ def repair_json(
         if parser is None:
             parser = JSONParser(
                 json_str,
-                json_fd,
-                logging,
-                chunk_length,
-                stream_stable,
-                strict,
+                json_fd=json_fd,
+                logging=logging,
+                json_fd_chunk_length=chunk_length,
+                stream_stable=stream_stable,
+                strict=strict,
                 try_valid_json_suffix=try_valid_json_suffix,
             )
             if logging:
@@ -236,7 +240,7 @@ def repair_json(
     return json.dumps(parsed_json, **json_dumps_args)
 
 
-def loads(
+def loads(  # noqa: PLR0917
     json_str: str,
     skip_json_loads: bool = False,
     logging: bool = False,
@@ -272,7 +276,7 @@ def loads(
     )
 
 
-def load(
+def load(  # noqa: PLR0917
     fd: TextIO,
     skip_json_loads: bool = False,
     logging: bool = False,
@@ -309,7 +313,7 @@ def load(
     )
 
 
-def from_file(
+def from_file(  # noqa: PLR0917
     filename: str | Path,
     skip_json_loads: bool = False,
     logging: bool = False,

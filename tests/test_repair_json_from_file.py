@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from src.json_repair.json_repair import from_file, load
+from src.json_repair.json_repair import from_file, load, loads, repair_json
 
 
 @pytest.mark.parametrize("skip_json_loads", [False, True])
@@ -18,6 +18,17 @@ def test_load_repairs_missing_opening_brace_from_current_position(skip_json_load
     value, logs = result
     assert value == {"a": {"b": "你好"}}
     assert any("opening object brace" in entry["text"] for entry in logs)
+
+
+def test_public_functions_preserve_positional_options(tmp_path: pathlib.Path) -> None:
+    raw = '{"name": "value"}'
+    input_path = tmp_path / "input.json"
+    input_path.write_text(raw, encoding="utf-8")
+    enabled = True
+    assert repair_json(raw, enabled, enabled) == {"name": "value"}
+    assert loads(raw, enabled) == {"name": "value"}
+    assert load(StringIO(raw), enabled) == {"name": "value"}
+    assert from_file(input_path, enabled) == {"name": "value"}
 
 
 def test_load_declines_missing_opening_brace_with_trailing_content() -> None:

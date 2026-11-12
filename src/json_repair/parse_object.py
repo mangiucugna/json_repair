@@ -340,6 +340,7 @@ def _parse_object_value(
 def _repair_empty_object_result(
     self: "JSONParser",
     obj: dict[str, JSONReturnType],
+    *,
     start_index: int,
     schema: dict[str, Any] | bool | None,
     path: str,
@@ -393,6 +394,7 @@ def _repair_empty_object_result(
 def _complete_object_parse(
     self: "JSONParser",
     obj: dict[str, JSONReturnType],
+    *,
     schema: dict[str, Any] | bool | None,
     path: str,
     schema_repairer: "SchemaRepairer | None",
@@ -520,10 +522,10 @@ def parse_object(
     repaired_empty_object, repaired_value = _repair_empty_object_result(
         self,
         obj,
-        start_index,
-        schema,
-        path,
-        schema_repairer,
+        start_index=start_index,
+        schema=schema,
+        path=path,
+        schema_repairer=schema_repairer,
     )
     if repaired_empty_object:
         return repaired_value
@@ -531,8 +533,8 @@ def parse_object(
     return _complete_object_parse(
         self,
         obj,
-        schema,
-        path,
-        schema_repairer,
-        schema_config,
+        schema=schema,
+        path=path,
+        schema_repairer=schema_repairer,
+        schema_config=schema_config,
     )
