@@ -158,6 +158,8 @@ Keep in mind that the library will not catch any IO-related exception and those 
 
 Non-seekable text streams are supported; their remaining contents are read into memory for repair.
 
+`from_file` and the CLI read and write files using UTF-8, including CLI schema files. To use another encoding, open a text stream with the desired encoding and pass it to `load`.
+
 ### Non-Latin characters
 
 When working with non-Latin characters (such as Chinese, Japanese, or Korean), you need to pass `ensure_ascii=False` to `repair_json()` in order to preserve the non-Latin characters in the output.
@@ -279,7 +281,7 @@ Schema mode can be selected with `schema_repair_mode`:
   - fills missing required fields only when a safe value can be inferred (`default`, `const`, first `enum`, or empty array/object when allowed by schema constraints).
   - for sequential top-level fragments, skips schema-invalid fragments and returns the first fragment that satisfies the schema.
 
-This is especially useful when you need deterministic, schema-valid outputs for downstream validation, storage, or typed processing. If the schema is invalid or the input cannot be repaired to satisfy it, `json_repair` raises `ValueError`.
+This is especially useful when you need deterministic, schema-valid outputs for downstream validation, storage, or typed processing. If the schema is invalid or the input cannot be repaired to satisfy it, `json_repair` raises `ValueError`. Some schema type mismatches also raise `TypeError` (the exception is a subclass of both).
 
 Install the optional dependencies:
 

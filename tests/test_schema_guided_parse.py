@@ -177,7 +177,7 @@ def test_schema_salvage_does_not_select_an_item_from_a_real_top_level_array() ->
         "required": ["name", "age"],
     }
 
-    with pytest.raises(ValueError, match="Expected object"):
+    with pytest.raises(TypeError, match="Expected object"):
         repair_with_schema(
             '[{"foo": 1}, {"name": "Alice", "age": 30}]',
             schema,
@@ -303,7 +303,7 @@ def test_schema_salvage_repairs_malformed_double_serialized_object_string() -> N
     raw = '{"summary": "{verdict: malicious, confidence: high}"}'
     expected = {"summary": {"verdict": "malicious", "confidence": "high"}}
 
-    with pytest.raises(ValueError, match=r"Expected object at \$.summary, got str\."):
+    with pytest.raises(TypeError, match=r"Expected object at \$.summary, got str\."):
         repair_json(raw, schema=schema, return_objects=True, schema_repair_mode="standard")
 
     repaired, logs = repair_json(raw, schema=schema, logging=True, schema_repair_mode="salvage")
@@ -370,10 +370,10 @@ def test_schema_object_string_unwrap_preserves_existing_failures() -> None:
         "required": ["summary"],
     }
 
-    with pytest.raises(ValueError, match=r"Expected object at \$.summary, got str\."):
+    with pytest.raises(TypeError, match=r"Expected object at \$.summary, got str\."):
         repair_json('{"summary": "not json"}', schema=schema, return_objects=True)
 
-    with pytest.raises(ValueError, match=r"Expected object at \$.summary, got str\."):
+    with pytest.raises(TypeError, match=r"Expected object at \$.summary, got str\."):
         repair_json('{"summary": "[1, 2]"}', schema=schema, return_objects=True)
 
 
@@ -767,7 +767,7 @@ def test_schema_salvage_mode_maps_list_to_object_when_unambiguous() -> None:
     }
     raw = '["hello", ["a", "b"]]'
 
-    with pytest.raises(ValueError, match="Expected object"):
+    with pytest.raises(TypeError, match="Expected object"):
         repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True)
 
     assert repair_json(
@@ -784,7 +784,7 @@ def test_schema_salvage_mode_maps_set_like_object_members_to_null_valued_keys() 
     schema = {"type": "object"}
     raw = '{"a", "b"}'
 
-    with pytest.raises(ValueError, match="Expected object"):
+    with pytest.raises(TypeError, match="Expected object"):
         repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True, schema_repair_mode="standard")
 
     assert (
@@ -849,7 +849,7 @@ def test_schema_salvage_mode_set_like_members_require_string_keys() -> None:
     schema = {"type": "object"}
     raw = "{1, 2}"
 
-    with pytest.raises(ValueError, match="Expected object"):
+    with pytest.raises(TypeError, match="Expected object"):
         repair_json(
             raw,
             schema=schema,
@@ -870,7 +870,7 @@ def test_schema_salvage_mode_mapping_rejects_mismatches(raw: str) -> None:
         },
         "required": ["name", "tags"],
     }
-    with pytest.raises(ValueError, match="Expected object"):
+    with pytest.raises(TypeError, match="Expected object"):
         repair_json(
             raw,
             schema=schema,
@@ -959,7 +959,7 @@ def test_schema_salvage_mode_unwraps_root_single_item_array_and_fills_required_a
     }
 """
 
-    with pytest.raises(ValueError, match=r"Expected object at \$, got list\."):
+    with pytest.raises(TypeError, match=r"Expected object at \$, got list\."):
         repair_json(
             raw,
             schema=schema,
@@ -1055,7 +1055,7 @@ def test_schema_salvage_mode_root_unwrap_requires_single_item() -> None:
         "properties": {"value": {"type": "integer"}},
         "required": ["value"],
     }
-    with pytest.raises(ValueError, match=r"Expected object at \$, got list\."):
+    with pytest.raises(TypeError, match=r"Expected object at \$, got list\."):
         repair_json(
             '[{"value": 1}, {"value": 2}]',
             schema=schema,

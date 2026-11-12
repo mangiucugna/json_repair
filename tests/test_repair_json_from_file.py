@@ -1,6 +1,7 @@
 import json
 import pathlib
 from io import StringIO
+from typing import Any
 
 import pytest
 
@@ -21,6 +22,19 @@ def test_load_repairs_missing_opening_brace_from_current_position(skip_json_load
 
 def test_load_declines_missing_opening_brace_with_trailing_content() -> None:
     assert load(StringIO('"a": 1} {"b": 2}'), chunk_length=2) == {"b": 2}
+
+
+def test_from_file_reads_utf8_independent_of_locale(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    input_path = tmp_path / "input.json"
+    input_path.write_bytes('{"name": "你好"}'.encode())
+    original_open = pathlib.Path.open
+
+    def open_with_ascii_default(self: pathlib.Path, *args: Any, **kwargs: Any) -> Any:
+        kwargs.setdefault("encoding", "ascii")
+        return original_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(pathlib.Path, "open", open_with_ascii_default)
+    assert from_file(input_path) == {"name": "你好"}
 
 
 def test_load_strict_rejects_missing_opening_brace() -> None:

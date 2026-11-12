@@ -17,7 +17,7 @@ def parse_object_direct(
     strict: bool = False,
     context: ContextValues | None = None,
 ) -> JSONReturnType:
-    parser = JSONParser(raw, None, False, 0, False, strict)
+    parser = JSONParser(raw, None, logging=False, json_fd_chunk_length=0, stream_stable=False, strict=strict)
     repairer = SchemaRepairer(schema if isinstance(schema, dict) else {}, None, schema_repair_mode=mode)
     parser.schema_repairer = repairer
     if context is not None:
@@ -27,7 +27,7 @@ def parse_object_direct(
 
 
 def parse_array_direct(raw: str, schema: dict | bool | str, *, mode: SchemaRepairMode = "standard") -> JSONReturnType:
-    parser = JSONParser(raw, None, False, 0, False, False)
+    parser = JSONParser(raw, None, logging=False, json_fd_chunk_length=0, stream_stable=False, strict=False)
     repairer = SchemaRepairer(schema if isinstance(schema, dict) else {}, None, schema_repair_mode=mode)
     parser.schema_repairer = repairer
     parser.index = 1
@@ -35,9 +35,9 @@ def parse_array_direct(raw: str, schema: dict | bool | str, *, mode: SchemaRepai
 
 
 def test_parse_object_schema_true_false_and_non_object() -> None:
-    assert parse_object_direct("{}", True) == {}
+    assert parse_object_direct("{}", schema=True) == {}
     with pytest.raises(ValueError, match="Schema does not allow"):
-        parse_object_direct("{}", False)
+        parse_object_direct("{}", schema=False)
     assert parse_object_direct("{}", {"type": "string"}) == {}
 
 
@@ -101,7 +101,7 @@ def test_parse_object_schema_skips_unsupported_pattern_regex_with_log() -> None:
         "patternProperties": {"^x[0-9]+$": {"type": "integer"}},
         "additionalProperties": True,
     }
-    parser = JSONParser('{"x1": 2}', None, True, 0, False, False)
+    parser = JSONParser('{"x1": 2}', None, logging=True, json_fd_chunk_length=0, stream_stable=False, strict=False)
     repairer = SchemaRepairer(schema, parser.logger)
     parser.schema_repairer = repairer
     parser.index = 1
@@ -139,7 +139,7 @@ def test_parse_object_schema_closing_array_bracket_and_extra_brace() -> None:
     assert repair_json('[{"a": 1]', schema=schema, skip_json_loads=True, return_objects=True) == [{"a": 1}]
 
     schema_obj = {"type": "object", "additionalProperties": True}
-    parser = JSONParser('{"a": 1}}', None, False, 0, False, False)
+    parser = JSONParser('{"a": 1}}', None, logging=False, json_fd_chunk_length=0, stream_stable=False, strict=False)
     repairer = SchemaRepairer(schema_obj, None)
     parser.schema_repairer = repairer
     parser.context.set(ContextValues.ARRAY)
@@ -158,9 +158,9 @@ def test_parse_object_schema_salvage_set_literal_keeps_non_string_members_as_arr
 
 
 def test_parse_array_schema_true_false_and_non_array() -> None:
-    assert parse_array_direct("[1]", True) == [1]
+    assert parse_array_direct("[1]", schema=True) == [1]
     with pytest.raises(ValueError, match="Schema does not allow"):
-        parse_array_direct("[1]", False)
+        parse_array_direct("[1]", schema=False)
     assert parse_array_direct("[1]", {"type": "object"}) == [1]
 
 
@@ -197,37 +197,37 @@ def test_parse_array_schema_invalid_items_schema_raises() -> None:
 
 def test_parse_json_with_schema_branches() -> None:
     schema = {"type": "array", "items": {"type": "integer"}}
-    parser = JSONParser("[1]", None, False, 0, False, False)
+    parser = JSONParser("[1]", None, logging=False, json_fd_chunk_length=0, stream_stable=False, strict=False)
     repairer = SchemaRepairer(schema, None)
     parser.schema_repairer = repairer
     assert parser.parse_json(schema, "$") == [1]
 
-    parser = JSONParser('"1"', None, False, 0, False, False)
+    parser = JSONParser('"1"', None, logging=False, json_fd_chunk_length=0, stream_stable=False, strict=False)
     parser.schema_repairer = repairer
     parser.context.set(ContextValues.ARRAY)
     assert parser.parse_json({"type": "integer"}, "$") == 1
 
-    parser = JSONParser("1", None, False, 0, False, False)
+    parser = JSONParser("1", None, logging=False, json_fd_chunk_length=0, stream_stable=False, strict=False)
     parser.schema_repairer = repairer
     parser.context.set(ContextValues.ARRAY)
     assert parser.parse_json({"type": "integer"}, "$") == 1
 
-    parser = JSONParser("# comment", None, False, 0, False, False)
+    parser = JSONParser("# comment", None, logging=False, json_fd_chunk_length=0, stream_stable=False, strict=False)
     parser.schema_repairer = repairer
     assert parser.parse_json({"type": "string"}, "$") == ""
 
-    parser = JSONParser("", None, False, 0, False, False)
+    parser = JSONParser("", None, logging=False, json_fd_chunk_length=0, stream_stable=False, strict=False)
     parser.schema_repairer = repairer
     assert parser.parse_json({"type": "string"}, "$") == ""
 
-    parser = JSONParser('"x"', None, False, 0, False, False)
+    parser = JSONParser('"x"', None, logging=False, json_fd_chunk_length=0, stream_stable=False, strict=False)
     parser.schema_repairer = repairer
     parser.context.set(ContextValues.ARRAY)
-    assert parser.parse_json(True, "$") == "x"
+    assert parser.parse_json(schema=True, path="$") == "x"
     with pytest.raises(ValueError, match="Schema does not allow"):
-        parser.parse_json(False, "$")
+        parser.parse_json(schema=False, path="$")
 
-    parser = JSONParser('@{"a": 1}', None, False, 0, False, False)
+    parser = JSONParser('@{"a": 1}', None, logging=False, json_fd_chunk_length=0, stream_stable=False, strict=False)
     parser.schema_repairer = SchemaRepairer({"type": "object"}, None)
     assert parser.parse_json({"type": "object"}, "$") == {"a": 1}
 
@@ -236,17 +236,17 @@ def test_schema_ref_to_true_short_circuits() -> None:
     schema = {"flag": True}
     repairer = SchemaRepairer(schema, None)
 
-    parser = JSONParser("[1]", None, False, 0, False, False)
+    parser = JSONParser("[1]", None, logging=False, json_fd_chunk_length=0, stream_stable=False, strict=False)
     parser.schema_repairer = repairer
     parser.index = 1
     assert parser.parse_array({"$ref": "#/flag"}, "$") == [1]
 
-    parser = JSONParser('{"a": 1}', None, False, 0, False, False)
+    parser = JSONParser('{"a": 1}', None, logging=False, json_fd_chunk_length=0, stream_stable=False, strict=False)
     parser.schema_repairer = repairer
     parser.index = 1
     assert parser.parse_object({"$ref": "#/flag"}, "$") == {"a": 1}
 
-    parser = JSONParser("1", None, False, 0, False, False)
+    parser = JSONParser("1", None, logging=False, json_fd_chunk_length=0, stream_stable=False, strict=False)
     parser.schema_repairer = repairer
     parser.context.set(ContextValues.ARRAY)
     assert parser.parse_json({"$ref": "#/flag"}, "$") == 1

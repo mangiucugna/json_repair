@@ -333,7 +333,7 @@ def from_file(
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON object or a tuple with the repaired JSON object and repair log.
     """
-    with Path(filename).open() as fd:
+    with Path(filename).open(encoding="utf-8") as fd:
         return load(
             fd=fd,
             skip_json_loads=skip_json_loads,
@@ -455,7 +455,7 @@ def cli(inline_args: list[str] | None = None) -> int:
     try:
         schema = None
         if args.schema:
-            with Path(args.schema).open() as fd:
+            with Path(args.schema).open(encoding="utf-8") as fd:
                 schema = json.load(fd)
         elif args.schema_model:
             schema = load_schema_model(args.schema_model)
@@ -479,7 +479,7 @@ def cli(inline_args: list[str] | None = None) -> int:
                 schema_repair_mode=args.schema_repair_mode,
             )
         if args.inline or args.output:
-            with Path(args.output or args.filename).open(mode="w") as fd:
+            with Path(args.output or args.filename).open(mode="w", encoding="utf-8") as fd:
                 json.dump(result, fd, indent=args.indent, ensure_ascii=ensure_ascii)
         else:
             print(json.dumps(result, indent=args.indent, ensure_ascii=ensure_ascii))

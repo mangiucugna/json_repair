@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 from .utils.constants import STRING_DELIMITERS
@@ -6,12 +7,8 @@ if TYPE_CHECKING:
     from .json_parser import JSONParser
 
 
-def parenthesized_is_explicit_tuple(parser: "JSONParser") -> bool:
-    """
-    Return True when the current '(' starts an explicit Python tuple literal.
-
-    Empty parentheses count as a tuple. A single grouped value like ``(1)`` does not.
-    """
+def _scan_parenthesized(parser: "JSONParser", *, allow_unmatched_close: bool) -> Iterator[tuple[int, str, bool]]:
+    """Yield unquoted characters with their index and top-level status."""
     i = parser.index + 1
     n = len(parser.json_str)
     nested_parentheses = 0
@@ -19,8 +16,6 @@ def parenthesized_is_explicit_tuple(parser: "JSONParser") -> bool:
     braces = 0
     in_quote: str | None = None
     backslashes = 0
-    saw_top_level_content = False
-
     while i < n:
         ch = parser.json_str[i]
 
@@ -38,30 +33,20 @@ def parenthesized_is_explicit_tuple(parser: "JSONParser") -> bool:
 
         if ch in STRING_DELIMITERS and backslashes % 2 == 0:
             in_quote = ch
-            saw_top_level_content = saw_top_level_content or (
-                nested_parentheses == 0 and square_brackets == 0 and braces == 0
-            )
             backslashes = 0
+            yield i, ch, nested_parentheses == 0 and square_brackets == 0 and braces == 0
             i += 1
             continue
 
         backslashes = 0
 
-        if (
-            not ch.isspace()
-            and ch not in [",", ")"]
-            and nested_parentheses == 0
-            and square_brackets == 0
-            and braces == 0
-        ):
-            saw_top_level_content = True
+        is_top_level = nested_parentheses == 0 and square_brackets == 0 and braces == 0
+        yield i, ch, is_top_level
 
         if ch == "(":
             nested_parentheses += 1
         elif ch == ")":
-            if nested_parentheses == 0 and square_brackets == 0 and braces == 0:
-                return not saw_top_level_content
-            if nested_parentheses > 0:
+            if nested_parentheses > 0 or allow_unmatched_close:
                 nested_parentheses -= 1
         elif ch == "[":
             square_brackets += 1
@@ -71,11 +56,21 @@ def parenthesized_is_explicit_tuple(parser: "JSONParser") -> bool:
             braces += 1
         elif ch == "}" and braces > 0:
             braces -= 1
-        elif ch == "," and nested_parentheses == 0 and square_brackets == 0 and braces == 0:
-            return True
-
         i += 1
 
+
+def parenthesized_is_explicit_tuple(parser: "JSONParser") -> bool:
+    """Return whether the current '(' starts an explicit Python tuple literal."""
+    saw_top_level_content = False
+    for _, ch, is_top_level in _scan_parenthesized(parser, allow_unmatched_close=False):
+        if not is_top_level:
+            continue
+        if ch == ",":
+            return True
+        if ch == ")":
+            return not saw_top_level_content
+        if not ch.isspace():
+            saw_top_level_content = True
     return not saw_top_level_content
 
 
@@ -110,60 +105,17 @@ def top_level_parenthesized_can_start_value(parser: "JSONParser") -> bool:
     ):
         return False
 
-    i = parser.index + 1
     n = len(parser.json_str)
-    nested_parentheses = 0
-    square_brackets = 0
-    braces = 0
-    in_quote: str | None = None
-    backslashes = 0
-
-    while i < n:
-        ch = parser.json_str[i]
-
-        if ch == "\\":
-            backslashes += 1
-            i += 1
-            continue
-
-        if in_quote is not None:
-            if ch == in_quote and backslashes % 2 == 0:
-                in_quote = None
-            backslashes = 0
-            i += 1
-            continue
-
-        if ch in STRING_DELIMITERS and backslashes % 2 == 0:
-            in_quote = ch
-            backslashes = 0
-            i += 1
-            continue
-
-        backslashes = 0
-
-        if ch == "(":
-            nested_parentheses += 1
-        elif ch == ")":
-            if nested_parentheses == 0 and square_brackets == 0 and braces == 0:
-                i += 1
-                while i < n:
-                    trailer = parser.json_str[i]
-                    if trailer in "\n\r":
-                        return True
-                    if not trailer.isspace():
-                        return False
-                    i += 1
-                return True
-            nested_parentheses -= 1
-        elif ch == "[":
-            square_brackets += 1
-        elif ch == "]" and square_brackets > 0:
-            square_brackets -= 1
-        elif ch == "{":
-            braces += 1
-        elif ch == "}" and braces > 0:
-            braces -= 1
-
-        i += 1
+    for i, ch, is_top_level in _scan_parenthesized(parser, allow_unmatched_close=True):
+        if ch == ")" and is_top_level:
+            trailer_index = i + 1
+            while trailer_index < n:
+                trailer = parser.json_str[trailer_index]
+                if trailer in "\n\r":
+                    return True
+                if not trailer.isspace():
+                    return False
+                trailer_index += 1
+            return True
 
     return True

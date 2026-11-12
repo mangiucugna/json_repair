@@ -119,25 +119,47 @@ def test_parse_array_mismatched_parenthesis_still_logs_missing_bracket() -> None
 
 
 def test_parenthesized_tuple_classifier_handles_nested_delimiters_and_missing_close() -> None:
-    parser = JSONParser('({"text": "a\\\\b", "items": [1]})', None, False)
+    parser = JSONParser('({"text": "a\\\\b", "items": [1]})', None, logging=False)
     assert parser.parenthesized_is_explicit_tuple() is False
 
-    parser = JSONParser("(1", None, False)
+    parser = JSONParser("(1", None, logging=False)
     assert parser.parenthesized_is_explicit_tuple() is False
 
 
 def test_top_level_parenthesized_value_gate_rejects_prose_and_accepts_standalone_jsonish_values() -> None:
-    parser = JSONParser("(", None, False)
+    parser = JSONParser("(", None, logging=False)
     assert parser.top_level_parenthesized_can_start_value() is False
 
-    parser = JSONParser('(note)\n{"key": 1}', None, False)
+    parser = JSONParser('(note)\n{"key": 1}', None, logging=False)
     assert parser.top_level_parenthesized_can_start_value() is False
 
-    parser = JSONParser("(1", None, False)
+    parser = JSONParser("(1", None, logging=False)
     assert parser.top_level_parenthesized_can_start_value() is True
 
-    parser = JSONParser('(["a\\\\b"], {"k": 1})\n', None, False)
+    parser = JSONParser('(["a\\\\b"], {"k": 1})\n', None, logging=False)
     assert parser.top_level_parenthesized_can_start_value() is True
+
+
+@pytest.mark.parametrize("buffered", [False, True])
+@pytest.mark.parametrize(
+    ("raw", "is_tuple", "starts_value"),
+    [
+        ('("a,b")', False, True),
+        ('("a,\\"b", 2)', True, True),
+        ("([)], x) prose", True, True),
+        ("([1, 2]) prose", False, False),
+    ],
+)
+def test_parenthesized_classifiers_preserve_quote_and_nesting_rules(
+    raw: str, is_tuple: bool, starts_value: bool, buffered: bool
+) -> None:
+    parser = (
+        JSONParser("", StringIO(raw), logging=False, json_fd_chunk_length=2)
+        if buffered
+        else JSONParser(raw, None, logging=False)
+    )
+    assert parser.parenthesized_is_explicit_tuple() is is_tuple
+    assert parser.top_level_parenthesized_can_start_value() is starts_value
 
 
 def test_parse_array_inner_quotes_across_items() -> None:

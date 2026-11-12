@@ -6,12 +6,16 @@ import json
 from functools import lru_cache
 from typing import Any, Literal, cast
 
-from .parser_schema import array_schema_config, object_schema_config
+from .parser_schema import array_schema_config, object_schema_config, tuple_item_schema
 from .utils.constants import MISSING_VALUE, JSONReturnType, MissingValueType
 from .utils.pattern_properties import match_pattern_properties
 
 SchemaRepairMode = Literal["standard", "salvage"]
 SUPPORTED_SCHEMA_REPAIR_MODES: tuple[SchemaRepairMode, ...] = ("standard", "salvage")
+
+
+class SchemaTypeError(TypeError, ValueError):
+    """Represent schema type mismatches while preserving value-error fallbacks."""
 
 
 class SchemaDefinitionError(ValueError):
@@ -165,7 +169,7 @@ def normalize_missing_values(value: object) -> JSONReturnType:
         normalized: dict[str, JSONReturnType] = {}
         for key, item in value.items():
             if not isinstance(key, str):
-                raise ValueError("Object keys must be strings.")
+                raise SchemaTypeError("Object keys must be strings.")
             normalized[key] = normalize_missing_values(item)
         return normalized
     if isinstance(value, list):
@@ -467,26 +471,18 @@ class SchemaRepairer:
         if schema_config.items_schema is not None:
             if isinstance(schema_config.items_schema, list):
                 repaired_items: list[JSONReturnType] = []
-                for idx, item_schema in enumerate(schema_config.items_schema):
-                    if idx >= len(items):
-                        break
+                for idx, item in enumerate(items):
+                    item_schema, is_tail = tuple_item_schema(schema_config, idx)
                     item_path = f"{path}[{idx}]"
-                    keep_item, repaired_value = repair_or_drop(items[idx], item_schema, item_path)
+                    if is_tail and not isinstance(item_schema, dict):
+                        if item_schema is True or item_schema is None:
+                            repaired_items.append(normalize_missing_values(item))
+                        else:
+                            self._log("Dropped extra array item not covered by schema", item_path)
+                        continue
+                    keep_item, repaired_value = repair_or_drop(item, item_schema, item_path)
                     if keep_item:
                         repaired_items.append(repaired_value)
-                if len(items) > len(schema_config.items_schema):
-                    tail = items[len(schema_config.items_schema) :]
-                    if isinstance(schema_config.additional_items, dict):
-                        for offset, item in enumerate(tail, start=len(schema_config.items_schema)):
-                            item_path = f"{path}[{offset}]"
-                            keep_item, repaired_value = repair_or_drop(item, schema_config.additional_items, item_path)
-                            if keep_item:
-                                repaired_items.append(repaired_value)
-                    elif schema_config.additional_items is True or schema_config.additional_items is None:
-                        repaired_items.extend(normalize_missing_values(item) for item in tail)
-                    else:
-                        for offset, _item in enumerate(tail, start=len(schema_config.items_schema)):
-                            self._log("Dropped extra array item not covered by schema", f"{path}[{offset}]")
                 items = repaired_items
             else:
                 repaired_items = []
@@ -522,7 +518,7 @@ class SchemaRepairer:
             "Repaired malformed JSON string to object to match schema",
         )
         if not isinstance(value, dict):
-            raise ValueError(f"Expected object at {path}, got {type(value).__name__}.")
+            raise SchemaTypeError(f"Expected object at {path}, got {type(value).__name__}.")
 
         property_aliases = schema.get("x-json-repair-property-aliases", {})
         if isinstance(property_aliases, dict):
@@ -829,7 +825,7 @@ class SchemaRepairer:
             copied: dict[str, JSONReturnType] = {}
             for key, item in value.items():
                 if not isinstance(key, str):
-                    raise ValueError(f"{label.capitalize()} value at {path} contains a non-string key.")
+                    raise SchemaTypeError(f"{label.capitalize()} value at {path} contains a non-string key.")
                 copied[key] = self._copy_json_value(item, f"{path}.{key}", label)
             return copied
         raise ValueError(f"{label.capitalize()} value at {path} is not JSON compatible.")
@@ -837,5 +833,5 @@ class SchemaRepairer:
     def _prepare_schema_for_validation(self, schema: object) -> dict[str, Any]:
         normalized = _prepare_schema_for_validation_node(schema)
         if not isinstance(normalized, dict):
-            raise ValueError("Schema must be an object.")
+            raise SchemaTypeError("Schema must be an object.")
         return normalized

@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Any, cast
 
-from .parser_schema import ArraySchemaConfig, resolve_parser_array_schema
+from .parser_schema import ArraySchemaConfig, resolve_parser_array_schema, tuple_item_schema
 from .utils.constants import STRING_DELIMITERS, JSONReturnType
 from .utils.json_context import ContextValues
 from .utils.object_comparer import ObjectComparer
@@ -19,15 +19,15 @@ def _resolve_array_item_schema(
     item_schema: dict[str, Any] | bool | None = None
     drop_item = False
     if isinstance(schema_config.items_schema, list):
-        if idx < len(schema_config.items_schema):
-            raw_schema = schema_config.items_schema[idx]
+        raw_schema, is_tail = tuple_item_schema(schema_config, idx)
+        if not is_tail:
             if raw_schema is not None and not isinstance(raw_schema, (dict, bool)):
                 raise ValueError("Schema must be an object.")
             item_schema = cast("dict[str, Any] | bool | None", raw_schema)
-        elif schema_config.additional_items is False:
+        elif raw_schema is False:
             drop_item = True
-        elif isinstance(schema_config.additional_items, dict):
-            item_schema = cast("dict[str, Any]", schema_config.additional_items)
+        elif isinstance(raw_schema, dict):
+            item_schema = cast("dict[str, Any]", raw_schema)
         else:
             item_schema = True
     elif isinstance(schema_config.items_schema, dict):

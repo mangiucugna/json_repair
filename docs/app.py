@@ -13,17 +13,17 @@ def format_json():
     try:
         data = request.get_json()
         if not isinstance(data, dict):
-            raise ValueError("Request JSON must be an object.")
+            raise TypeError("Request JSON must be an object.")
         malformed_json = data.get("malformedJSON")
         if not isinstance(malformed_json, str):
-            raise ValueError("malformedJSON must be a string.")
+            raise TypeError("malformedJSON must be a string.")
 
         schema = data.get("schema")
         if schema is not None and not isinstance(schema, (dict, bool)):
             raise ValueError("schema must be a JSON object or boolean.")
         schema_repair_mode = data.get("schemaRepairMode", "standard")
         if not isinstance(schema_repair_mode, str):
-            raise ValueError("schemaRepairMode must be a string.")
+            raise TypeError("schemaRepairMode must be a string.")
         if schema_repair_mode not in ("standard", "salvage"):
             raise ValueError("schemaRepairMode must be 'standard' or 'salvage'.")
         if schema_repair_mode == "salvage" and schema is None:

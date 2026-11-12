@@ -1,6 +1,7 @@
 import io
 import json
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -36,6 +37,23 @@ def test_cli_inline_requires_filename(capsys: pytest.CaptureFixture[str]) -> Non
     captured = capsys.readouterr()
     assert captured.err.strip() == "Error: Inline mode requires a filename"
     assert exc.value.code != 0
+
+
+def test_cli_uses_utf8_for_schema_and_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    input_path = tmp_path / "input.json"
+    schema_path = tmp_path / "schema.json"
+    output_path = tmp_path / "output.json"
+    input_path.write_bytes('{"name": "你好"}'.encode())
+    schema_path.write_bytes('{"type":"object","properties":{"name":{"const":"你好"}}}'.encode())
+    original_open = Path.open
+
+    def open_with_ascii_default(self: Path, *args: Any, **kwargs: Any) -> Any:
+        kwargs.setdefault("encoding", "ascii")
+        return original_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", open_with_ascii_default)
+    assert cli(inline_args=[str(input_path), "--schema", str(schema_path), "-o", str(output_path)]) == 0
+    assert json.loads(output_path.read_text(encoding="utf-8")) == {"name": "你好"}
 
 
 def test_cli_inline_and_output_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

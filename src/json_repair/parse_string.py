@@ -655,6 +655,43 @@ def _handle_right_delimiter_candidate(
     return False, char, False
 
 
+def _object_value_brace_ends_string(self: "JSONParser", state: StringParseState) -> bool:
+    rstring_delimiter_missing = True
+    self.skip_whitespaces()
+    if self.get_char_at(1) == "\\":
+        rstring_delimiter_missing = False
+    i = _cached_skip_to_character(self, state, _outer_rstring_delimiter(state), idx=1)
+    next_c = self.get_char_at(i)
+    if next_c:
+        i = self.scroll_whitespaces(idx=i + 1)
+        next_c = self.get_char_at(i)
+        if not next_c or next_c in [",", "}"]:
+            rstring_delimiter_missing = False
+        else:
+            i = self.skip_to_character(character=state.lstring_delimiter, idx=i)
+            next_c = self.get_char_at(i)
+            if not next_c:
+                rstring_delimiter_missing = False
+            else:
+                i = self.scroll_whitespaces(idx=i + 1)
+                next_c = self.get_char_at(i)
+                if next_c and next_c != ":":
+                    rstring_delimiter_missing = False
+    else:
+        i = _cached_skip_to_character(self, state, ":", idx=1)
+        if self.get_char_at(i):
+            return True
+        i = self.scroll_whitespaces(idx=1)
+        j = self.skip_to_character(character="}", idx=i)
+        if j - i > 1:
+            rstring_delimiter_missing = False
+    if rstring_delimiter_missing:
+        self.log(
+            "While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn't determine that a right delimiter was present. Stopping here",
+        )
+    return rstring_delimiter_missing
+
+
 def _scan_string_body(
     self: "JSONParser",
     state: StringParseState,
@@ -754,41 +791,7 @@ def _scan_string_body(
             if state.object_value_unmatched_opening_braces:
                 char = _append_literal_char(self, state, char)
                 continue
-            rstring_delimiter_missing = True
-            self.skip_whitespaces()
-            if self.get_char_at(1) == "\\":
-                rstring_delimiter_missing = False
-            i = _cached_skip_to_character(self, state, outer_rstring_delimiter, idx=1)
-            next_c = self.get_char_at(i)
-            if next_c:
-                i += 1
-                i = self.scroll_whitespaces(idx=i)
-                next_c = self.get_char_at(i)
-                if not next_c or next_c in [",", "}"]:
-                    rstring_delimiter_missing = False
-                else:
-                    i = self.skip_to_character(character=state.lstring_delimiter, idx=i)
-                    next_c = self.get_char_at(i)
-                    if not next_c:
-                        rstring_delimiter_missing = False
-                    else:
-                        i = self.scroll_whitespaces(idx=i + 1)
-                        next_c = self.get_char_at(i)
-                        if next_c and next_c != ":":
-                            rstring_delimiter_missing = False
-            else:
-                i = _cached_skip_to_character(self, state, ":", idx=1)
-                next_c = self.get_char_at(i)
-                if next_c:
-                    break
-                i = self.scroll_whitespaces(idx=1)
-                j = self.skip_to_character(character="}", idx=i)
-                if j - i > 1:
-                    rstring_delimiter_missing = False
-            if rstring_delimiter_missing:
-                self.log(
-                    "While parsing a string missing the left delimiter in object value context, we found a , or } and we couldn't determine that a right delimiter was present. Stopping here",
-                )
+            if _object_value_brace_ends_string(self, state):
                 break
         if (
             not self.stream_stable

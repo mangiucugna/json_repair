@@ -22,7 +22,7 @@ def test_missing_value_deepcopy() -> None:
 def test_normalize_missing_values_nested_and_invalid() -> None:
     assert normalize_missing_values(MISSING_VALUE) == ""
     assert normalize_missing_values({"a": MISSING_VALUE, "b": [MISSING_VALUE, 1]}) == {"a": "", "b": ["", 1]}
-    with pytest.raises(ValueError, match="Object keys must be strings"):
+    with pytest.raises(TypeError, match="Object keys must be strings"):
         normalize_missing_values({1: "a"})
     with pytest.raises(ValueError, match="JSON compatible"):
         normalize_missing_values(object())
@@ -43,8 +43,8 @@ def test_load_schema_model_errors_and_success(tmp_path: Path, monkeypatch: pytes
 
 def test_schema_from_input_basic_and_invalid() -> None:
     assert schema_from_input({"type": "string"}) == {"type": "string"}
-    assert schema_from_input(True) is True
-    assert schema_from_input(False) is False
+    assert schema_from_input(schema=True) is True
+    assert schema_from_input(schema=False) is False
     with pytest.raises(ValueError, match="Schema must be a JSON Schema"):
         schema_from_input(1)
 
@@ -139,11 +139,11 @@ def test_schema_from_input_requires_pydantic_v2(monkeypatch: pytest.MonkeyPatch)
 def test_schema_repairer_validate_and_prepare() -> None:
     pytest.importorskip("jsonschema")
     repairer = SchemaRepairer({}, [])
-    assert repairer.is_valid(1, True) is True
-    assert repairer.is_valid(1, False) is False
-    repairer.validate(1, True)
+    assert repairer.is_valid(1, schema=True) is True
+    assert repairer.is_valid(1, schema=False) is False
+    repairer.validate(1, schema=True)
     with pytest.raises(ValueError, match="Schema does not allow"):
-        repairer.validate(1, False)
+        repairer.validate(1, schema=False)
     integer_schema = {"type": "integer"}
     repairer.validate(1, integer_schema)
     assert repairer._get_validator(integer_schema) is repairer._get_validator(integer_schema)
@@ -171,7 +171,7 @@ def test_schema_repairer_validate_and_prepare() -> None:
     assert prepared2["items"] == {"type": "string"}
 
     invalid_schema: Any = True
-    with pytest.raises(ValueError, match="Schema must be an object"):
+    with pytest.raises(TypeError, match="Schema must be an object"):
         repairer._prepare_schema_for_validation(invalid_schema)
 
 
@@ -214,7 +214,7 @@ def test_schema_repairer_resolve_schema_and_refs() -> None:
     root = {"defs": {"node": {"type": "string"}}, "flag": True, "flag_false": False, "bad": 1}
     repairer = SchemaRepairer(root, None)
     assert repairer.resolve_schema(None) is True
-    assert repairer.resolve_schema(False) is False
+    assert repairer.resolve_schema(schema=False) is False
     assert repairer.resolve_schema({"$ref": "#/defs/node"}) == {"type": "string"}
     assert repairer.resolve_schema({"$ref": "#/flag"}) is True
     assert repairer.resolve_schema({"$ref": "#/flag_false"}) is False
@@ -253,8 +253,8 @@ def test_schema_repairer_object_and_array_helpers() -> None:
     assert repairer.is_array_schema({"items": {"type": "string"}}) is True
     assert repairer.is_array_schema({"type": "object"}) is False
 
-    assert repairer.is_object_schema(True) is False
-    assert repairer.is_array_schema(False) is False
+    assert repairer.is_object_schema(schema=True) is False
+    assert repairer.is_array_schema(schema=False) is False
 
 
 def test_repair_value_missing_and_unions() -> None:
@@ -429,9 +429,9 @@ def test_coerce_numeric_scalars_and_reject_invalid_types() -> None:
     assert repairer._coerce_scalar(2.0, "integer", "$") == 2
     assert repairer._coerce_scalar("2.5", "number", "$") == 2.5
     with pytest.raises(ValueError, match="Expected string"):
-        repairer._coerce_scalar(True, "string", "$")
+        repairer._coerce_scalar(value=True, schema_type="string", path="$")
     with pytest.raises(ValueError, match="Expected integer"):
-        repairer._coerce_scalar(True, "integer", "$")
+        repairer._coerce_scalar(value=True, schema_type="integer", path="$")
     with pytest.raises(ValueError, match="Expected integer"):
         repairer._coerce_scalar(2.5, "integer", "$")
     with pytest.raises(ValueError, match="Expected integer"):
@@ -439,7 +439,7 @@ def test_coerce_numeric_scalars_and_reject_invalid_types() -> None:
     with pytest.raises(ValueError, match="Expected integer"):
         repairer._coerce_scalar({}, "integer", "$")
     with pytest.raises(ValueError, match="Expected number"):
-        repairer._coerce_scalar(True, "number", "$")
+        repairer._coerce_scalar(value=True, schema_type="number", path="$")
     with pytest.raises(ValueError, match="Expected number"):
         repairer._coerce_scalar("nope", "number", "$")
     with pytest.raises(ValueError, match="Expected number"):
@@ -480,7 +480,7 @@ def test_repair_value_without_explicit_type() -> None:
     assert repairer.repair_value({"a": "1"}, {"properties": {"a": {"type": "integer"}}}, "$") == {"a": 1}
     assert repairer.repair_value(["1"], {"items": {"type": "integer"}}, "$") == [1]
     with pytest.raises(ValueError, match="Schema does not allow"):
-        repairer.repair_value(1, False, "$")
+        repairer.repair_value(1, schema=False, path="$")
 
 
 def test_repair_object_skips_unsupported_pattern_regex_with_fallback_and_log() -> None:

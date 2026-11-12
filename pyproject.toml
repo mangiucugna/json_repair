@@ -93,6 +93,8 @@ extend-exclude = ["*.md"]
 # Assume Python 3.13
 target-version = "py313"
 [tool.ruff.lint]
+preview = true
+explicit-preview-rules = true
 # Read more here https://docs.astral.sh/ruff/rules/
 # By default, Ruff enables Flake8's E and F rules
 # FastAPI - FAST
@@ -141,17 +143,29 @@ extend-select = [
   "RUF012",  # mutable class defaults
   "RUF013",  # implicit optional annotations
   "RUF016",  # invalid index types
+  "RUF017",  # avoid quadratic list summation
   "RUF018",  # assignment expressions in assertions
   "RUF005",  # collection literal concatenation
+  "RUF008",  # mutable dataclass defaults
   "RUF010",  # prefer explicit conversion flags in f-strings
   "RUF019",  # prefer dict.get over redundant key checks
   "RUF021",  # clarify mixed and/or precedence
   "RUF022",  # keep __all__ sorted
+  "RUF024",  # prevent shared mutable values in dict.fromkeys
+  "RUF009",  # avoid function calls as dataclass defaults
   "RUF043",  # make pytest.raises regex intent explicit
+  "RUF064",  # use octal file permissions
+  "RUF068",  # duplicate __all__ entries
+  "RUF071",  # avoid character-based path prefix checks
+  "RUF102",  # invalid rule codes in noqa comments
+  "RUF103",  # invalid Ruff suppression comments
   "RUF200",  # validate pyproject.toml metadata
+  "FBT003",  # make boolean arguments explicit at call sites
   "PLR1714", # repeated equality comparisons
   "PLR5501", # collapsible else-if
+  "PLW1514", # require explicit text encoding
   "TRY300",  # keep returns out of try blocks
+  "TRY004",  # use TypeError for invalid types
 ]
 ignore = [
   "ANN401", # Allow Any; mypy and ty handle type checking.

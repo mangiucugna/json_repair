@@ -26,7 +26,7 @@ def _assert_object_repairs(raw: str, expected: dict) -> None:
 
 class CountingParser(JSONParser):
     def __init__(self, json_str: str) -> None:
-        super().__init__(json_str, None, False)
+        super().__init__(json_str, None, logging=False)
         self.skip_to_character_calls = 0
 
     def skip_to_character(self, character: str | list[str], idx: int = 0) -> int:
@@ -463,7 +463,7 @@ def test_parse_string_fast_path_falls_back_for_escapes_with_logs() -> None:
 
 
 def test_parse_string_fast_path_rejects_ambiguous_top_level_trailing_text() -> None:
-    parser = JSONParser('"value" trailing', None, False)
+    parser = JSONParser('"value" trailing', None, logging=False)
     assert _try_parse_simple_quoted_string(parser) is None
 
 
@@ -580,11 +580,11 @@ def test_parse_string_missing_quotes_object_value_stops_at_quote_fragment() -> N
 
 
 def test_parse_string_fast_path_string_wrapper_fallbacks() -> None:
-    escaped_parser = JSONParser("", None, False)
+    escaped_parser = JSONParser("", None, logging=False)
     escaped_parser.json_str = StringFileWrapper(StringIO('"va\\lue"'), 2)
     assert _try_parse_simple_quoted_string(escaped_parser) is None
 
-    unterminated_parser = JSONParser("", None, False)
+    unterminated_parser = JSONParser("", None, logging=False)
     unterminated_parser.json_str = StringFileWrapper(StringIO('"value'), 2)
     assert _try_parse_simple_quoted_string(unterminated_parser) is None
 
@@ -612,7 +612,7 @@ def test_parse_string_fast_path_string_wrapper_fallbacks() -> None:
     ],
 )
 def test_brace_before_code_fence_belongs_to_string(raw: str, expected: bool) -> None:
-    parser = JSONParser(raw, None, False)
+    parser = JSONParser(raw, None, logging=False)
 
     assert _brace_before_code_fence_belongs_to_string(parser, StringParseState(), 1) is expected
 
@@ -633,7 +633,7 @@ def test_brace_before_code_fence_belongs_to_string(raw: str, expected: bool) -> 
     ],
 )
 def test_skip_inline_container(raw: str, index: int, expected: int | None) -> None:
-    parser = JSONParser(raw, None, False)
+    parser = JSONParser(raw, None, logging=False)
 
     assert _skip_inline_container(parser, index) == expected
 
@@ -654,7 +654,7 @@ def test_skip_inline_container(raw: str, index: int, expected: int | None) -> No
     ],
 )
 def test_starts_nested_inline_container(raw: str, index: int, expected: bool) -> None:
-    parser = JSONParser(raw, None, False)
+    parser = JSONParser(raw, None, logging=False)
 
     assert _starts_nested_inline_container(parser, index) is expected
 
@@ -662,7 +662,7 @@ def test_starts_nested_inline_container(raw: str, index: int, expected: bool) ->
 def test_update_inline_container_stack_starts_tracking_pending_container() -> None:
     inline_container_stack: list[str] = []
     pending_inline_container, keep_inline_container_char = update_inline_container_stack(
-        "[", True, inline_container_stack
+        "[", pending_inline_container=True, inline_container_stack=inline_container_stack
     )
 
     assert not pending_inline_container
@@ -673,7 +673,7 @@ def test_update_inline_container_stack_starts_tracking_pending_container() -> No
 def test_update_inline_container_stack_tracks_nested_container() -> None:
     inline_container_stack = ["["]
     pending_inline_container, keep_inline_container_char = update_inline_container_stack(
-        "{", False, inline_container_stack
+        "{", pending_inline_container=False, inline_container_stack=inline_container_stack
     )
 
     assert not pending_inline_container
@@ -684,7 +684,7 @@ def test_update_inline_container_stack_tracks_nested_container() -> None:
 def test_update_inline_container_stack_keeps_closing_container_character() -> None:
     inline_container_stack = ["["]
     pending_inline_container, keep_inline_container_char = update_inline_container_stack(
-        "]", False, inline_container_stack
+        "]", pending_inline_container=False, inline_container_stack=inline_container_stack
     )
 
     assert not pending_inline_container
@@ -693,7 +693,7 @@ def test_update_inline_container_stack_keeps_closing_container_character() -> No
 
 
 def test_scan_string_body_keeps_closing_inline_container_character() -> None:
-    parser = JSONParser(']"', None, False)
+    parser = JSONParser(']"', None, logging=False)
     parser.context.set(ContextValues.OBJECT_VALUE)
     state = StringParseState(string_acc=list("x"), inline_container_stack=["["])
 
@@ -705,7 +705,7 @@ def test_scan_string_body_keeps_closing_inline_container_character() -> None:
 
 
 def test_scan_string_body_closes_low_smart_quote_span_with_unicode_quote() -> None:
-    parser = JSONParser('”"', None, False)
+    parser = JSONParser('”"', None, logging=False)
     parser.context.set(ContextValues.OBJECT_VALUE)
     state = StringParseState(rstring_delimiter='"\0', string_acc=list("prefix"))
 
@@ -735,7 +735,7 @@ def test_scan_string_body_closes_low_smart_quote_span_with_unicode_quote() -> No
     ],
 )
 def test_quoted_object_member_follows(raw: str, expected: bool) -> None:
-    parser = JSONParser(raw, None, False)
+    parser = JSONParser(raw, None, logging=False)
 
     assert _quoted_object_member_follows(parser, 2) is expected
 
