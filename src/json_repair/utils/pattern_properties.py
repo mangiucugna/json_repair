@@ -18,6 +18,9 @@ def match_pattern_properties(
 
     Any pattern using additional regex tokens is treated as unsupported and skipped.
     The caller can log unsupported patterns using the returned list.
+
+    Returns:
+        The matching schemas and the unsupported patterns.
     """
 
     if not pattern_properties:

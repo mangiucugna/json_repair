@@ -26,7 +26,7 @@ def _skip_stray_number_after_commas(self: "JSONParser") -> None:
     next_offset = offset + 1
     while (next_char := self.get_char_at(next_offset)) and next_char.isspace():
         next_offset += 1
-    if self.get_char_at(next_offset) in ('"', "'"):
+    if self.get_char_at(next_offset) in {'"', "'"}:
         self.log("Discarded stray number between object fields")
         self.index += offset
 

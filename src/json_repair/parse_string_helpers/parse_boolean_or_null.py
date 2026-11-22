@@ -13,7 +13,11 @@ LITERAL_VALUES: dict[str, bool | None] = {
 
 
 def parse_boolean_or_null(parser: "JSONParser") -> tuple[bool, bool | None]:
-    """Return whether an unquoted complete literal was found and its value."""
+    """Return whether an unquoted complete literal was found and its value.
+
+    Returns:
+        A pair indicating whether a literal was found and its value.
+    """
     char = (parser.get_char_at() or "").lower()
     starting_index = parser.index
     for literal, value in LITERAL_VALUES.items():

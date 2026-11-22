@@ -56,7 +56,7 @@ def parse_array(
         while True:
             self.skip_whitespace_and_comments()
             char = self.get_char_at()
-            if char is None or char in [closing_delimiter, "}"]:
+            if char is None or char in {closing_delimiter, "}"}:
                 break
             if char == ",":
                 self.index += 1
@@ -96,7 +96,7 @@ def parse_array(
                     self.parse_json(item_schema, item_path) if active_schema_repairer is not None else self.parse_json()
                 )
 
-            if ObjectComparer.is_strictly_empty(value) and self.get_char_at() not in [closing_delimiter, ","]:
+            if ObjectComparer.is_strictly_empty(value) and self.get_char_at() not in {closing_delimiter, ","}:
                 self.index += 1
             elif value == "..." and self.get_char_at(-1) == ".":
                 self.log(

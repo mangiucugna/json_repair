@@ -17,7 +17,7 @@ def _bare_member_has_recoverable_value(
 ) -> bool:
     value_start_idx = parser.scroll_whitespaces(idx=value_idx)
     value_start = parser.get_char_at(value_start_idx)
-    if value_start in [*STRING_DELIMITERS, "{", "[", "-"]:
+    if value_start in {*STRING_DELIMITERS, "{", "[", "-"}:
         return True
     if value_start and value_start.isdigit():
         return True
@@ -25,7 +25,7 @@ def _bare_member_has_recoverable_value(
     for literal in ["true", "false", "null"]:
         if all(parser.get_char_at(value_start_idx + offset) == char for offset, char in enumerate(literal)):
             value_end = parser.get_char_at(value_start_idx + len(literal))
-            if value_end is None or value_end.isspace() or value_end in [",", "}", "]"]:
+            if value_end is None or value_end.isspace() or value_end in {",", "}", "]"}:
                 return True
 
     # An unquoted value is only a safe member boundary when its object closes
@@ -42,7 +42,7 @@ def classify_object_value_comma(
     skip_to_character = cached_skip_to_character or parser.skip_to_character
     next_idx = parser.scroll_whitespaces(idx=1)
     next_c = parser.get_char_at(next_idx)
-    if next_c in ["}", None]:
+    if next_c in {"}", None}:
         return "member"
 
     if next_c in STRING_DELIMITERS:
@@ -56,7 +56,7 @@ def classify_object_value_comma(
         bare_key_idx = next_idx + 1
         while True:
             key_char = parser.get_char_at(bare_key_idx)
-            if not key_char or not (key_char.isalnum() or key_char in ["_", "-"]):
+            if not key_char or not (key_char.isalnum() or key_char in {"_", "-"}):
                 break
             bare_key_idx += 1
         bare_key_idx = parser.scroll_whitespaces(idx=bare_key_idx)
@@ -66,7 +66,7 @@ def classify_object_value_comma(
         bare_key_idx = next_idx
         while True:
             key_char = parser.get_char_at(bare_key_idx)
-            if not key_char or not (key_char.isalnum() or key_char in ["_", "-"]):
+            if not key_char or not (key_char.isalnum() or key_char in {"_", "-"}):
                 break
             bare_key_idx += 1
         bare_key_idx = parser.scroll_whitespaces(idx=bare_key_idx)
@@ -77,14 +77,14 @@ def classify_object_value_comma(
         ):
             return "member"
 
-    if next_c in ["{", "["]:
+    if next_c in {"{", "["}:
         return "container"
 
     next_special_idx = skip_to_character([*STRING_DELIMITERS, "{", "["], next_idx)
     next_special = parser.get_char_at(next_special_idx)
     if not next_special:
         return "string_no_future_delimiter"
-    if next_special in ["{", "["]:
+    if next_special in {"{", "["}:
         return "string"
 
     key_end_idx = skip_to_character(next_special, next_special_idx + 1)
@@ -99,7 +99,7 @@ def update_inline_container_stack(
     pending_inline_container: bool,
     inline_container_stack: list[str],
 ) -> tuple[bool, bool]:
-    if char in ["{", "["]:
+    if char in {"{", "["}:
         if pending_inline_container:
             inline_container_stack.append(char)
             return False, False

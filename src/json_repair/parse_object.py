@@ -78,7 +78,7 @@ def _strip_comments_for_empty_object_classification(body: str) -> str:
 
         if char == "#" or (char == "/" and next_char == "/"):
             index += 2 if char == "/" else 1
-            while index < len(body) and body[index] not in ["\n", "\r"]:
+            while index < len(body) and body[index] not in {"\n", "\r"}:
                 index += 1
             continue
         if char == "/" and next_char == "*":
@@ -145,7 +145,11 @@ def _classify_empty_object_repair(
 
 
 def _shared_row_length(self: "JSONParser", rows: list[JSONReturnType]) -> int | None:
-    """Return the length shared by every list in rows, or None if there is no list or the lengths differ."""
+    """Return the length shared by every list in rows, or None if there is no list or the lengths differ.
+
+    Returns:
+        The shared row length, or None when no length is shared.
+    """
     # Each continuation appends to the same rows list, so resume the check where the previous call stopped
     # instead of rescanning every row (quadratic on long tables).
     scan = self.row_length_scan
@@ -229,7 +233,7 @@ def _parse_object_key(
             key = raw_key
             if key == "":
                 self.skip_whitespace_and_comments()
-            if key != "" or (key == "" and self.get_char_at() in [":", "}"]):
+            if key != "" or (key == "" and self.get_char_at() in {":", "}"}):
                 if key == "" and self.strict:
                     self.log(
                         "Empty key found in strict mode while parsing object, raising an error",
@@ -322,7 +326,7 @@ def _parse_object_value(
     try:
         self.skip_whitespace_and_comments()
         char = self.get_char_at()
-        if char in [",", "}"]:
+        if char in {",", "}"}:
             self.log(
                 f"While parsing an object value we found a stray {char}, ignoring it",
             )
@@ -401,10 +405,10 @@ def _complete_object_parse(
     schema_config: ObjectSchemaConfig | None,
 ) -> JSONReturnType:
     if not self.context.empty:
-        if self.get_char_at() == "}" and self.context.current not in [
+        if self.get_char_at() == "}" and self.context.current not in {
             ContextValues.OBJECT_KEY,
             ContextValues.OBJECT_VALUE,
-        ]:
+        }:
             self.log(
                 "Found an extra closing brace that shouldn't be there, skipping it",
             )
@@ -509,7 +513,7 @@ def parse_object(
         else:
             schema_repairer._log("Dropped extra property not covered by schema", key_path)
 
-        if self.get_char_at() in [",", "'", '"']:
+        if self.get_char_at() in {",", "'", '"'}:
             self.index += 1
         if self.get_char_at() == "]" and ContextValues.ARRAY in self.context.context:
             self.log(

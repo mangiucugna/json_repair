@@ -327,7 +327,14 @@ class SchemaRepairer:
         return self._allows_schema_type(schema, "object") and not self._allows_schema_type(schema, "array")
 
     def repair_value(self, value: Any, schema: dict[str, Any] | bool | None, path: str) -> JSONReturnType:
-        """Apply schema rules to a parsed value, including unions, coercions, and defaults."""
+        """Apply schema rules to a parsed value, including unions, coercions, and defaults.
+
+        Returns:
+            The value after applying schema rules.
+
+        Raises:
+            ValueError: If the schema disallows the value or repair cannot satisfy it.
+        """
         schema = self.resolve_schema(schema)
         if schema is True:
             return normalize_missing_values(value)
@@ -696,7 +703,7 @@ class SchemaRepairer:
         if expected_type == "string":
             self._log("Filled missing value with empty string", path)
             return ""
-        if expected_type in ("integer", "number"):
+        if expected_type in {"integer", "number"}:
             self._log("Filled missing value with 0", path)
             return 0
         if expected_type == "boolean":
@@ -776,13 +783,13 @@ class SchemaRepairer:
                 return value
             if isinstance(value, str):
                 lowered = value.lower()
-                if lowered in ("true", "yes", "y", "on", "1"):
+                if lowered in {"true", "yes", "y", "on", "1"}:
                     self._log("Coerced string to boolean", path)
                     return True
-                if lowered in ("false", "no", "n", "off", "0"):
+                if lowered in {"false", "no", "n", "off", "0"}:
                     self._log("Coerced string to boolean", path)
                     return False
-            if isinstance(value, (int, float)) and not isinstance(value, bool) and value in (0, 1):
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and value in {0, 1}:
                 self._log("Coerced number to boolean", path)
                 return bool(value)
             raise ValueError(f"Expected boolean at {path}.")

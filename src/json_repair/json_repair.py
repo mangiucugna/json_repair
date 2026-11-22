@@ -143,6 +143,9 @@ def repair_json(  # noqa: PLR0917
         schema_repair_mode (Literal["standard", "salvage"], optional): Schema repair mode. "standard" keeps default schema behavior; "salvage" enables best-effort schema salvage heuristics for arrays/objects.
     Returns:
         Union[JSONReturnType, Tuple[JSONReturnType, List[Dict[str, str]]]]: The repaired JSON or a tuple with the repaired JSON and repair log when logging is True.
+
+    Raises:
+        ValueError: If input options, strict parsing, or schema validation are invalid.
     """
     schema_repair_mode = normalize_schema_repair_mode(schema_repair_mode)
     if schema is None and schema_repair_mode == "salvage":

@@ -25,7 +25,7 @@ def format_json() -> Response | tuple[Response, int]:
         schema_repair_mode = data.get("schemaRepairMode", "standard")
         if not isinstance(schema_repair_mode, str):
             raise TypeError("schemaRepairMode must be a string.")
-        if schema_repair_mode not in ("standard", "salvage"):
+        if schema_repair_mode not in {"standard", "salvage"}:
             raise ValueError("schemaRepairMode must be 'standard' or 'salvage'.")
         if schema_repair_mode == "salvage" and schema is None:
             raise ValueError("schemaRepairMode='salvage' requires schema.")

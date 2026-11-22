@@ -22,7 +22,11 @@ class ArraySchemaConfig:
 
 
 def tuple_item_schema(config: ArraySchemaConfig, index: int) -> tuple[object | None, bool]:
-    """Return the schema at a tuple position and whether it belongs to the tail."""
+    """Return the schema at a tuple position and whether it belongs to the tail.
+
+    Returns:
+        The item schema and whether the position belongs to the tail.
+    """
     assert isinstance(config.items_schema, list)
     if index < len(config.items_schema):
         return config.items_schema[index], False
@@ -33,7 +37,7 @@ def resolve_parser_object_schema(
     repairer: SchemaRepairer | None,
     schema: dict[str, Any] | bool | None,
 ) -> tuple[SchemaRepairer | None, dict[str, Any] | bool | None, ObjectSchemaConfig | None]:
-    if repairer is None or schema in (None, True):
+    if repairer is None or schema is None or schema is True:
         return None, schema, None
 
     schema = repairer.resolve_schema(schema)
@@ -48,7 +52,7 @@ def resolve_parser_array_schema(
     repairer: SchemaRepairer | None,
     schema: dict[str, Any] | bool | None,
 ) -> tuple[SchemaRepairer | None, dict[str, Any] | bool | None, ArraySchemaConfig | None]:
-    if repairer is None or schema in (None, True):
+    if repairer is None or schema is None or schema is True:
         return None, schema, None
 
     schema = repairer.resolve_schema(schema)

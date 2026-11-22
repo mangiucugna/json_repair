@@ -60,7 +60,11 @@ def _scan_parenthesized(parser: "JSONParser", *, allow_unmatched_close: bool) ->
 
 
 def parenthesized_is_explicit_tuple(parser: "JSONParser") -> bool:
-    """Return whether the current '(' starts an explicit Python tuple literal."""
+    """Return whether the current '(' starts an explicit Python tuple literal.
+
+    Returns:
+        Whether the current parenthesis starts a tuple.
+    """
     saw_top_level_content = False
     for _, ch, is_top_level in _scan_parenthesized(parser, allow_unmatched_close=False):
         if not is_top_level:
@@ -80,6 +84,9 @@ def top_level_parenthesized_can_start_value(parser: "JSONParser") -> bool:
 
     This keeps tuple support available for direct inputs and fenced blocks while avoiding
     regressions on surrounding explanatory text like ``foo (clarification): {...}``.
+
+    Returns:
+        Whether the parenthesis can start a standalone value.
     """
     i = parser.index - 1
     while i >= 0:
@@ -97,10 +104,10 @@ def top_level_parenthesized_can_start_value(parser: "JSONParser") -> bool:
 
     inner_text = parser.json_str[parser.index + idx : parser.index + idx + 5].lower()
     if (
-        first_inner_char not in [")", "{", "[", "(", *STRING_DELIMITERS]
+        first_inner_char not in {")", "{", "[", "(", *STRING_DELIMITERS}
         and not first_inner_char.isdigit()
-        and first_inner_char not in ["-", "."]
-        and inner_text[:4] not in ["true", "null", "none"]
+        and first_inner_char not in {"-", "."}
+        and inner_text[:4] not in {"true", "null", "none"}
         and inner_text[:5] != "false"
     ):
         return False

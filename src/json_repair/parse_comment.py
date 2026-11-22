@@ -44,12 +44,16 @@ def skip_comment(self: "JSONParser") -> None:
 
 
 def parse_comment(self: "JSONParser", record_top_level_value: bool = False) -> JSONReturnType:
-    """Skip comments and resume value parsing only at the top level."""
+    """Skip comments and resume value parsing only at the top level.
+
+    Returns:
+        The next top-level value, or an empty string in a nested context.
+    """
     while True:
         skip_comment(self)
         if not self.context.empty:
             return ""
         # Keep long runs of top-level comments iterative.
         self.skip_whitespaces()
-        if self.get_char_at() not in ["#", "/"]:
+        if self.get_char_at() not in {"#", "/"}:
             return self.parse_json(record_top_level_value=record_top_level_value)

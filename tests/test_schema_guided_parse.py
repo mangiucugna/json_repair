@@ -473,7 +473,7 @@ def test_schema_applies_to_valid_empty_string() -> None:
 @pytest.mark.parametrize("keyword", ["const", "enum", "default", "examples"])
 def test_schema_literal_values_are_not_normalized_as_schemas(keyword: str) -> None:
     literal = {"items": [1, 2], "additionalItems": False}
-    value = [literal] if keyword in ("enum", "examples") else literal
+    value = [literal] if keyword in {"enum", "examples"} else literal
     schema = {keyword: value}
     assert repair_json('{"items":[1,2],"additionalItems":false}', schema=schema, return_objects=True) == literal
 

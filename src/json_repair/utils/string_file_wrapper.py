@@ -40,6 +40,9 @@ class StringFileWrapper:
 
         Returns:
             str: The buffer chunk at the specified index.
+
+        Raises:
+            IndexError: If the chunk index is negative or out of range.
         """
         if index < 0:
             raise IndexError("Negative indexing is not supported")
@@ -78,6 +81,9 @@ class StringFileWrapper:
 
         Returns:
             str: The character(s) at the specified index or slice.
+
+        Raises:
+            IndexError: If an integer index is out of range or negative.
         """
         # The buffer is an array that is seek like a RAM:
         # self.buffers[index]: the row in the array of length 1MB, index is `i` modulo CHUNK_LENGTH
@@ -153,6 +159,9 @@ class StringFileWrapper:
     def _ensure_chunk_position(self, chunk_index: int) -> None:
         """
         Ensure that we know the starting file position for the given chunk index.
+
+        Raises:
+            IndexError: If the chunk index is beyond the end of the file.
         """
         while len(self._chunk_positions) <= chunk_index:
             prev_index = len(self._chunk_positions) - 1

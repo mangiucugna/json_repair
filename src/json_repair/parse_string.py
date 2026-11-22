@@ -136,7 +136,11 @@ def _quote_belongs_to_regex_character_class(
     self: "JSONParser",
     state: StringParseState,
 ) -> bool:
-    """Return whether the current quote is inside a compact ``[...]`` character class."""
+    """Check whether the current quote is inside a compact ``[...]`` character class.
+
+    Returns:
+        Whether the quote is inside a compact character class.
+    """
     start = state.regex_character_class_start
     if start is None or any(char.isspace() for char in state.string_acc[start:]):
         return False
@@ -183,7 +187,7 @@ def _prepare_string_entry(
     self: "JSONParser",
 ) -> tuple[StringParseState | None, object]:
     char = self.get_char_at()
-    if char in ["#", "/"]:
+    if char in {"#", "/"}:
         return None, self.parse_comment()
 
     while char and char not in STRING_DELIMITERS and not char.isalnum():
@@ -205,7 +209,7 @@ def _prepare_string_entry(
         state.lstring_delimiter = "“"
         state.rstring_delimiter = "”"
     elif char.isalnum():
-        if char.lower() in ["t", "f", "n"] and self.context.current != ContextValues.OBJECT_KEY:
+        if char.lower() in {"t", "f", "n"} and self.context.current != ContextValues.OBJECT_KEY:
             found_literal, value = parse_boolean_or_null(self)
             if found_literal:
                 return state, value
@@ -233,8 +237,8 @@ def _prepare_string_entry(
 def _handle_doubled_quote_entry(self: "JSONParser", state: StringParseState) -> object:
     if (
         (self.context.current == ContextValues.OBJECT_KEY and self.get_char_at(1) == ":")
-        or (self.context.current == ContextValues.OBJECT_VALUE and self.get_char_at(1) in [",", "}"])
-        or (self.context.current == ContextValues.ARRAY and self.get_char_at(1) in [",", "]"])
+        or (self.context.current == ContextValues.OBJECT_VALUE and self.get_char_at(1) in {",", "}"})
+        or (self.context.current == ContextValues.ARRAY and self.get_char_at(1) in {",", "]"})
     ):
         self.index += 1
         return ""
@@ -261,7 +265,7 @@ def _handle_doubled_quote_entry(self: "JSONParser", state: StringParseState) -> 
                 self.context.current == ContextValues.OBJECT_VALUE
                 and not _only_whitespace_until(self, i)
                 and self.get_char_at(outer_quote_idx) == state.rstring_delimiter
-                and after_outer_quote in [",", "}", None]
+                and after_outer_quote in {",", "}", None}
             ):
                 self.log(
                     "While parsing a string, we found a leading quote that starts a quoted span, keeping it",
@@ -272,7 +276,7 @@ def _handle_doubled_quote_entry(self: "JSONParser", state: StringParseState) -> 
                 return NO_DIRECT_RESULT
         i = self.scroll_whitespaces(idx=1)
         next_c = self.get_char_at(i)
-        if next_c in [*STRING_DELIMITERS, "{", "["]:
+        if next_c in {*STRING_DELIMITERS, "{", "["}:
             self.log(
                 "While parsing a string, we found a doubled quote but also another quote afterwards, ignoring it",
             )
@@ -282,7 +286,7 @@ def _handle_doubled_quote_entry(self: "JSONParser", state: StringParseState) -> 
                 )
             self.index += 1
             return ""
-        if next_c not in [",", "]", "}"]:
+        if next_c not in {",", "]", "}"}:
             self.log(
                 "While parsing a string, we found a doubled quote but it was a mistake, removing one quote",
             )
@@ -311,11 +315,11 @@ def _normalize_escape_sequence(
         run_length = run_end - run_start
         next_char = self.get_char_at(run_end - self.index)
         after_quote = self.get_char_at(self.scroll_whitespaces(idx=run_end - self.index + 1))
-        if run_length % 2 == 0 and (next_char != active_rstring_delimiter or after_quote in [",", ":", "}", "]", None]):
+        if run_length % 2 == 0 and (next_char != active_rstring_delimiter or after_quote in {",", ":", "}", "]", None}):
             _replace_trailing_backslash(state, "\\" * (run_length // 2))
             self.index = run_end
             return True, self.get_char_at()
-    if char in [active_rstring_delimiter, "t", "n", "r", "b", "\\"]:
+    if char in {active_rstring_delimiter, "t", "n", "r", "b", "\\"}:
         escape_seqs = {"t": "\t", "n": "\n", "r": "\r", "b": "\b"}
         _replace_trailing_backslash(state, escape_seqs.get(char, char))
         self.index += 1
@@ -324,13 +328,13 @@ def _normalize_escape_sequence(
             next_char
             and state.string_acc
             and state.string_acc[-1] == "\\"
-            and next_char in [active_rstring_delimiter, "\\"]
+            and next_char in {active_rstring_delimiter, "\\"}
         ):
             _replace_trailing_backslash(state, next_char)
             self.index += 1
             next_char = self.get_char_at()
         return True, next_char
-    if char in ["u", "x"]:
+    if char in {"u", "x"}:
         num_chars = 4 if char == "u" else 2
         next_chars = self.json_str[self.index + 1 : self.index + 1 + num_chars]
         if len(next_chars) == num_chars and all(c in "0123456789abcdefABCDEF" for c in next_chars):
@@ -368,7 +372,7 @@ def _brace_before_code_fence_belongs_to_string(
     while self.get_char_at(quote_idx) == outer_rstring_delimiter:
         after_quote_idx = self.scroll_whitespaces(idx=quote_idx + 1)
         after_quote = self.get_char_at(after_quote_idx)
-        if after_quote in [",", "}", "]", None]:
+        if after_quote in {",", "}", "]", None}:
             if keep_post_fence_container:
                 state.pending_inline_container = True
             return True
@@ -390,7 +394,7 @@ def _bare_key_is_followed_by_colon(
 
     while True:
         key_char = self.get_char_at(key_idx)
-        if not key_char or not (key_char.isalnum() or key_char in ["_", "-"]):
+        if not key_char or not (key_char.isalnum() or key_char in {"_", "-"}):
             break
         key_idx += 1
 
@@ -404,13 +408,13 @@ def _post_fence_container_starts_next_member(
 ) -> bool:
     after_container_idx = self.scroll_whitespaces(idx=container_end_idx)
     after_container = self.get_char_at(after_container_idx)
-    if after_container in ["}", None]:
+    if after_container in {"}", None}:
         return True
     if after_container != ",":
         return False
 
     next_member_idx = _scroll_comment_prefixed_member_start(self, after_container_idx + 1)
-    return self.get_char_at(next_member_idx) in ["}", None] or _object_member_starts_at(self, next_member_idx)
+    return self.get_char_at(next_member_idx) in {"}", None} or _object_member_starts_at(self, next_member_idx)
 
 
 def _starts_nested_inline_container(
@@ -426,18 +430,18 @@ def _starts_nested_inline_container(
         if not prev_char.isspace():
             if prev_char in INLINE_CONTAINER_OPENERS:
                 return True
-            if prev_char not in [",", ":"]:
+            if prev_char not in {",", ":"}:
                 return False
 
             next_idx = self.scroll_whitespaces(idx=idx + 1)
             next_char = self.get_char_at(next_idx)
-            if opening_delimiter in ["[", "("]:
-                return next_char in ["]", ")", *STRING_DELIMITERS, "-", *INLINE_CONTAINER_OPENERS, "t", "f", "n"] or (
+            if opening_delimiter in {"[", "("}:
+                return next_char in {"]", ")", *STRING_DELIMITERS, "-", *INLINE_CONTAINER_OPENERS, "t", "f", "n"} or (
                     next_char is not None and next_char.isdigit()
                 )
             if opening_delimiter != "{":
                 return False
-            if next_char in ["}", *STRING_DELIMITERS]:
+            if next_char in {"}", *STRING_DELIMITERS}:
                 return True
             return prev_char == ":" and _bare_key_is_followed_by_colon(self, next_idx)
         prev_idx -= 1
@@ -482,7 +486,7 @@ def _scroll_comment_prefixed_member_start(
     while True:
         char = self.get_char_at(idx)
         if char == "#":
-            while char and char not in ["\n", "\r"]:
+            while char and char not in {"\n", "\r"}:
                 idx += 1
                 char = self.get_char_at(idx)
             idx = self.scroll_whitespaces(idx=idx)
@@ -492,7 +496,7 @@ def _scroll_comment_prefixed_member_start(
             if next_char == "/":
                 idx += 2
                 char = self.get_char_at(idx)
-                while char and char not in ["\n", "\r"]:
+                while char and char not in {"\n", "\r"}:
                     idx += 1
                     char = self.get_char_at(idx)
                 idx = self.scroll_whitespaces(idx=idx)
@@ -528,7 +532,7 @@ def _object_member_starts_at(
     self: "JSONParser",
     next_member_idx: int,
 ) -> bool:
-    if self.get_char_at(next_member_idx) in ["}", None]:
+    if self.get_char_at(next_member_idx) in {"}", None}:
         return False
 
     next_member = self.get_char_at(next_member_idx)
@@ -561,10 +565,10 @@ def _handle_right_delimiter_candidate(
     if state.missing_quotes and self.context.current == ContextValues.OBJECT_VALUE:
         i = 1
         next_c = self.get_char_at(i)
-        while next_c and next_c not in [
+        while next_c and next_c not in {
             outer_rstring_delimiter,
             state.lstring_delimiter,
-        ]:
+        }:
             i += 1
             next_c = self.get_char_at(i)
         if next_c:
@@ -587,16 +591,16 @@ def _handle_right_delimiter_candidate(
     i = 1
     next_c = self.get_char_at(i)
     check_comma_in_object_value = True
-    while next_c and next_c not in [
+    while next_c and next_c not in {
         outer_rstring_delimiter,
         state.lstring_delimiter,
-    ]:
+    }:
         if check_comma_in_object_value and next_c.isalpha():
             check_comma_in_object_value = False
         if (
-            (ContextValues.OBJECT_KEY in self.context.context and next_c in [":", "}"])
+            (ContextValues.OBJECT_KEY in self.context.context and next_c in {":", "}"})
             or (ContextValues.OBJECT_VALUE in self.context.context and next_c == "}")
-            or (ContextValues.ARRAY in self.context.context and next_c in ["]", ","])
+            or (ContextValues.ARRAY in self.context.context and next_c in {"]", ","})
             or (check_comma_in_object_value and self.context.current == ContextValues.OBJECT_VALUE and next_c == ",")
         ):
             break
@@ -609,7 +613,7 @@ def _handle_right_delimiter_candidate(
         i += 1
         i = self.scroll_whitespaces(idx=i)
         next_c = self.get_char_at(i)
-        if next_c in ["}", ","]:
+        if next_c in {"}", ","}:
             self.log(
                 "While parsing a string, we found a misplaced quote that would have closed the string but has a different meaning here, ignoring it",
             )
@@ -631,7 +635,7 @@ def _handle_right_delimiter_candidate(
             i += 1
             next_c = self.get_char_at(i)
             while next_c and next_c != ":":
-                if next_c in [",", "]", "}"] or (next_c == outer_rstring_delimiter and self.get_char_at(i - 1) != "\\"):
+                if next_c in {",", "]", "}"} or (next_c == outer_rstring_delimiter and self.get_char_at(i - 1) != "\\"):
                     break
                 i += 1
                 next_c = self.get_char_at(i)
@@ -671,7 +675,7 @@ def _object_value_brace_ends_string(self: "JSONParser", state: StringParseState)
     if next_c:
         i = self.scroll_whitespaces(idx=i + 1)
         next_c = self.get_char_at(i)
-        if not next_c or next_c in [",", "}"]:
+        if not next_c or next_c in {",", "}"}:
             rstring_delimiter_missing = False
         else:
             i = self.skip_to_character(character=state.lstring_delimiter, idx=i)
@@ -715,7 +719,7 @@ def _scan_string_body(
                     "While parsing a string missing the left delimiter in object key context, we found a :, stopping here",
                 )
                 break
-            if self.context.current == ContextValues.ARRAY and char in ["]", ","]:
+            if self.context.current == ContextValues.ARRAY and char in {"]", ","}:
                 self.log(
                     "While parsing a string missing the left delimiter in array context, we found a ] or ,, stopping here",
                 )
@@ -858,7 +862,7 @@ def _scan_string_body(
                     i += 1
                     i = self.scroll_whitespaces(idx=i)
                     ch = self.get_char_at(i)
-                    if ch in [",", "}"]:
+                    if ch in {",", "}"}:
                         self.log(
                             f"While parsing a string missing the right delimiter in object key context, we found a {ch} stopping here",
                         )
@@ -904,7 +908,7 @@ def _finalize_string_result(
             "While parsing a string, handling an extreme corner case in which the LLM added a comment instead of valid string, invalidate the string and return an empty value",
         )
         self.skip_whitespaces()
-        if self.get_char_at() not in [":", ","]:
+        if self.get_char_at() not in {":", ","}:
             return ""
 
     string_acc = "".join(state.string_acc)
@@ -934,7 +938,11 @@ def parse_string(self: "JSONParser") -> JSONReturnType:
 
 
 def _array_quotes_pair_up(self: "JSONParser", delimiter: str, quote_idx: int) -> bool:
-    """Return whether the quotes from ``quote_idx`` up to the next ``]`` come in pairs."""
+    """Return whether the quotes from ``quote_idx`` up to the next ``]`` come in pairs.
+
+    Returns:
+        Whether the remaining quotes occur in pairs.
+    """
     quote_index = self.index + quote_idx
     scan = self.array_quote_scan
     # Every quote after quote_index up to the same ] was already found by an earlier scan, so reuse it.

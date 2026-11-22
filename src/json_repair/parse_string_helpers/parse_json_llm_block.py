@@ -9,6 +9,9 @@ if TYPE_CHECKING:
 def parse_json_llm_block(parser: "JSONParser") -> JSONReturnType:
     """
     Extracts and normalizes JSON enclosed in ```json ... ``` blocks.
+
+    Returns:
+        The parsed block value, or False when no JSON block is found.
     """
     # Try to find a ```json ... ``` block
     if parser.json_str[parser.index : parser.index + 7] == "```json":

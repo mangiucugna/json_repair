@@ -11,6 +11,9 @@ class ObjectComparer:  # pragma: no cover
         Recursively compares two objects and ensures that:
         - Their types match
         - Their keys/structure match
+
+        Returns:
+            Whether the types and structure match recursively.
         """
         if type(obj1) is not type(obj2):
             # Fail immediately if the types don't match
@@ -43,5 +46,8 @@ class ObjectComparer:  # pragma: no cover
         """
         Returns True if value is an empty container (str, list, dict, set, tuple).
         Returns False for non-containers like None, 0, False, etc.
+
+        Returns:
+            Whether the value is an empty container.
         """
         return isinstance(value, (str, list, dict, set, tuple)) and len(value) == 0

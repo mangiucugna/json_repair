@@ -111,7 +111,11 @@ class JSONParser:
         repairer: "SchemaRepairer",
         schema: dict[str, Any] | bool,
     ) -> JSONReturnType:
-        """Parse with schema guidance enabled for all nested values."""
+        """Parse with schema guidance enabled for all nested values.
+
+        Returns:
+            The parsed value, repaired and validated against the schema.
+        """
         self.schema_repairer = repairer
         if repairer.schema_repair_mode == "salvage":
             return self._parse_top_level_salvage_with_schema(repairer, schema)
@@ -122,7 +126,11 @@ class JSONParser:
         repairer: "SchemaRepairer",
         schema: dict[str, Any] | bool,
     ) -> JSONReturnType:
-        """Return the first schema-valid top-level fragment while salvaging."""
+        """Return the first schema-valid top-level fragment while salvaging.
+
+        Returns:
+            The first schema-valid fragment.
+        """
         last_error: ValueError | None = None
         while self.index < len(self.json_str):
             self.context.clear()
@@ -213,7 +221,7 @@ class JSONParser:
                 in_string = True
             elif char in closing_delimiters:
                 containers.append(char)
-            elif char in ["}", "]"]:
+            elif char in {"}", "]"}:
                 if not containers or char != closing_delimiters[containers.pop()]:
                     return False
                 if not containers:
@@ -283,7 +291,11 @@ class JSONParser:
         finalize_schema: bool = True,
         record_top_level_value: bool = False,
     ) -> JSONReturnType:
-        """Parse the next JSON value and, when configured, enforce schema constraints."""
+        """Parse the next JSON value and, when configured, enforce schema constraints.
+
+        Returns:
+            The next parsed value, or an empty string when no value remains.
+        """
         if record_top_level_value:
             self._last_parse_found_value = False
         if self.deferred_contexts:
@@ -304,7 +316,7 @@ class JSONParser:
                 return ""
             if (
                 self.try_valid_json_suffix
-                and char in ["{", "["]
+                and char in {"{", "["}
                 and self._initial_container_has_non_comma_trailing_content()
             ):
                 parsed_suffix, value = self._try_parse_valid_json_value()
@@ -379,7 +391,7 @@ class JSONParser:
                     finalize_schema=finalize_schema,
                     record_top_level_value=record_top_level_value,
                 )
-            if char in ["#", "/"]:
+            if char in {"#", "/"}:
                 value = self.parse_comment(record_top_level_value)
                 return self._finalize_parsed_value(
                     value, repairer=repairer, schema=schema, path=path, finalize_schema=finalize_schema
@@ -409,7 +421,7 @@ class JSONParser:
         self,
         schema: dict[str, Any] | bool | None,
     ) -> tuple["SchemaRepairer | None", dict[str, Any] | bool | None]:
-        repairer = self.schema_repairer if self.schema_repairer is not None and schema not in (None, True) else None
+        repairer = self.schema_repairer if schema is not None and schema is not True else None
         if repairer is None:
             return None, schema
 
@@ -460,14 +472,17 @@ class JSONParser:
         while True:
             self.skip_whitespaces()
             char = self.get_char_at()
-            if char != "#" and not (char == "/" and self.get_char_at(1) in ("/", "*")):
+            if char != "#" and not (char == "/" and self.get_char_at(1) in {"/", "*"}):
                 return
             _skip_comment(self)
 
     def scroll_whitespaces(self, idx: int = 0, *, backwards: bool = False) -> int:
         """
-        Skip whitespace at idx without moving self.index, returning the relative offset.
+        Skip whitespace at idx without moving self.index.
         Set backwards to scan toward the start.
+
+        Returns:
+            The relative offset after skipping whitespace.
         """
         step = -1 if backwards else 1
         try:
@@ -482,7 +497,9 @@ class JSONParser:
     def skip_to_character(self, character: str | list[str], idx: int = 0) -> int:
         """
         Advance from (self.index + idx) until we hit an *unescaped* target character.
-        Returns the offset (idx) from self.index to that position, or the distance to the end if not found.
+
+        Returns:
+            The offset to the target, or to the end when no target is found.
         """
         targets = set(character) if isinstance(character, list) else {character}
         i = self.index + idx
