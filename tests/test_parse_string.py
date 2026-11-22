@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from io import StringIO
 
 import pytest
@@ -19,7 +20,7 @@ from src.json_repair.utils.string_file_wrapper import StringFileWrapper
 from tests.utils.string_cases import FENCED_SNIPPET_CASES, FENCED_SNIPPET_IDS
 
 
-def _assert_object_repairs(raw: str, expected: dict) -> None:
+def _assert_object_repairs(raw: str, expected: Mapping[str, object]) -> None:
     assert repair_json(raw, return_objects=True) == expected
     assert repair_json(raw, skip_json_loads=True, return_objects=True) == expected
 
@@ -377,7 +378,7 @@ def test_parse_string_logs_invalid_code_fences() -> None:
 
 
 @pytest.mark.parametrize(("raw", "expected"), FENCED_SNIPPET_CASES, ids=FENCED_SNIPPET_IDS)
-def test_parse_string_keeps_literal_fenced_snippet_cases(raw: str, expected: dict) -> None:
+def test_parse_string_keeps_literal_fenced_snippet_cases(raw: str, expected: dict[str, str]) -> None:
     _assert_object_repairs(raw, expected)
 
 

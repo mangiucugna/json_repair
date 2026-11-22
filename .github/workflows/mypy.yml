@@ -22,5 +22,5 @@ jobs:
     - name: Run mypy
       run: uv run --no-default-groups --group typecheck --frozen mypy src/
 
-    - name: Run ty
-      run: uv run --no-default-groups --group typecheck --group test --frozen ty check src/ tests/
+    - name: Run Pyrefly
+      run: uv run --no-default-groups --group typecheck --group test --group schema --frozen pyrefly check

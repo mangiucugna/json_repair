@@ -40,7 +40,7 @@ def test_schema_applied_after_missing_opening_brace(
         )
 
 
-def _two_string_schema() -> dict:
+def _two_string_schema() -> dict[str, object]:
     pytest.importorskip("jsonschema")
     pydantic = pytest.importorskip("pydantic", minversion="2")
 
@@ -48,10 +48,10 @@ def _two_string_schema() -> dict:
         a: str
         b: str
 
-    return cast("dict", SchemaModel.model_json_schema())
+    return cast("dict[str, object]", SchemaModel.model_json_schema())
 
 
-def _assert_two_string_schema_repairs(raw: str, expected: dict) -> None:
+def _assert_two_string_schema_repairs(raw: str, expected: dict[str, str]) -> None:
     schema = _two_string_schema()
     assert repair_json(raw, schema=schema, return_objects=True) == expected
     assert repair_json(raw, schema=schema, skip_json_loads=True, return_objects=True) == expected
@@ -401,7 +401,7 @@ def test_schema_array_string_unwrap_preserves_existing_fallbacks() -> None:
 def test_deep_allof_schema_raises_value_error_instead_of_recursion_error() -> None:
     pytest.importorskip("jsonschema")
     schema = {"type": "object", "properties": {"value": {"type": "string"}}}
-    for _ in range(550):
+    for _ in range(550):  # pyrefly: ignore[non-convergent-recursion]
         schema = {"allOf": [schema]}
 
     with pytest.raises(ValueError, match="supported schema recursion depth"):
@@ -411,7 +411,7 @@ def test_deep_allof_schema_raises_value_error_instead_of_recursion_error() -> No
 def test_deep_properties_schema_raises_value_error_instead_of_recursion_error() -> None:
     pytest.importorskip("jsonschema")
     schema = {"type": "string"}
-    for depth in range(550):
+    for depth in range(550):  # pyrefly: ignore[non-convergent-recursion]
         schema = {"type": "object", "properties": {f"level_{depth}": schema}}
 
     with pytest.raises(ValueError, match="supported schema recursion depth"):
@@ -643,7 +643,7 @@ def test_schema_pydantic_populate_by_name_accepts_malformed_required_field() -> 
 
 
 @pytest.mark.parametrize(("raw", "expected"), FENCED_SNIPPET_CASES, ids=FENCED_SNIPPET_IDS)
-def test_schema_pydantic_model_keeps_literal_fenced_snippet_cases(raw: str, expected: dict) -> None:
+def test_schema_pydantic_model_keeps_literal_fenced_snippet_cases(raw: str, expected: dict[str, str]) -> None:
     _assert_two_string_schema_repairs(raw, expected)
 
 
@@ -1023,7 +1023,8 @@ def test_schema_salvage_mode_fills_required_with_safe_inference_sources() -> Non
 
 def test_schema_salvage_mode_missing_required_without_property_schema_still_raises() -> None:
     pytest.importorskip("jsonschema")
-    schema = {"type": "object", "properties": {}, "required": ["missing"]}
+    properties: dict[str, object] = {}
+    schema = {"type": "object", "properties": properties, "required": ["missing"]}
     with pytest.raises(ValueError, match="Missing required properties"):
         repair_json(
             "{}",

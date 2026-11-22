@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request
+from flask.wrappers import Response
 from flask_cors import CORS
 from werkzeug.exceptions import BadRequest
 
@@ -9,7 +10,7 @@ CORS(app)  # This will enable CORS for all routes
 
 
 @app.route("/api/repair-json", methods=["POST"])
-def format_json():
+def format_json() -> Response | tuple[Response, int]:
     try:
         data = request.get_json()
         if not isinstance(data, dict):
@@ -29,11 +30,12 @@ def format_json():
         if schema_repair_mode == "salvage" and schema is None:
             raise ValueError("schemaRepairMode='salvage' requires schema.")
 
-        # Repair the malformed JSON
-        loads_kwargs = {"logging": True, "schema_repair_mode": schema_repair_mode}
-        if schema is not None:
-            loads_kwargs["schema"] = schema
-        parsed_json = loads(malformed_json, **loads_kwargs)
+        parsed_json = loads(
+            malformed_json,
+            logging=True,
+            schema=schema,
+            schema_repair_mode=schema_repair_mode,
+        )
 
         return jsonify(parsed_json)
     except (BadRequest, TypeError, ValueError) as e:

@@ -72,17 +72,13 @@ class JSONParser:
         # This is used in the object member parsing to manage the special cases of missing quotes in key or value
         self.context = JsonContext()
         self.deferred_contexts: list[ContextValues] = []
-        # Use this to log the activity, but only if logging is active
-
-        # This is a trick but a beautiful one. We call self.log in the code over and over even if it's not needed.
-        # We could add a guard in the code for each call but that would make this code unreadable, so here's this neat trick
-        # Replace self.log with a noop
+        # Choose the logger once so parser code can log without checking the flag at each call.
         self.logging = logging
         self.logger: list[dict[str, str]] = []
         if logging:
             self.log = self._log
         else:
-            # No-op
+            # pyrefly: ignore[implicit-any-lambda]
             self.log = lambda *args, **kwargs: None  # noqa: ARG005
         # When the json to be repaired is the accumulation of streaming json at a certain moment.
         # e.g. json obtained from llm response.
@@ -291,7 +287,8 @@ class JSONParser:
         if record_top_level_value:
             self._last_parse_found_value = False
         if self.deferred_contexts:
-            deferred_contexts, self.deferred_contexts = self.deferred_contexts, []
+            deferred_contexts = self.deferred_contexts
+            self.deferred_contexts = []
             with ExitStack() as stack:
                 for context_value in deferred_contexts:
                     stack.enter_context(self.context.enter(context_value))

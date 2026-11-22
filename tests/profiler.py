@@ -10,8 +10,13 @@ from pstats import SortKey, Stats
 
 from src.json_repair.json_repair import repair_json
 
-# Hack: Monkey patch pstats to change the formatting method and increase precision
-pstats.__dict__["f8"] = lambda x: f"{x:14.9f}"
+
+def format_profile_time(seconds: float) -> str:
+    return f"{seconds:14.9f}"
+
+
+# Use more precision than the default pstats formatter.
+pstats.__dict__["f8"] = format_profile_time
 
 m = """
 [

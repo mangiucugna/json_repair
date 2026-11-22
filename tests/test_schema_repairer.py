@@ -106,7 +106,7 @@ def test_schema_from_input_non_dict_properties() -> None:
     class DummyField:
         def __init__(self, default: object) -> None:
             self.default = default
-            self.default_factory = None
+            self.default_factory: None = None
 
         def is_required(self) -> bool:
             return False
@@ -326,7 +326,9 @@ def test_repair_object_properties_and_constraints() -> None:
     schema_min_props = {"type": "object", "minProperties": 1}
     with pytest.raises(ValueError, match="minProperties"):
         repairer.repair_value({}, schema_min_props, "$")
-    schema_bad_props = {"type": "object", "properties": [], "patternProperties": []}
+    properties: list[object] = []
+    pattern_properties: list[object] = []
+    schema_bad_props = {"type": "object", "properties": properties, "patternProperties": pattern_properties}
     assert repairer.repair_value({}, schema_bad_props, "$") == {}
     with pytest.raises(ValueError, match="Expected object"):
         repairer.repair_value([], {"type": "object"}, "$")

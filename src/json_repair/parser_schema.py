@@ -60,12 +60,10 @@ def resolve_parser_array_schema(
 
 
 def object_schema_config(schema: dict[str, Any]) -> ObjectSchemaConfig:
-    properties = schema.get("properties", {})
-    if not isinstance(properties, dict):
-        properties = {}
-    pattern_properties = schema.get("patternProperties", {})
-    if not isinstance(pattern_properties, dict):
-        pattern_properties = {}
+    raw_properties = schema.get("properties")
+    properties: dict[str, Any] = raw_properties if isinstance(raw_properties, dict) else {}
+    raw_pattern_properties = schema.get("patternProperties")
+    pattern_properties: dict[str, Any] = raw_pattern_properties if isinstance(raw_pattern_properties, dict) else {}
     return ObjectSchemaConfig(
         properties=properties,
         pattern_properties=pattern_properties,

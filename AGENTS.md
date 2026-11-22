@@ -3,7 +3,8 @@
 ## Workflow
 - Use `.venv` via `uv run`; install development dependencies with `uv sync --group dev` and update `uv.lock` when dependencies change.
 - For code changes, run `uv run pytest` and `pre-commit run --all-files`. Skip pre-commit for Markdown-only changes unless requested. If hooks update files, retain and restage those updates in commit flows.
-- Keep Ruff `ANN401` disabled; use mypy and ty. Keep CI's `ruff format` aligned with the Python-only pre-commit hook.
+- Keep Ruff `ANN401` disabled; use mypy. Keep CI's `ruff format` aligned with the Python-only pre-commit hook.
+- Keep Pyrefly in the `typecheck` dependency group. Its project-wide CI check also needs the `test` and `schema` groups. Keep the repository root on its search path for repository-relative test imports, and exclude the FastAPI example because it requires a separate install.
 - When consolidating tests, preserve coverage across stdlib fast paths, forced repair, schema modes, and file buffering. CI's Python-version matrix runs only `tests/test_json_repair.py`; moving its cases elsewhere changes matrix coverage.
 - The docs API tests require Flask and Flask-CORS, and the overload-inference tests require mypy. Full-suite CI needs the `test`, `schema`, and `typecheck` groups; missing test dependencies should fail collection rather than silently skip these modules.
 - Keep Python 3.10 support best effort without expanding CI or adding compatibility work for it. Retain performance tests and dependency-update hooks in normal pre-commit runs.
@@ -12,6 +13,7 @@
 
 ## Parser and schema contracts
 - Preserve standard-library behavior for valid JSON, including in strict mode; `skip_json_loads=True` explicitly opts out. `load(fd)` starts at the descriptor's current position.
+- Preserve the parser's logging no-op when logging is disabled to avoid branching at each log call.
 - Keep repair heuristics conservative in strict mode and log automatic corrections. Preserve malformed-input behavior and context lifetimes when refactoring; use existing regression tests to cover specific cases.
 - Treat comments as whitespace at structural value boundaries; consuming trivia must not continue top-level parsing. Keep one shared output-finalization path in `repair_json`.
 - Apply schema repair and validation to valid and invalid inputs, with dispatch centralized in `JSONParser.parse_json(schema, path)`. Preserve accepted Pydantic field names and explicit-alias precedence.

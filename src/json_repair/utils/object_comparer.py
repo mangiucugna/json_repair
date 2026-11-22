@@ -44,4 +44,4 @@ class ObjectComparer:  # pragma: no cover
         Returns True if value is an empty container (str, list, dict, set, tuple).
         Returns False for non-containers like None, 0, False, etc.
         """
-        return isinstance(value, str | list | dict | set | tuple) and len(value) == 0
+        return isinstance(value, (str, list, dict, set, tuple)) and len(value) == 0

@@ -63,11 +63,17 @@ def _require_pydantic() -> Any:
         raise ValueError("pydantic is required when using schema models.") from exc
 
 
+def _ensure_dict_entry(parent: dict[str, Any], key: str) -> dict[str, Any]:
+    entry = parent.setdefault(key, {})
+    if isinstance(entry, dict):
+        return entry
+    replacement: dict[str, Any] = {}
+    parent[key] = replacement
+    return replacement
+
+
 def _add_pydantic_field_metadata(schema_dict: dict[str, Any], model: type[Any]) -> None:
-    properties = schema_dict.setdefault("properties", {})
-    if not isinstance(properties, dict):
-        properties = {}
-        schema_dict["properties"] = properties
+    properties = _ensure_dict_entry(schema_dict, "properties")
     model_config = getattr(model, "model_config", {})
     accepts_field_names = model_config.get("populate_by_name", False) or model_config.get("validate_by_name", False)
     property_aliases: dict[str, list[str]] = {}
@@ -82,10 +88,7 @@ def _add_pydantic_field_metadata(schema_dict: dict[str, Any], model: type[Any]) 
             property_aliases.setdefault(property_name, []).append(name)
         if field.is_required():
             continue
-        property_schema = properties.setdefault(property_name, {})
-        if not isinstance(property_schema, dict):
-            property_schema = {}
-            properties[property_name] = property_schema
+        property_schema = _ensure_dict_entry(properties, property_name)
         if "default" not in property_schema:
             if field.default_factory is not None:
                 property_schema["default"] = field.default_factory()

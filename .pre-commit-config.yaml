@@ -17,7 +17,7 @@ repos:
   - id: gha-update
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: v0.17.4
+  rev: v0.17.6
   hooks:
     # Run the linter.
     - id: ruff-check
@@ -40,9 +40,9 @@ repos:
     language: system
     pass_filenames: false
     types: [python]
-  - id: ty
-    name: ty
-    entry: uv run ty check src/ tests/
+  - id: pyrefly
+    name: pyrefly
+    entry: uv run pyrefly check
     language: system
     pass_filenames: false
     types: [python]
@@ -59,7 +59,7 @@ repos:
     pass_filenames: false
     types: [python]
 - repo: https://github.com/semgrep/pre-commit
-  rev: "v1.185.0"
+  rev: "v1.186.0"
   hooks:
     - id: semgrep
       args:

@@ -182,7 +182,7 @@ def test_docs_api_salvage_mode_drops_invalid_array_items(client: FlaskClient) ->
 def test_docs_api_deep_schema_returns_400_instead_of_500(client: FlaskClient) -> None:
     pytest.importorskip("jsonschema")
     schema = {"type": "object"}
-    for _ in range(550):
+    for _ in range(550):  # pyrefly: ignore[non-convergent-recursion]
         schema = {"allOf": [schema]}
 
     response = client.post(

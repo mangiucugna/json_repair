@@ -46,7 +46,7 @@ test = [
 ]
 typecheck = [
     "mypy",
-    "ty",
+    "pyrefly>=1.5.0",
 ]
 [tool.uv.dependency-groups]
 dev = { requires-python = ">=3.13" }
@@ -169,7 +169,7 @@ extend-select = [
   "TRY004",  # use TypeError for invalid types
 ]
 ignore = [
-  "ANN401", # Allow Any; mypy and ty handle type checking.
+  "ANN401", # Allow Any; mypy handles type checking.
   "S101",   # assert: Use of assert detected. We like assert
   "COM812", # Ruff: The following rule may cause conflicts when used with the formatter
   "E501",   # Line too long
@@ -199,3 +199,13 @@ line-ending = "auto"
 "!{src,tests}/**.py" = ["ANN"]
 [tool.mypy]
 strict = true
+
+[tool.pyrefly]
+search-path = ["."]
+project-excludes = ["examples/fastapi_app.py"]
+
+[tool.pyrefly.errors]
+no-any-return = "error"
+method-assign = "error"
+unannotated-return = "error"
+implicit-any = "error"

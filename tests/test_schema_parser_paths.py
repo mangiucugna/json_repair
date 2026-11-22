@@ -11,7 +11,7 @@ from src.json_repair.utils.json_context import ContextValues
 
 def parse_object_direct(
     raw: str,
-    schema: dict | bool | str,
+    schema: dict[str, Any] | bool | str,
     *,
     mode: SchemaRepairMode = "standard",
     strict: bool = False,
@@ -26,7 +26,9 @@ def parse_object_direct(
     return parser.parse_object(cast("Any", schema), "$")
 
 
-def parse_array_direct(raw: str, schema: dict | bool | str, *, mode: SchemaRepairMode = "standard") -> JSONReturnType:
+def parse_array_direct(
+    raw: str, schema: dict[str, Any] | bool | str, *, mode: SchemaRepairMode = "standard"
+) -> JSONReturnType:
     parser = JSONParser(raw, json_fd=None, logging=False, json_fd_chunk_length=0, stream_stable=False, strict=False)
     repairer = SchemaRepairer(schema if isinstance(schema, dict) else {}, None, schema_repair_mode=mode)
     parser.schema_repairer = repairer
@@ -42,10 +44,12 @@ def test_parse_object_schema_true_false_and_non_object() -> None:
 
 
 def test_parse_object_schema_property_fallbacks_and_stray_colon() -> None:
+    properties: list[object] = []
+    pattern_properties: list[object] = []
     schema = {
         "type": "object",
-        "properties": [],
-        "patternProperties": [],
+        "properties": properties,
+        "patternProperties": pattern_properties,
         "additionalProperties": True,
     }
     assert parse_object_direct("{:a:1}", schema) == {"a": 1}
