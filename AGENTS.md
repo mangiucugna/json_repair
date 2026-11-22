@@ -7,7 +7,7 @@
 - Keep Pyrefly in the `typecheck` dependency group. Its project-wide CI check also needs the `test` and `schema` groups. Keep the repository root on its search path for repository-relative test imports, and exclude the FastAPI example because it requires a separate install.
 - When consolidating tests, preserve coverage across stdlib fast paths, forced repair, schema modes, and file buffering. CI's Python-version matrix runs only `tests/test_json_repair.py`; moving its cases elsewhere changes matrix coverage.
 - The docs API tests require Flask and Flask-CORS, and the overload-inference tests require mypy. Full-suite CI needs the `test`, `schema`, and `typecheck` groups; missing test dependencies should fail collection rather than silently skip these modules.
-- Keep Python 3.10 support best effort without expanding CI or adding compatibility work for it. Retain performance tests and dependency-update hooks in normal pre-commit runs.
+- Keep Python 3.10 support best effort without expanding CI, adding compatibility work, or targeting it with tooling. Retain performance tests and dependency-update hooks in normal pre-commit runs.
 - Keep `README.zh.md` aligned with `README.md` when behavior or contributor guidance changes. `README.md` is the PyPI description; avoid relative links. Store demo share state in the URL hash.
 - For releases, align `pyproject.toml` and `CITATION.cff`, use semantic versioning, and run `uvx twine check dist/*` after building. Preserve sdist test exclusion and the `json_repair` package-data key for `py.typed`.
 

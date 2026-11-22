@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 [project]
 name = "json_repair"
@@ -34,8 +34,8 @@ dev = [
     "pre-commit",
 ]
 schema = [
-    "jsonschema",
-    "pydantic",
+    "jsonschema>=4.21",
+    "pydantic>=2",
 ]
 test = [
     "coverage",
@@ -85,8 +85,6 @@ where = ["src"]
 [project.scripts]
 json_repair = "json_repair.__main__:cli"
 [tool.ruff]
-# Same as Black.
-indent-width = 4
 line-length = 120
 # Keep documentation code examples outside Ruff's formatter scope.
 extend-exclude = ["*.md"]
@@ -95,84 +93,46 @@ target-version = "py313"
 [tool.ruff.lint]
 preview = true
 explicit-preview-rules = true
-# Read more here https://docs.astral.sh/ruff/rules/
-# By default, Ruff enables Flake8's E and F rules
-# FastAPI - FAST
-# Flake8-no-pep420 - INP
-# Flake8-bandit - S
-# Flake8-bugbear – catches real-world Python footguns - B
-# Flake8-builtins - A
-# Flake8-comprehensions  - C4
-# Flake8-blind-except - BLE
-# Flake8-datetimez - DTZ
-# Flake8-debugger - T10
-# Flake8-executable - EXE
-# Flake8-logging and logging-format - LOG, G
-# Flake8-commas - COM
-# Flake8-implicit-str-concat - ISC
-# Flake8-print - T20
-# Flake8-quotes - Q
-# Flake8-raise - RSE
-# Flake8-return - RET
-# Flake8-tidy-imports - TID
-# Flake8-type-checking - TC
-# Flake8-unused-arguments - ARG
-# Refurb - FURB
-# Isort - I
-# Mccabe – code complexity warnings - C90
-# PEP 8 Naming convention - N
-# Perflint - PERF
-# Pygrep-hooks - PGH
-# flake8-pie - PIE
-# Flake8-use-pathlib - PTH
-# Pycodestyle - E, W
-# Pyflakes - F
-# Pylint - PLC, PLE, PLR, PLW
-# PyTest - PT
-# Pyupgrade – safe modernization (e.g., str() → f"") - UP
-# Flake8-2020 - YTT
-# Eradicate - ERA
-# Flake8-annotations - ANN
-# Ruff specific - RUF
-# Simplifications (e.g., if x == True → if x) - SIM
-select = ['A', 'ANN', 'ARG', 'B', 'BLE', 'C4', 'COM', 'C90', 'DTZ', 'E', 'ERA', 'EXE', 'F', 'FURB', 'G', 'I', 'INP', 'ISC', 'LOG', 'N', 'PERF', 'PGH', 'PIE', 'PLC', 'PLE', 'PLW', 'PT', 'PTH', 'Q', 'RET', 'RSE', 'S', 'SIM', 'T10', 'T20', 'TC', 'TID', 'UP', 'W', 'YTT']
+# Rule families are documented at https://docs.astral.sh/ruff/rules/.
+select = [
+    "A", "ANN", "ARG", "B", "BLE", "C4", "COM", "C90", "DTZ", "E", "ERA", "EXE", "F", "FURB",
+    "G", "I", "INP", "ISC", "LOG", "N", "PERF", "PGH", "PIE", "PLC", "PLE", "PLW", "PT",
+    "PTH", "Q", "RET", "RSE", "S", "SIM", "T10", "T20", "TC", "TID", "UP", "W", "YTT",
+]
 # Additional individual rules
 extend-select = [
+  "DOC201",  # document return values
+  "DOC501",  # document explicitly raised exceptions
+  "FBT003",  # make boolean arguments explicit at call sites
+  "PLE1141", # catch dictionary unpacking without items()
+  "PLR0917", # limit positional arguments
+  "PLW1514", # require explicit text encoding
+  "PLW3201", # detect invalid special method names
   "RUF001",  # ambiguous Unicode
-  "RUF100",  # unused noqa
+  "RUF008",  # mutable dataclass defaults
+  "RUF009",  # avoid function calls as dataclass defaults
   "RUF012",  # mutable class defaults
   "RUF013",  # implicit optional annotations
   "RUF016",  # invalid index types
   "RUF017",  # avoid quadratic list summation
   "RUF018",  # assignment expressions in assertions
-  "RUF005",  # collection literal concatenation
-  "RUF008",  # mutable dataclass defaults
-  "RUF010",  # prefer explicit conversion flags in f-strings
-  "RUF019",  # prefer dict.get over redundant key checks
   "RUF020",  # avoid Never and NoReturn in unions
-  "RUF021",  # clarify mixed and/or precedence
-  "RUF022",  # keep __all__ sorted
   "RUF024",  # prevent shared mutable values in dict.fromkeys
   "RUF026",  # catch default_factory passed as a defaultdict keyword
   "RUF027",  # detect likely missing f-string prefixes
   "RUF028",  # validate formatter suppression comments
   "RUF030",  # avoid printing assertion messages
-  "RUF032",  # avoid constructing Decimal from float literals
   "RUF033",  # catch misleading dataclass post-init defaults
   "RUF034",  # detect conditional expressions with identical branches
   "RUF040",  # catch non-string literal assertion messages
+  "RUF043",  # make pytest.raises regex intent explicit
   "RUF049",  # avoid applying dataclass to enums
   "RUF052",  # catch used variables named as unused
   "RUF053",  # avoid mixing generic type parameter syntaxes
   "RUF054",  # catch ambiguous form-feed indentation
+  "RUF059",  # catch unused unpacked variables
   "RUF060",  # catch membership tests against empty collections
   "RUF063",  # avoid accessing annotations through a class dictionary
-  "RUF009",  # avoid function calls as dataclass defaults
-  "RUF043",  # make pytest.raises regex intent explicit
-  "RUF048",  # avoid parsing version components as integers
-  "RUF059",  # catch unused unpacked variables
-  "RUF064",  # use octal file permissions
-  "RUF065",  # avoid eager conversion of logging arguments
   "RUF066",  # detect properties without a return
   "RUF068",  # duplicate __all__ entries
   "RUF071",  # avoid character-based path prefix checks
@@ -181,25 +141,15 @@ extend-select = [
   "RUF074",  # detect incorrect decorator order
   "RUF075",  # protect context manager cleanup from exceptions
   "RUF077",  # detect default values on method receivers
+  "RUF100",  # unused noqa
   "RUF101",  # use canonical rule codes in suppressions
   "RUF102",  # invalid rule codes in noqa comments
   "RUF103",  # invalid Ruff suppression comments
   "RUF104",  # unmatched Ruff suppression comments
   "RUF200",  # validate pyproject.toml metadata
   "RUF202",  # use canonical rule selectors
-  "FBT003",  # make boolean arguments explicit at call sites
-  "PLR1714", # repeated equality comparisons
-  "PLR0917", # limit positional arguments
-  "PLR5501", # collapsible else-if
-  "PLR6201", # prefer set literals for membership tests
-  "PLE1141", # catch dictionary unpacking without items()
-  "PLW1514", # require explicit text encoding
-  "PLW3201", # detect invalid special method names
-  "TRY300",  # keep returns out of try blocks
-  "TRY203",  # catch exception handlers that only re-raise
   "TRY004",  # use TypeError for invalid types
-  "DOC201",  # document return values
-  "DOC501",  # document explicitly raised exceptions
+  "TRY203",  # catch exception handlers that only re-raise
 ]
 ignore = [
   "ANN401", # Allow Any; mypy handles type checking.
@@ -208,22 +158,6 @@ ignore = [
   "E501",   # Line too long
   "C901",   # `function` is too complex
 ]
-# Allow fix for all enabled rules (when `--fix`) is provided.
-fixable = ["ALL"]
-unfixable = []
-[tool.ruff.format]
-# Like Black, use double quotes for strings.
-quote-style = "double"
-
-# Like Black, indent with spaces, rather than tabs.
-indent-style = "space"
-
-# Like Black, respect magic trailing commas.
-skip-magic-trailing-comma = false
-
-# Like Black, automatically detect the appropriate line ending.
-line-ending = "auto"
-
 [tool.ruff.lint.per-file-ignores]
 # Explicit re-exports is fine in __init__.py, still a code smell elsewhere.
 "__init__.py" = ["PLC0414"]

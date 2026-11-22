@@ -544,17 +544,17 @@ dev = [
     { name = "coverage", marker = "python_full_version >= '3.13'" },
     { name = "flask", marker = "python_full_version >= '3.13'", specifier = ">=3" },
     { name = "flask-cors", marker = "python_full_version >= '3.13'", specifier = ">=6" },
-    { name = "jsonschema", marker = "python_full_version >= '3.13'" },
+    { name = "jsonschema", marker = "python_full_version >= '3.13'", specifier = ">=4.21" },
     { name = "mypy", marker = "python_full_version >= '3.13'" },
     { name = "pre-commit", marker = "python_full_version >= '3.13'" },
-    { name = "pydantic", marker = "python_full_version >= '3.13'" },
+    { name = "pydantic", marker = "python_full_version >= '3.13'", specifier = ">=2" },
     { name = "pyrefly", marker = "python_full_version >= '3.13'", specifier = ">=1.5.0" },
     { name = "pytest", marker = "python_full_version >= '3.13'" },
     { name = "pytest-benchmark", marker = "python_full_version >= '3.13'" },
 ]
 schema = [
-    { name = "jsonschema" },
-    { name = "pydantic" },
+    { name = "jsonschema", specifier = ">=4.21" },
+    { name = "pydantic", specifier = ">=2" },
 ]
 test = [
     { name = "coverage" },
